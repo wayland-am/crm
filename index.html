@@ -278,20 +278,29 @@ const avStyle = i => `background:${BRAND_COLORS.Hitachi}22;color:${AV_COLORS[i%1
 const coList = () => [...new Set([...db.contacts.map(c=>c.company),...db.fleet.map(f=>f.company)])].sort();
 
 // ─── API ──────────────────────────────────────────────────────────────────────
-async function api(params) {
+function api(params) {
   setSyncStatus('spin','Синхронизация...');
-  try {
+  return new Promise((resolve, reject) => {
+    const cbName = 'cb_' + Date.now();
     const payload = encodeURIComponent(JSON.stringify(params));
-    const url = API_URL + '?payload=' + payload;
-    const res = await fetch(url, {redirect: 'follow'});
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error);
-    setSyncStatus('ok', 'Synced ' + new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}));
-    return data.data;
-  } catch(e) {
-    setSyncStatus('err', 'Ошибка: ' + e.message.slice(0,40));
-    throw e;
-  }
+    const url = API_URL + '?payload=' + payload + '&callback=' + cbName;
+    const script = document.createElement('script');
+    const timer = setTimeout(() => {
+      cleanup();
+      setSyncStatus('err','Таймаут — проверь URL скрипта');
+      reject(new Error('timeout'));
+    }, 15000);
+    window[cbName] = function(data) {
+      cleanup();
+      if (!data.ok) { setSyncStatus('err', data.error||'Ошибка'); reject(new Error(data.error)); return; }
+      setSyncStatus('ok', 'Synced ' + new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}));
+      resolve(data.data);
+    };
+    function cleanup() { clearTimeout(timer); delete window[cbName]; if(script.parentNode) script.parentNode.removeChild(script); }
+    script.onerror = () => { cleanup(); setSyncStatus('err','Ошибка загрузки скрипта'); reject(new Error('script error')); };
+    script.src = url;
+    document.head.appendChild(script);
+  });
 }
 
 async function loadAll() {
