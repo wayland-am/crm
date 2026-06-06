@@ -258,7 +258,7 @@ const AV_COLORS = ['#185FA5','#3B6D11','#854F0B','#534AB7','#A32D2D','#0F6E56','
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let API_URL = '';
-let db = { deals:[], contacts:[], fleet:[], tasks:[] };
+let db = { deals:[], contacts:[], fleet:[], tasks:[], companies:[] };
 let currentSection = 'dashboard';
 let modalType = '';
 let editId = null;
@@ -275,7 +275,11 @@ const condBadge = c => ({Excellent:'b-green',Good:'b-blue',Fair:'b-amber',Poor:'
 const stageBadge = s => ({Lead:'b-gray',Qualified:'b-purple',Proposal:'b-amber',Negotiation:'b-blue',Won:'b-green'}[s]||'b-gray');
 const statusBadge = s => ({Active:'b-green',Prospect:'b-blue',Negotiating:'b-amber',Inactive:'b-red'}[s]||'b-gray');
 const avStyle = i => `background:${BRAND_COLORS.Hitachi}22;color:${AV_COLORS[i%10]}`;
-const coList = () => [...new Set([...db.contacts.map(c=>c.company),...db.fleet.map(f=>f.company)])].sort();
+const coList = () => [...new Set([
+  ...db.companies.map(c=>c.name).filter(Boolean),
+  ...db.contacts.map(c=>c.company).filter(Boolean),
+  ...db.fleet.map(f=>f.company).filter(Boolean),
+])].sort();
 
 // ─── API ──────────────────────────────────────────────────────────────────────
 async function api(params) {
@@ -296,16 +300,18 @@ async function api(params) {
 }
 
 async function loadAll() {
-  const [deals, contacts, fleet, tasks] = await Promise.all([
+  const [deals, contacts, fleet, tasks, companies] = await Promise.all([
     api({action:'read', sheet:'deals'}),
     api({action:'read', sheet:'contacts'}),
     api({action:'read', sheet:'fleet'}),
     api({action:'read', sheet:'tasks'}),
+    api({action:'read', sheet:'companies'}),
   ]);
-  db.deals    = deals    || [];
-  db.contacts = contacts || [];
-  db.fleet    = fleet    || [];
-  db.tasks    = tasks    || [];
+  db.deals     = deals     || [];
+  db.contacts  = contacts  || [];
+  db.fleet     = fleet     || [];
+  db.tasks     = tasks     || [];
+  db.companies = companies || [];
   db.deals.forEach(d => { d.amount = Number(d.amount)||0; d.days = Number(d.days)||0; });
   db.fleet.forEach(f => { f.year = Number(f.year)||0; });
 }
@@ -723,12 +729,12 @@ function openModal(type, id=null) {
 
   const bodies = {
     deal:`
+      <div class="form-group"><label class="form-label">Компания</label><input class="form-control" id="f-company" list="co-dl" value="${e.company||''}" placeholder="Введи название компании" autocomplete="off"><datalist id="co-dl">${coOpts}</datalist></div>
+      <div class="form-group"><label class="form-label">Контакт</label><input class="form-control" id="f-contact" value="${e.contact||''}"></div>
       <div class="form-row">
-        <div class="form-group"><label class="form-label">Модель</label><select class="form-control" id="f-model">${MODELS.map(m=>`<option ${e.model===m?'selected':''}>${m}</option>`).join('')}</select></div>
+        <div class="form-group"><label class="form-label">Модель техники</label><input class="form-control" id="f-model" list="model-dl" value="${e.model||''}" placeholder="Напр. ZX470LC-6"><datalist id="model-dl">${HITACHI_MODELS.map(m=>`<option>${m}</option>`).join('')}</datalist></div>
         <div class="form-group"><label class="form-label">Сумма (USD)</label><input class="form-control" id="f-amount" type="number" value="${e.amount||''}"></div>
       </div>
-      <div class="form-group"><label class="form-label">Компания</label><input class="form-control" id="f-company" list="co-dl" value="${e.company||''}"><datalist id="co-dl">${coOpts}</datalist></div>
-      <div class="form-group"><label class="form-label">Контакт</label><input class="form-control" id="f-contact" value="${e.contact||''}"></div>
       <div class="form-row">
         <div class="form-group"><label class="form-label">Этап</label><select class="form-control" id="f-stage">${STAGES.map(s=>`<option ${e.stage===s?'selected':''}>${s}</option>`).join('')}</select></div>
         <div class="form-group"><label class="form-label">Менеджер</label><select class="form-control" id="f-agent">${AGENTS.map(a=>`<option ${e.agent===a?'selected':''}>${a}</option>`).join('')}</select></div>
@@ -800,9 +806,15 @@ async function saveModal() {
 
   if (modalType==='deal') {
     row = {...row, model:g('f-model'),company:g('f-company'),contact:g('f-contact'),amount:Number(g('f-amount'))||0,stage:g('f-stage'),agent:g('f-agent'),days:Number(g('f-days'))||0,created:row.created||new Date().toISOString().slice(0,10)};
-    if (!row.model||!row.company) return;
+    if (!row.company) return;
     const saved = await save('deals', row);
     if (!editId) db.deals.push(saved); else Object.assign(db.deals.find(d=>String(d.id)===String(editId)),saved);
+    // auto-save company name for shared autocomplete
+    const coName = row.company.trim();
+    if (coName && !db.companies.find(c=>c.name===coName)) {
+      const savedCo = await save('companies', {name: coName});
+      db.companies.push(savedCo);
+    }
     renderPipeline();
   } else if (modalType==='contact') {
     row = {...row, company:g('f-company'),contact:g('f-contact'),phone:g('f-phone'),industry:g('f-industry'),status:g('f-status'),deals:row.deals||0};
