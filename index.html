@@ -1130,7 +1130,6 @@ function renderAgents(){
     }).join(""):`<div style="grid-column:1/-1"><div class="empty"><i class="ti ti-users-group"></i><div class="empty-title">Нет продавцов</div><p style="margin-bottom:12px;color:var(--text-m)">Пока список пуст — используются продавцы по умолчанию.<br>Добавь команду чтобы управлять ею из CRM.</p><button class="btn btn-primary" onclick="openM('agent')"><i class="ti ti-plus"></i>Добавить первого продавца</button></div></div>`}
   </div>`;
 }
-
 function globalSearch(q){
   if(!q||q.length<2){$('search-results')&&$('search-results').remove();return;}
   const ql=q.toLowerCase();
