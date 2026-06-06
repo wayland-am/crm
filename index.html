@@ -290,18 +290,20 @@ const coOpts=()=>db.companies.map(c=>`<option value="${c.id}">${c.name}</option>
 const coDatalist=()=>db.companies.map(c=>`<option>${c.name}</option>`).join('');
 
 // ─── API ───────────────────────────────────────────────────────────────────
-function apiCall(params){
+async function apiCall(params){
   setSS('spin','Синхронизация...');
-  return new Promise((resolve,reject)=>{
-    const cb='_cb'+Date.now();
-    const url=API+'?payload='+encodeURIComponent(JSON.stringify(params))+'&callback='+cb;
-    const s=document.createElement('script');
-    const t=setTimeout(()=>{cleanup();setSS('err','Таймаут');reject(new Error('timeout'));},20000);
-    window[cb]=data=>{cleanup();if(!data.ok){setSS('err',data.error||'Ошибка');reject(new Error(data.error));return;}setSS('ok','Synced '+new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}));resolve(data.data);};
-    function cleanup(){clearTimeout(t);delete window[cb];s.parentNode&&s.parentNode.removeChild(s);}
-    s.onerror=()=>{cleanup();setSS('err','Ошибка сети');reject(new Error('net'));};
-    s.src=url;document.head.appendChild(s);
-  });
+  try{
+    const url=API+'?payload='+encodeURIComponent(JSON.stringify(params));
+    const res=await fetch(url,{redirect:'follow'});
+    const text=await res.text();
+    const data=JSON.parse(text);
+    if(!data.ok)throw new Error(data.error||'Ошибка');
+    setSS('ok','Synced '+new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}));
+    return data.data;
+  }catch(e){
+    setSS('err',e.message.slice(0,50));
+    throw e;
+  }
 }
 async function load(){
   const sheets=['companies','contacts','deals','fleet','tasks','activities'];
