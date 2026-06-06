@@ -281,13 +281,9 @@ const coList = () => [...new Set([...db.contacts.map(c=>c.company),...db.fleet.m
 async function api(params) {
   setSyncStatus('spin','Синхронизация...');
   try {
-    const url = API_URL + '?action=' + params.action + '&sheet=' + (params.sheet||'');
-    let res;
-    if (params.action === 'read') {
-      res = await fetch(url);
-    } else {
-      res = await fetch(API_URL, {method:'POST', body: JSON.stringify(params)});
-    }
+    const payload = encodeURIComponent(JSON.stringify(params));
+    const url = API_URL + '?payload=' + payload;
+    const res = await fetch(url, {redirect: 'follow'});
     const data = await res.json();
     if (!data.ok) throw new Error(data.error);
     setSyncStatus('ok', 'Synced ' + new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}));
