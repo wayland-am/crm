@@ -3,869 +3,991 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Wayland CRM — Hitachi Excavators</title>
+<title>Wayland CRM</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
-:root {
-  --blue:#185FA5; --blue-dark:#0C447C; --blue-light:#E6F1FB;
-  --green:#3B6D11; --green-light:#EAF3DE;
-  --amber:#854F0B; --amber-light:#FAEEDA;
-  --red:#A32D2D;   --red-light:#FCEBEB;
-  --purple:#534AB7;--purple-light:#EEEDFE;
-  --teal:#0F6E56;  --teal-light:#E1F5EE;
-  --coral:#993C1D; --coral-light:#FAECE7;
-  --gray-50:#F8F9FA; --gray-100:#F1F3F5; --gray-200:#E9ECEF;
-  --gray-300:#DEE2E6; --gray-400:#CED4DA; --gray-500:#ADB5BD;
-  --gray-600:#6C757D; --gray-700:#495057; --gray-800:#343A40; --gray-900:#212529;
-  --text:#212529; --text-muted:#6C757D; --text-light:#ADB5BD;
-  --bg:#F8F9FA; --surface:#FFFFFF; --border:#DEE2E6;
-  --radius:8px; --radius-lg:12px;
-  --shadow:0 1px 3px rgba(0,0,0,0.08);
+:root{
+  --blue:#185FA5;--blue-dk:#0C447C;--blue-lt:#E6F1FB;
+  --green:#2d8a4e;--green-lt:#e6f4ec;
+  --amber:#b45309;--amber-lt:#fef3c7;
+  --red:#b91c1c;--red-lt:#fee2e2;
+  --purple:#6d28d9;--purple-lt:#ede9fe;
+  --teal:#0f766e;--teal-lt:#ccfbf1;
+  --gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;
+  --gray-300:#d1d5db;--gray-400:#9ca3af;--gray-500:#6b7280;
+  --gray-600:#4b5563;--gray-700:#374151;--gray-800:#1f2937;
+  --text:#111827;--text-m:#6b7280;--text-l:#9ca3af;
+  --bg:#f3f4f6;--sur:#ffffff;--bdr:#e5e7eb;
+  --r:8px;--rlg:12px;--sh:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
-.crm{display:flex;height:100vh}
-
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;height:100vh;overflow:hidden}
+/* Layout */
+.app{display:flex;height:100vh}
+.sidebar{width:224px;min-width:224px;background:var(--sur);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 /* Sidebar */
-.sidebar{width:220px;min-width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-.logo{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
-.logo-title{font-size:16px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px}
-.logo-title i{color:var(--blue);font-size:20px}
-.logo-sub{font-size:11px;color:var(--text-muted);margin-top:3px}
-.nav{padding:10px 8px;flex:1;overflow-y:auto}
-.nav-section{font-size:10px;font-weight:600;color:var(--text-light);text-transform:uppercase;letter-spacing:.8px;padding:10px 10px 4px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;cursor:pointer;font-size:13px;color:var(--text-muted);border-radius:var(--radius);transition:all .12s}
-.nav-item:hover{background:var(--gray-100);color:var(--text)}
-.nav-item.active{background:var(--blue-light);color:var(--blue);font-weight:500}
-.nav-item i{font-size:17px;width:18px;text-align:center}
-.sync-status{padding:14px 18px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted);display:flex;align-items:center;gap:6px}
-.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--gray-400)}
-.sync-dot.ok{background:#28a745}.sync-dot.err{background:#dc3545}.sync-dot.spin{background:var(--amber);animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-.user-bar{padding:12px 18px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
-.avatar{width:32px;height:32px;border-radius:50%;background:var(--blue-light);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--blue);flex-shrink:0}
-
-/* Main */
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;flex-shrink:0}
-.page-title{font-size:17px;font-weight:600;color:var(--text)}
-.topbar-right{display:flex;align-items:center;gap:10px}
+.logo{padding:18px 16px 14px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px}
+.logo-icon{width:34px;height:34px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0}
+.logo-text{font-size:15px;font-weight:700;color:var(--text)}
+.logo-sub{font-size:11px;color:var(--text-m)}
+.nav{flex:1;overflow-y:auto;padding:8px}
+.nav-sec{font-size:10px;font-weight:700;color:var(--text-l);text-transform:uppercase;letter-spacing:.8px;padding:12px 8px 4px}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:500;color:var(--text-m);transition:all .1s;margin-bottom:1px}
+.ni:hover{background:var(--gray-100);color:var(--text)}
+.ni.active{background:var(--blue-lt);color:var(--blue)}
+.ni i{font-size:17px;width:18px;text-align:center}
+.ni .count{margin-left:auto;font-size:11px;background:var(--gray-200);color:var(--gray-600);padding:1px 6px;border-radius:10px;font-weight:600}
+.ni.active .count{background:var(--blue);color:#fff}
+.sidebar-footer{border-top:1px solid var(--bdr);padding:12px 16px}
+.sync-row{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-m);margin-bottom:10px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--gray-300);flex-shrink:0}
+.dot.ok{background:#22c55e}.dot.err{background:#ef4444}.dot.spin{background:var(--amber);animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.user{display:flex;align-items:center;gap:9px}
+.av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+/* Topbar */
+.topbar{height:54px;background:var(--sur);border-bottom:1px solid var(--bdr);padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.page-title{font-size:17px;font-weight:700;color:var(--text)}
+.breadcrumb{font-size:13px;color:var(--text-m);display:flex;align-items:center;gap:6px}
+.breadcrumb span{cursor:pointer;color:var(--blue)}
+.topbar-right{display:flex;align-items:center;gap:8px}
+/* Content */
 .content{flex:1;overflow-y:auto;padding:24px}
-
 /* Buttons */
-.btn{padding:7px 16px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:500;transition:all .12s}
+.btn{padding:7px 16px;font-size:13px;border:1px solid var(--bdr);border-radius:var(--r);background:var(--sur);color:var(--text);cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:500;transition:all .1s;white-space:nowrap}
 .btn:hover{background:var(--gray-100)}
 .btn:active{transform:scale(.98)}
 .btn-primary{background:var(--blue);color:#fff;border-color:var(--blue)}
-.btn-primary:hover{background:var(--blue-dark);border-color:var(--blue-dark)}
-.btn-sm{padding:5px 12px;font-size:12px}
-.btn-danger{background:var(--red-light);color:var(--red);border-color:#f5c1c1}
-.btn-danger:hover{background:#f5c1c1}
-.btn-ghost{border-color:transparent;background:transparent}
+.btn-primary:hover{background:var(--blue-dk)}
+.btn-sm{padding:5px 11px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px}
+.btn-ghost{border-color:transparent;background:transparent;padding:6px 8px}
 .btn-ghost:hover{background:var(--gray-100)}
-
+.btn-danger{background:var(--red-lt);color:var(--red);border-color:#fca5a5}
 /* Metrics */
-.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:22px}
-.metric{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;box-shadow:var(--shadow)}
-.metric-label{font-size:12px;color:var(--text-muted);margin-bottom:6px;display:flex;align-items:center;gap:5px}
-.metric-value{font-size:26px;font-weight:700;color:var(--text);line-height:1}
-.metric-sub{font-size:11px;color:var(--text-muted);margin-top:5px}
-.metric-sub.up{color:#28a745}.metric-sub.down{color:#dc3545}
-
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px}
+.metric{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rlg);padding:16px 18px;box-shadow:var(--sh)}
+.metric-label{font-size:11px;font-weight:600;color:var(--text-m);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.metric-value{font-size:26px;font-weight:800;color:var(--text);line-height:1}
+.metric-sub{font-size:12px;color:var(--text-m);margin-top:5px}
+.up{color:#16a34a}.dn{color:var(--red)}
 /* Cards */
-.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;box-shadow:var(--shadow)}
-.card-title{font-size:14px;font-weight:600;color:var(--text);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
-
+.card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rlg);padding:18px 20px;box-shadow:var(--sh)}
+.card-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;justify-content:space-between}
 /* Tables */
-.tbl{width:100%;border-collapse:collapse;font-size:13px}
-.tbl th{padding:9px 12px;text-align:left;font-weight:600;font-size:11px;color:var(--text-muted);border-bottom:1px solid var(--border);background:var(--gray-50);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
-.tbl td{padding:10px 12px;border-bottom:1px solid var(--gray-100);color:var(--text);vertical-align:middle}
+.tbl-wrap{border:1px solid var(--bdr);border-radius:var(--rlg);overflow:hidden;box-shadow:var(--sh)}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;background:var(--sur)}
+.tbl th{padding:9px 14px;text-align:left;font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--bdr);background:var(--gray-50);white-space:nowrap}
+.tbl td{padding:11px 14px;border-bottom:1px solid var(--gray-100);color:var(--text);vertical-align:middle}
 .tbl tr:last-child td{border-bottom:none}
-.tbl tr:hover td{background:var(--gray-50)}
-.tbl-wrap{border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
-
+.tbl tr:hover td{background:var(--gray-50);cursor:pointer}
+.tbl .actions{display:flex;gap:4px;opacity:0;transition:opacity .1s}
+.tbl tr:hover .actions{opacity:1}
 /* Badges */
-.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap}
-.b-blue{background:var(--blue-light);color:var(--blue)}
-.b-green{background:var(--green-light);color:var(--green)}
-.b-amber{background:var(--amber-light);color:var(--amber)}
-.b-red{background:var(--red-light);color:var(--red)}
-.b-purple{background:var(--purple-light);color:var(--purple)}
-.b-teal{background:var(--teal-light);color:var(--teal)}
-.b-gray{background:var(--gray-100);color:var(--gray-700)}
-.b-coral{background:var(--coral-light);color:var(--coral)}
-
-/* Toolbar */
+.b{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:600;white-space:nowrap;gap:4px}
+.b-blue{background:var(--blue-lt);color:var(--blue)}
+.b-green{background:var(--green-lt);color:var(--green)}
+.b-amber{background:var(--amber-lt);color:var(--amber)}
+.b-red{background:var(--red-lt);color:var(--red)}
+.b-purple{background:var(--purple-lt);color:var(--purple)}
+.b-teal{background:var(--teal-lt);color:var(--teal)}
+.b-gray{background:var(--gray-100);color:var(--gray-600)}
+/* Search */
 .toolbar{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap}
-.search-wrap{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:7px 12px;flex:1;min-width:200px}
-.search-wrap input{border:none;outline:none;background:transparent;font-size:13px;color:var(--text);flex:1}
-.search-wrap i{color:var(--text-light);font-size:16px}
-
+.search{display:flex;align-items:center;gap:8px;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);padding:7px 12px;flex:1;min-width:180px;box-shadow:var(--sh)}
+.search input{border:none;outline:none;background:transparent;font-size:13px;color:var(--text);flex:1;min-width:0}
+.search i{color:var(--text-l);font-size:16px;flex-shrink:0}
 /* Pipeline */
-.pipeline-wrap{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:start}
-.p-col-head{font-size:12px;font-weight:600;color:var(--text-muted);padding:8px 12px;border-radius:var(--radius);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;text-transform:uppercase;letter-spacing:.4px}
-.p-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:12px;cursor:pointer;margin-bottom:8px;box-shadow:var(--shadow);transition:box-shadow .12s}
-.p-card:hover{box-shadow:0 4px 12px rgba(0,0,0,0.1)}
-.p-card-model{font-weight:600;font-size:13px;color:var(--text)}
-.p-card-co{font-size:12px;color:var(--text-muted);margin:3px 0}
-.p-card-amt{font-size:14px;font-weight:700;color:var(--text);margin-top:8px}
-.p-card-foot{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text-light)}
-
-/* Tasks */
-.task-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:13px 16px;display:flex;gap:12px;align-items:flex-start;box-shadow:var(--shadow)}
-.task-cb{width:20px;height:20px;border-radius:5px;border:2px solid var(--border);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all .12s}
-.task-cb.done{background:var(--blue);border-color:var(--blue);color:#fff}
-
-/* Fleet share bar */
-.share-bar{height:24px;border-radius:var(--radius);overflow:hidden;display:flex;margin:8px 0}
-.share-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff}
+.pipeline{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;align-items:flex-start}
+.p-col{min-width:200px;width:200px;flex-shrink:0}
+.p-head{font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.4px;padding:8px 12px;border-radius:var(--r);margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.p-head .cnt{font-weight:600;font-size:12px}
+.p-card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rlg);padding:13px 14px;margin-bottom:8px;cursor:pointer;box-shadow:var(--sh);transition:box-shadow .1s;border-left:3px solid transparent}
+.p-card:hover{box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.p-card-co{font-weight:700;font-size:13px;color:var(--text)}
+.p-card-model{font-size:12px;color:var(--text-m);margin:3px 0}
+.p-card-amt{font-size:15px;font-weight:800;color:var(--text);margin-top:8px}
+.p-card-foot{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.p-card-agent{font-size:11px;color:var(--text-l)}
+.p-prob{font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px}
+/* Company detail */
+.detail-grid{display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start}
+.detail-sidebar .card{margin-bottom:14px}
+.info-row{display:flex;align-items:flex-start;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);font-size:13px}
+.info-row:last-child{border-bottom:none}
+.info-label{color:var(--text-m);font-weight:500;flex-shrink:0;margin-right:12px}
+.info-val{color:var(--text);text-align:right;font-weight:500}
+.tabs{display:flex;gap:2px;margin-bottom:16px;background:var(--gray-100);padding:3px;border-radius:var(--r);width:fit-content}
+.tab{padding:6px 16px;font-size:13px;cursor:pointer;border-radius:6px;color:var(--text-m);font-weight:500}
+.tab.active{background:var(--sur);color:var(--text);box-shadow:var(--sh)}
+/* Activity feed */
+.act-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--gray-100)}
+.act-item:last-child{border-bottom:none}
+.act-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;margin-top:2px}
+.act-text{font-size:13px;color:var(--text)}
+.act-meta{font-size:11px;color:var(--text-m);margin-top:2px}
+/* Fleet bar */
+.fleet-bar{height:22px;border-radius:var(--r);overflow:hidden;display:flex}
+.fleet-seg{height:100%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;transition:width .3s}
 .brand-dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex-shrink:0}
-
-/* Fleet tabs */
-.tab-bar{display:flex;gap:2px;margin-bottom:18px;background:var(--gray-100);padding:4px;border-radius:var(--radius-lg);width:fit-content}
-.tab{padding:6px 18px;font-size:13px;cursor:pointer;border-radius:var(--radius);color:var(--text-muted);font-weight:500;transition:all .12s}
-.tab.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow)}
-
+/* Tasks */
+.task-row{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rlg);padding:12px 16px;display:flex;gap:12px;align-items:flex-start;box-shadow:var(--sh);margin-bottom:8px}
+.cb{width:19px;height:19px;border-radius:5px;border:2px solid var(--gray-300);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:1px;transition:all .1s}
+.cb.done{background:var(--blue);border-color:var(--blue);color:#fff}
 /* Reports */
-.bar-grid{display:flex;flex-direction:column;gap:7px;margin-top:6px}
-.bar-row{display:flex;align-items:center;gap:10px}
-.bar-label{font-size:12px;color:var(--text-muted);width:96px;flex-shrink:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bar-row{display:flex;align-items:center;gap:10px;margin-bottom:7px}
+.bar-label{font-size:12px;color:var(--text-m);width:100px;flex-shrink:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .bar-track{flex:1;height:20px;background:var(--gray-100);border-radius:4px;overflow:hidden}
 .bar-fill{height:100%;border-radius:4px;transition:width .4s}
-.bar-val{font-size:12px;font-weight:600;color:var(--text);width:64px;flex-shrink:0}
-
+.bar-val{font-size:12px;font-weight:700;color:var(--text);width:70px;flex-shrink:0}
 /* Modal */
-.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:200;align-items:flex-start;justify-content:center;padding-top:60px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:300;align-items:flex-start;justify-content:center;padding-top:60px}
 .overlay.open{display:flex}
-.modal{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:24px;width:500px;max-width:96vw;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)}
-.modal-title{font-size:16px;font-weight:600;color:var(--text);margin-bottom:18px;display:flex;justify-content:space-between;align-items:center}
-.modal-close{cursor:pointer;color:var(--text-muted);font-size:20px;line-height:1}
+.modal{background:var(--sur);border-radius:var(--rlg);border:1px solid var(--bdr);padding:24px;width:520px;max-width:96vw;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
+.modal-close{cursor:pointer;color:var(--text-m);font-size:20px;padding:2px}
 .modal-close:hover{color:var(--text)}
-.form-group{margin-bottom:14px}
-.form-label{display:block;font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
-.form-control{width:100%;padding:9px 12px;font-size:13px;border:1px solid var(--border);border-radius:var(--radius);background:var(--surface);color:var(--text);outline:none;transition:border-color .12s}
-.form-control:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,.12)}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
-
-/* Setup screen */
+.fg{margin-bottom:14px}
+.fl{display:block;font-size:11px;font-weight:700;color:var(--text-m);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.fc{width:100%;padding:9px 12px;font-size:13px;border:1px solid var(--bdr);border-radius:var(--r);background:var(--sur);color:var(--text);outline:none;transition:border-color .1s}
+.fc:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,.1)}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;padding-top:16px;border-top:1px solid var(--bdr)}
+/* Setup */
 .setup{display:flex;align-items:center;justify-content:center;height:100vh;background:var(--bg)}
-.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:36px;width:540px;box-shadow:0 8px 32px rgba(0,0,0,.08)}
-.setup-title{font-size:22px;font-weight:700;color:var(--text);margin-bottom:8px}
-.setup-sub{font-size:14px;color:var(--text-muted);margin-bottom:24px;line-height:1.6}
-.step{display:flex;gap:14px;margin-bottom:18px;align-items:flex-start}
-.step-num{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
-.step-text{font-size:13px;color:var(--text);line-height:1.6}
-.step-text code{background:var(--gray-100);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:12px}
-.step-text a{color:var(--blue)}
-
-/* Loading */
-.loading{display:flex;align-items:center;justify-content:center;height:200px;color:var(--text-muted);gap:10px;font-size:14px}
-.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* Responsive */
-@media(max-width:900px){
-  .sidebar{width:180px;min-width:180px}
-  .form-row{grid-template-columns:1fr}
-  .pipeline-wrap{grid-template-columns:repeat(3,1fr)}
-}
+.setup-card{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rlg);padding:40px;width:560px;box-shadow:0 8px 40px rgba(0,0,0,.08)}
+.step{display:flex;gap:14px;margin-bottom:16px}
+.step-n{width:26px;height:26px;border-radius:50%;background:var(--blue);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+.step-t{font-size:13px;color:var(--text);line-height:1.7}
+.step-t code{background:var(--gray-100);padding:1px 6px;border-radius:4px;font-family:monospace;font-size:12px}
+.step-t a{color:var(--blue)}
+/* Empty states */
+.empty{text-align:center;padding:48px 20px;color:var(--text-m)}
+.empty i{font-size:40px;color:var(--gray-300);display:block;margin-bottom:12px}
+.empty-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:6px}
+/* Avatar colors */
+.av-0{background:#dbeafe;color:#1d4ed8}.av-1{background:#dcfce7;color:#15803d}
+.av-2{background:#fef9c3;color:#a16207}.av-3{background:#ede9fe;color:#7c3aed}
+.av-4{background:#fee2e2;color:#b91c1c}.av-5{background:#ccfbf1;color:#0f766e}
+.av-6{background:#ffedd5;color:#c2410c}.av-7{background:#fce7f3;color:#be185d}
+.av-8{background:#f0fdf4;color:#166534}.av-9{background:#f0f9ff;color:#0369a1}
+/* Divider */
+.divider{height:1px;background:var(--bdr);margin:14px 0}
+/* Stage indicator strip */
+.stage-strip{display:flex;gap:0;margin-bottom:18px;border-radius:var(--r);overflow:hidden}
+.stage-step{flex:1;padding:6px 8px;text-align:center;font-size:11px;font-weight:600;color:var(--text-m);background:var(--gray-100);cursor:pointer;transition:all .1s;border-right:1px solid var(--bdr)}
+.stage-step:last-child{border-right:none}
+.stage-step.active{background:var(--blue);color:#fff}
+.stage-step.done{background:var(--green-lt);color:var(--green)}
 </style>
 </head>
 <body>
 
-<!-- SETUP SCREEN -->
-<div class="setup" id="setup-screen">
+<!-- SETUP -->
+<div class="setup" id="setup">
   <div class="setup-card">
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-      <i class="ti ti-tractor" style="font-size:28px;color:var(--blue)"></i>
-      <div class="setup-title" style="margin:0">Wayland CRM Setup</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+      <div style="width:40px;height:40px;background:var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px"><i class="ti ti-tractor"></i></div>
+      <div style="font-size:22px;font-weight:800;color:var(--text)">Wayland CRM</div>
     </div>
-    <div class="setup-sub">Подключи Google Sheets как базу данных. Данные будут доступны всей команде и сохранятся между сессиями.</div>
-
-    <div class="step"><div class="step-num">1</div><div class="step-text">Открой <a href="https://script.google.com" target="_blank">script.google.com</a> → <strong>New project</strong></div></div>
-    <div class="step"><div class="step-num">2</div><div class="step-text">Вставь содержимое файла <code>Code.gs</code> (из архива) вместо кода по умолчанию. Сохрани.</div></div>
-    <div class="step"><div class="step-num">3</div><div class="step-text">Нажми <strong>Deploy → New deployment</strong>. Тип: <strong>Web app</strong>. Execute as: <strong>Me</strong>. Who has access: <strong>Anyone</strong>. Нажми Deploy, дай разрешения.</div></div>
-    <div class="step"><div class="step-num">4</div><div class="step-text">Скопируй <strong>Web app URL</strong> и вставь ниже.</div></div>
-
-    <div class="form-group" style="margin-top:8px">
-      <label class="form-label">Web App URL</label>
-      <input class="form-control" id="setup-url" placeholder="https://script.google.com/macros/s/.../exec">
-    </div>
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-primary" style="flex:1" onclick="connectSheets()"><i class="ti ti-plug"></i> Подключить и инициализировать</button>
-    </div>
-    <div id="setup-error" style="margin-top:12px;font-size:12px;color:var(--red);display:none"></div>
+    <div style="font-size:14px;color:var(--text-m);margin-bottom:28px">Подключи Google Sheets как базу данных для всей команды.</div>
+    <div class="step"><div class="step-n">1</div><div class="step-t">Открой Google Sheets → создай новую таблицу → нажми <strong>Расширения → Apps Script</strong></div></div>
+    <div class="step"><div class="step-n">2</div><div class="step-t">Вставь содержимое <code>Code.gs</code> из архива → сохрани (Ctrl+S)</div></div>
+    <div class="step"><div class="step-n">3</div><div class="step-t"><strong>Развернуть → Новое развёртывание</strong> → Тип: <strong>Веб-приложение</strong> → Запускать как: <strong>Я</strong> → Доступ: <strong>Все</strong> → Развернуть → дай разрешения</div></div>
+    <div class="step"><div class="step-n">4</div><div class="step-t">Скопируй <strong>URL веб-приложения</strong> и вставь ниже</div></div>
+    <div class="fg" style="margin-top:8px"><label class="fl">Web App URL</label><input class="fc" id="su-url" placeholder="https://script.google.com/macros/s/.../exec"></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="connect()"><i class="ti ti-plug"></i> Подключить и инициализировать</button>
+    <div id="su-err" style="margin-top:10px;font-size:12px;color:var(--red);display:none"></div>
   </div>
 </div>
 
-<!-- MAIN CRM -->
-<div class="crm" id="crm-app" style="display:none">
+<!-- APP -->
+<div class="app" id="app" style="display:none">
   <div class="sidebar">
     <div class="logo">
-      <div class="logo-title"><i class="ti ti-tractor"></i>Wayland CRM</div>
-      <div class="logo-sub">Armenia</div>
+      <div class="logo-icon"><i class="ti ti-tractor"></i></div>
+      <div><div class="logo-text">Wayland CRM</div><div class="logo-sub">Armenia</div></div>
     </div>
     <nav class="nav">
-      <div class="nav-section">Главное</div>
-      <div class="nav-item active" onclick="nav('dashboard',this)"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
-      <div class="nav-item" onclick="nav('pipeline',this)"><i class="ti ti-versions"></i>Pipeline</div>
-      <div class="nav-section">Клиенты</div>
-      <div class="nav-item" onclick="nav('contacts',this)"><i class="ti ti-building"></i>Контакты</div>
-      <div class="nav-item" onclick="nav('fleet',this)"><i class="ti ti-tractor"></i>Парк техники</div>
-      <div class="nav-section">Работа</div>
-      <div class="nav-item" onclick="nav('tasks',this)"><i class="ti ti-checkbox"></i>Задачи</div>
-      <div class="nav-item" onclick="nav('reports',this)"><i class="ti ti-chart-bar"></i>Отчёты</div>
+      <div class="nav-sec">Главное</div>
+      <div class="ni active" onclick="go('dashboard',this)"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
+      <div class="ni" onclick="go('pipeline',this)"><i class="ti ti-versions"></i>Pipeline<span class="count" id="nc-pipeline">0</span></div>
+      <div class="nav-sec">Клиенты</div>
+      <div class="ni" onclick="go('companies',this)"><i class="ti ti-building"></i>Компании<span class="count" id="nc-companies">0</span></div>
+      <div class="ni" onclick="go('contacts',this)"><i class="ti ti-users"></i>Контакты<span class="count" id="nc-contacts">0</span></div>
+      <div class="ni" onclick="go('fleet',this)"><i class="ti ti-tractor"></i>Парк техники<span class="count" id="nc-fleet">0</span></div>
+      <div class="nav-sec">Работа</div>
+      <div class="ni" onclick="go('tasks',this)"><i class="ti ti-checkbox"></i>Задачи<span class="count" id="nc-tasks">0</span></div>
+      <div class="ni" onclick="go('reports',this)"><i class="ti ti-chart-bar"></i>Отчёты</div>
     </nav>
-    <div class="sync-status"><div class="sync-dot" id="sync-dot"></div><span id="sync-text">Не подключено</span></div>
-    <div class="user-bar"><div class="avatar" id="user-avatar">МК</div><div><div style="font-size:13px;font-weight:600;color:var(--text)">М. Калашников</div><div style="font-size:11px;color:var(--text-muted)">Manager</div></div></div>
+    <div class="sidebar-footer">
+      <div class="sync-row"><div class="dot" id="dot"></div><span id="sync-txt">Не подключено</span></div>
+      <div class="user"><div class="av av-0" id="user-av">МК</div><div><div style="font-size:13px;font-weight:600">М. Калашников</div><div style="font-size:11px;color:var(--text-m)">Sales Manager</div></div></div>
+    </div>
   </div>
-
   <div class="main">
     <div class="topbar">
-      <div class="page-title" id="page-title">Dashboard</div>
+      <div class="topbar-left">
+        <div class="page-title" id="ptitle">Dashboard</div>
+        <div class="breadcrumb" id="breadcrumb"></div>
+      </div>
       <div class="topbar-right" id="topbar-right"></div>
     </div>
-    <div class="content" id="content"></div>
+    <div class="content" id="content"><div style="text-align:center;padding:60px;color:var(--text-m)">Загрузка...</div></div>
   </div>
 </div>
 
 <!-- MODAL -->
-<div class="overlay" id="overlay" onclick="overlayClick(event)">
+<div class="overlay" id="overlay" onclick="overlayBg(event)">
   <div class="modal">
-    <div class="modal-title"><span id="modal-title"></span><span class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></span></div>
-    <div id="modal-body"></div>
-    <div class="modal-footer" id="modal-footer">
-      <button class="btn" onclick="closeModal()">Отмена</button>
-      <button class="btn btn-primary" onclick="saveModal()">Сохранить</button>
+    <div class="modal-title"><span id="mtitle"></span><span class="modal-close" onclick="closeM()"><i class="ti ti-x"></i></span></div>
+    <div id="mbody"></div>
+    <div class="modal-footer" id="mfoot">
+      <button class="btn" onclick="closeM()">Отмена</button>
+      <button class="btn btn-primary" id="msave" onclick="saveM()">Сохранить</button>
     </div>
   </div>
 </div>
 
 <script>
-// ─── Config ───────────────────────────────────────────────────────────────────
-const MODELS = ['ZX135US-6','ZX210LC-6','ZX330LC-6','ZX470LC-6','ZX890LCH-6'];
-const STAGES = ['Lead','Qualified','Proposal','Negotiation','Won'];
-const AGENTS = ['А. Мартиросян','Г. Петросян','Н. Арутюнян','С. Саргсян','В. Акопян','Л. Мкртчян','К. Давтян','А. Карапетян','Р. Овсепян','Т. Григорян'];
-const INDUSTRIES = ['Mining','Construction','Road building','Quarrying','Infrastructure'];
-const COMPETITOR_BRANDS = ['Caterpillar','Komatsu','Volvo','Liebherr','Doosan','John Deere','Hyundai','Sany','XCMG'];
-const EQ_TYPES = ['Excavator','Wheel loader','Bulldozer','Drill rig','Dump truck','Compressor','Crane','Motor grader'];
-const HITACHI_MODELS = ['ZX135US-6','ZX175LC-6','ZX210LC-6','ZX330LC-6','ZX350LCN-6','ZX470LC-6','ZX490LCH-6','ZX890LCH-6'];
-const BRAND_COLORS = {Hitachi:'#185FA5',Caterpillar:'#EF9F27',Komatsu:'#E24B4A',Volvo:'#1D9E75',Liebherr:'#7F77DD',Doosan:'#D4537E','John Deere':'#639922',Hyundai:'#D85A30',Sany:'#888780',XCMG:'#534AB7'};
-const STAGE_COLORS = {Lead:'#F1F3F5',Qualified:'#EEEDFE',Proposal:'#FAEEDA',Negotiation:'#E6F1FB',Won:'#EAF3DE'};
-const AV_COLORS = ['#185FA5','#3B6D11','#854F0B','#534AB7','#A32D2D','#0F6E56','#993C1D','#993556','#5F5E5A','#185FA5'];
+// ─── Constants ─────────────────────────────────────────────────────────────
+const STAGES=['Lead','Qualified','Proposal','Negotiation','Won','Lost'];
+const STAGE_P={Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0};
+const STAGE_COLOR={Lead:'#9ca3af',Qualified:'#8b5cf6',Proposal:'#f59e0b',Negotiation:'#3b82f6',Won:'#22c55e',Lost:'#ef4444'};
+const AGENTS=['А. Мартиросян','Г. Петросян','Н. Арутюнян','С. Саргсян','В. Акопян','Л. Мкртчян','К. Давтян','А. Карапетян','Р. Овсепян','Т. Григорян'];
+const INDUSTRIES=['Горнодобывающая','Строительство','Дорожное строительство','Карьеры','Инфраструктура','Промышленность','Другое'];
+const EQ_TYPES=['Экскаватор','Колёсный погрузчик','Бульдозер','Буровая установка','Самосвал','Компрессор','Кран','Грейдер'];
+const BRANDS=['Hitachi','Caterpillar','Komatsu','Volvo','Liebherr','Doosan','John Deere','Hyundai','Sany','XCMG','Другое'];
+const BRAND_C={Hitachi:'#185FA5',Caterpillar:'#EF9F27',Komatsu:'#E24B4A',Volvo:'#1D9E75',Liebherr:'#7F77DD',Doosan:'#D4537E','John Deere':'#639922',Hyundai:'#D85A30',Sany:'#888780',XCMG:'#534AB7'};
+const HITACHI_M=['ZX85USB-6','ZX130-6','ZX135US-6','ZX175LC-6','ZX210LC-6','ZX250LC-6','ZX330LC-6','ZX350LCN-6','ZX470LC-6','ZX490LCH-6','ZX690LCH-6','ZX890LCH-6'];
+const TASK_TYPES=['Звонок','Встреча','Email','КП','Демонстрация','Документы','Другое'];
+const CO_STATUS=['Активный','Потенциальный','Переговоры','Партнёр','Неактивный'];
+const CURRENCIES=['USD','EUR','AMD','RUB'];
 
-// ─── State ────────────────────────────────────────────────────────────────────
-let API_URL = '';
-let db = { deals:[], contacts:[], fleet:[], tasks:[], companies:[] };
-let currentSection = 'dashboard';
-let modalType = '';
-let editId = null;
-let taskFilter = 'all';
-let fleetTab = 'overview';
-let compChart = null;
+// ─── State ─────────────────────────────────────────────────────────────────
+let API='';
+let db={companies:[],contacts:[],deals:[],fleet:[],tasks:[],activities:[]};
+let cur={section:'dashboard',company:null,deal:null};
+let mtype='',eid=null;
+let charts={};
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const $ = id => document.getElementById(id);
-const fmt = n => '$' + Number(n).toLocaleString();
-const initials = s => String(s).split(' ').map(p=>p[0]).join('').slice(0,2).toUpperCase();
-const uid = () => Date.now().toString() + Math.random().toString(36).slice(2,6);
-const condBadge = c => ({Excellent:'b-green',Good:'b-blue',Fair:'b-amber',Poor:'b-red'}[c]||'b-gray');
-const stageBadge = s => ({Lead:'b-gray',Qualified:'b-purple',Proposal:'b-amber',Negotiation:'b-blue',Won:'b-green'}[s]||'b-gray');
-const statusBadge = s => ({Active:'b-green',Prospect:'b-blue',Negotiating:'b-amber',Inactive:'b-red'}[s]||'b-gray');
-const avStyle = i => `background:${BRAND_COLORS.Hitachi}22;color:${AV_COLORS[i%10]}`;
-const coList = () => [...new Set([
-  ...db.companies.map(c=>c.name).filter(Boolean),
-  ...db.contacts.map(c=>c.company).filter(Boolean),
-  ...db.fleet.map(f=>f.company).filter(Boolean),
-])].sort();
+// ─── Helpers ───────────────────────────────────────────────────────────────
+const $=id=>document.getElementById(id);
+const fmt=n=>Number(n||0).toLocaleString();
+const fmtUSD=n=>'$'+fmt(n);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const ini=s=>String(s||'').split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase()||'?';
+const avC=i=>'av-'+(i%10);
+const today=()=>new Date().toISOString().slice(0,10);
+const coName=id=>{const c=db.companies.find(x=>x.id==id);return c?c.name:id||''};
+const stageBadge=s=>({Lead:'b-gray',Qualified:'b-purple',Proposal:'b-amber',Negotiation:'b-blue',Won:'b-green',Lost:'b-red'}[s]||'b-gray');
+const condBadge=c=>({Excellent:'b-green',Good:'b-blue',Fair:'b-amber',Poor:'b-red'}[c]||'b-gray');
+const statusBadge=s=>({Активный:'b-green',Потенциальный:'b-blue',Переговоры:'b-amber',Партнёр:'b-teal',Неактивный:'b-gray'}[s]||'b-gray');
+const coOpts=()=>db.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+const coDatalist=()=>db.companies.map(c=>`<option>${c.name}</option>`).join('');
 
-// ─── API ──────────────────────────────────────────────────────────────────────
-async function api(params) {
-  setSyncStatus('spin','Синхронизация...');
-  try {
-    const payload = encodeURIComponent(JSON.stringify(params));
-    const url = API_URL + '?payload=' + payload;
-    const res = await fetch(url, {method:'GET', redirect:'follow'});
-    const text = await res.text();
-    const data = JSON.parse(text);
-    if (!data.ok) throw new Error(data.error);
-    setSyncStatus('ok', 'Synced ' + new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}));
-    return data.data;
-  } catch(e) {
-    setSyncStatus('err', 'Ошибка: ' + e.message.slice(0,50));
-    throw e;
-  }
+// ─── API ───────────────────────────────────────────────────────────────────
+function apiCall(params){
+  setSS('spin','Синхронизация...');
+  return new Promise((resolve,reject)=>{
+    const cb='_cb'+Date.now();
+    const url=API+'?payload='+encodeURIComponent(JSON.stringify(params))+'&callback='+cb;
+    const s=document.createElement('script');
+    const t=setTimeout(()=>{cleanup();setSS('err','Таймаут');reject(new Error('timeout'));},20000);
+    window[cb]=data=>{cleanup();if(!data.ok){setSS('err',data.error||'Ошибка');reject(new Error(data.error));return;}setSS('ok','Synced '+new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}));resolve(data.data);};
+    function cleanup(){clearTimeout(t);delete window[cb];s.parentNode&&s.parentNode.removeChild(s);}
+    s.onerror=()=>{cleanup();setSS('err','Ошибка сети');reject(new Error('net'));};
+    s.src=url;document.head.appendChild(s);
+  });
+}
+async function load(){
+  const sheets=['companies','contacts','deals','fleet','tasks','activities'];
+  const res=await Promise.all(sheets.map(s=>apiCall({action:'read',sheet:s})));
+  sheets.forEach((s,i)=>{db[s]=res[i]||[];});
+  db.deals.forEach(d=>{d.amount=Number(d.amount)||0;d.days=Number(d.days)||0;});
+  db.fleet.forEach(f=>{f.year=Number(f.year)||0;});
+  db.tasks.forEach(t=>{t.done=String(t.done)==='true';});
+  updateCounts();
+}
+async function persist(sheet,row){const r=await apiCall({action:'upsert',sheet,row});return r;}
+async function remove(sheet,id){await apiCall({action:'delete',sheet,id});}
+
+function setSS(state,txt){$('dot').className='dot '+state;$('sync-txt').textContent=txt;}
+function updateCounts(){
+  $('nc-pipeline').textContent=db.deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').length;
+  $('nc-companies').textContent=db.companies.length;
+  $('nc-contacts').textContent=db.contacts.length;
+  $('nc-fleet').textContent=db.fleet.length;
+  $('nc-tasks').textContent=db.tasks.filter(t=>!t.done).length;
 }
 
-async function loadAll() {
-  const [deals, contacts, fleet, tasks, companies] = await Promise.all([
-    api({action:'read', sheet:'deals'}),
-    api({action:'read', sheet:'contacts'}),
-    api({action:'read', sheet:'fleet'}),
-    api({action:'read', sheet:'tasks'}),
-    api({action:'read', sheet:'companies'}),
-  ]);
-  db.deals     = deals     || [];
-  db.contacts  = contacts  || [];
-  db.fleet     = fleet     || [];
-  db.tasks     = tasks     || [];
-  db.companies = companies || [];
-  db.deals.forEach(d => { d.amount = Number(d.amount)||0; d.days = Number(d.days)||0; });
-  db.fleet.forEach(f => { f.year = Number(f.year)||0; });
+// ─── Setup ─────────────────────────────────────────────────────────────────
+async function connect(){
+  const url=$('su-url').value.trim();
+  if(!url.includes('script.google.com')){showErr('Вставь корректный URL от Google Apps Script');return;}
+  API=url;
+  try{
+    await apiCall({action:'init'});
+    localStorage.setItem('wcrm_url',url);
+    await load();
+    $('setup').style.display='none';
+    $('app').style.display='flex';
+    render('dashboard');
+  }catch(e){showErr('Не удалось подключиться. Проверь URL и права доступа (Anyone).');}
 }
+function showErr(m){const e=$('su-err');e.textContent=m;e.style.display='block';}
 
-async function save(sheet, row) {
-  const saved = await api({action:'upsert', sheet, row});
-  return saved;
+// ─── Navigation ────────────────────────────────────────────────────────────
+function go(sec,el){
+  cur.section=sec;cur.company=null;cur.deal=null;
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  if(el)el.classList.add('active');
+  render(sec);
 }
-
-async function del(sheet, id) {
-  await api({action:'delete', sheet, id});
+function render(sec){
+  const tr=$('topbar-right');tr.innerHTML='';
+  $('breadcrumb').innerHTML='';
+  const titles={dashboard:'Dashboard',pipeline:'Pipeline',companies:'Компании',contacts:'Контакты',fleet:'Парк техники',tasks:'Задачи',reports:'Отчёты'};
+  $('ptitle').textContent=titles[sec]||sec;
+  if(sec==='pipeline')tr.innerHTML=mkBtn('deal','Добавить сделку');
+  if(sec==='companies')tr.innerHTML=mkBtn('company','Добавить компанию');
+  if(sec==='contacts')tr.innerHTML=mkBtn('contact','Добавить контакт');
+  if(sec==='fleet')tr.innerHTML=mkBtn('fleet','Добавить технику');
+  if(sec==='tasks')tr.innerHTML=mkBtn('task','Добавить задачу');
+  const fns={dashboard:renderDashboard,pipeline:renderPipeline,companies:renderCompanies,contacts:renderContacts,fleet:renderFleet,tasks:renderTasks,reports:renderReports};
+  if(fns[sec])fns[sec]();
 }
+function mkBtn(type,label){return`<button class="btn btn-primary" onclick="openM('${type}')"><i class="ti ti-plus"></i>${label}</button>`;}
 
-function setSyncStatus(state, text) {
-  const dot = $('sync-dot');
-  dot.className = 'sync-dot ' + state;
-  $('sync-text').textContent = text;
-}
+// ─── Dashboard ─────────────────────────────────────────────────────────────
+function renderDashboard(){
+  const active=db.deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost');
+  const won=db.deals.filter(d=>d.stage==='Won');
+  const pipeVal=active.reduce((s,d)=>s+d.amount,0);
+  const wonVal=won.reduce((s,d)=>s+d.amount,0);
+  const openTasks=db.tasks.filter(t=>!t.done);
+  const hitachi=db.fleet.filter(f=>f.brand==='Hitachi').length;
+  const fleetTotal=db.fleet.length;
+  const replOpp=db.fleet.filter(u=>u.brand!=='Hitachi'&&(u.condition==='Poor'||u.condition==='Fair')).length;
 
-// ─── Setup ────────────────────────────────────────────────────────────────────
-async function connectSheets() {
-  const url = $('setup-url').value.trim();
-  if (!url.includes('script.google.com')) {
-    showSetupError('Вставь корректный URL от Google Apps Script');
-    return;
-  }
-  API_URL = url;
-  try {
-    await api({action:'init'});
-    localStorage.setItem('wayland_crm_url', url);
-    await loadAll();
-    $('setup-screen').style.display = 'none';
-    $('crm-app').style.display = 'flex';
-    renderSection('dashboard');
-  } catch(e) {
-    showSetupError('Не удалось подключиться. Проверь URL и права доступа Apps Script.');
-  }
-}
-
-function showSetupError(msg) {
-  const el = $('setup-error');
-  el.textContent = msg;
-  el.style.display = 'block';
-}
-
-// ─── Navigation ───────────────────────────────────────────────────────────────
-function nav(section, el) {
-  currentSection = section;
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  el.classList.add('active');
-  const titles = {dashboard:'Dashboard',pipeline:'Pipeline',contacts:'Контакты',fleet:'Парк техники',tasks:'Задачи',reports:'Отчёты'};
-  $('page-title').textContent = titles[section] || section;
-  renderSection(section);
-}
-
-function renderSection(s) {
-  const tr = $('topbar-right');
-  tr.innerHTML = '';
-  if (s === 'pipeline') tr.innerHTML = '<button class="btn btn-primary" onclick="openModal(\'deal\')"><i class="ti ti-plus"></i> Добавить сделку</button>';
-  if (s === 'fleet')    tr.innerHTML = '<button class="btn btn-primary" onclick="openModal(\'fleet\')"><i class="ti ti-plus"></i> Добавить технику</button>';
-  if (s === 'contacts') tr.innerHTML = '<button class="btn btn-primary" onclick="openModal(\'contact\')"><i class="ti ti-plus"></i> Добавить контакт</button>';
-  if (s === 'tasks')    tr.innerHTML = '<button class="btn btn-primary" onclick="openModal(\'task\')"><i class="ti ti-plus"></i> Добавить задачу</button>';
-
-  const fns = {dashboard:renderDashboard,pipeline:renderPipeline,contacts:renderContacts,fleet:renderFleet,tasks:renderTasks,reports:renderReports};
-  if (fns[s]) fns[s]();
-}
-
-// ─── Dashboard ────────────────────────────────────────────────────────────────
-function renderDashboard() {
-  const activeDeals = db.deals.filter(d => d.stage !== 'Won');
-  const pipeVal = activeDeals.reduce((s,d) => s+d.amount, 0);
-  const wonAmt = db.deals.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0);
-  const hitachi = db.fleet.filter(f=>f.brand==='Hitachi').length;
-  const total = db.fleet.length;
-  const replOpp = db.fleet.filter(u=>u.brand!=='Hitachi'&&(u.condition==='Poor'||u.condition==='Fair')).length;
-
-  $('content').innerHTML = `
+  $('content').innerHTML=`
   <div class="metrics">
-    <div class="metric"><div class="metric-label"><i class="ti ti-versions" style="font-size:13px"></i>Активных сделок</div><div class="metric-value">${activeDeals.length}</div><div class="metric-sub">pipeline: ${fmt(pipeVal)}</div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-trophy" style="font-size:13px"></i>Закрыто (Won)</div><div class="metric-value">${fmt(wonAmt)}</div><div class="metric-sub">${db.deals.filter(d=>d.stage==='Won').length} сделок</div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-tractor" style="font-size:13px"></i>Единиц техники</div><div class="metric-value">${total}</div><div class="metric-sub">у ${[...new Set(db.fleet.map(f=>f.company))].length} компаний</div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-chart-pie" style="font-size:13px"></i>Доля Hitachi</div><div class="metric-value" style="color:var(--blue)">${total?Math.round(hitachi/total*100):0}%</div><div class="metric-sub up">${replOpp} замен конкурентов</div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-checkbox" style="font-size:13px"></i>Задач открыто</div><div class="metric-value">${db.tasks.filter(t=>String(t.done)!=='true').length}</div><div class="metric-sub">${db.tasks.filter(t=>t.priority==='high'&&String(t.done)!=='true').length} срочных</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-building" style="font-size:13px"></i>Компаний</div><div class="metric-value">${db.companies.length}</div><div class="metric-sub">${db.contacts.length} контактов</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-versions" style="font-size:13px"></i>Активных сделок</div><div class="metric-value">${active.length}</div><div class="metric-sub">Pipeline: ${fmtUSD(pipeVal)}</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-trophy" style="font-size:13px"></i>Закрыто (Won)</div><div class="metric-value">${fmtUSD(wonVal)}</div><div class="metric-sub up">${won.length} сделок</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-tractor" style="font-size:13px"></i>Парк техники</div><div class="metric-value">${fleetTotal}</div><div class="metric-sub">${fleetTotal?Math.round(hitachi/fleetTotal*100):0}% Hitachi · <span class="dn">${replOpp} под замену</span></div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-checkbox" style="font-size:13px"></i>Задач открыто</div><div class="metric-value">${openTasks.length}</div><div class="metric-sub dn">${openTasks.filter(t=>t.priority==='high').length} срочных</div></div>
   </div>
-  <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:18px">
+  <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:18px;margin-bottom:18px">
     <div class="card">
-      <div class="card-title">Активные сделки</div>
-      ${activeDeals.slice(0,6).map(d=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--gray-100)">
-          <div><div style="font-weight:600;font-size:13px">${d.model}</div><div style="font-size:12px;color:var(--text-muted)">${d.company}</div></div>
-          <div style="text-align:right"><div style="font-weight:700">${fmt(d.amount)}</div><span class="badge ${stageBadge(d.stage)}">${d.stage}</span></div>
-        </div>`).join('')}
-      ${activeDeals.length===0?'<div style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px">Нет активных сделок</div>':''}
+      <div class="card-title">Горячие сделки <span style="font-weight:400;font-size:12px;color:var(--text-m)">Negotiation + Proposal</span></div>
+      ${active.filter(d=>d.stage==='Negotiation'||d.stage==='Proposal').slice(0,6).map(d=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="openDealDetail('${d.id}')">
+          <div><div style="font-weight:700;font-size:13px">${d.company}</div><div style="font-size:12px;color:var(--text-m)">${d.model||'—'} · ${d.agent||'—'}</div></div>
+          <div style="text-align:right;flex-shrink:0;margin-left:12px"><div style="font-weight:800;font-size:14px">${fmtUSD(d.amount)}</div><span class="b ${stageBadge(d.stage)}">${d.stage}</span></div>
+        </div>`).join('') || '<div class="empty" style="padding:20px"><i class="ti ti-versions"></i>Нет горячих сделок</div>'}
     </div>
     <div class="card">
-      <div class="card-title">Активность команды</div>
+      <div class="card-title">Команда</div>
       ${AGENTS.slice(0,8).map((a,i)=>{
         const ad=db.deals.filter(d=>d.agent===a);
-        const won=ad.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0);
-        return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100)">
-          <div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:28px;height:28px;font-size:10px;${avStyle(i)}">${initials(a)}</div><span style="font-size:13px;font-weight:500">${a}</span></div>
-          <div style="font-size:12px;color:var(--text-muted)">${ad.length} сд.${won?' · '+fmt(won):''}</div>
+        const w=ad.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0);
+        return`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)">
+          <div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:28px;height:28px;font-size:10px">${ini(a)}</div><span style="font-size:13px;font-weight:500">${a}</span></div>
+          <div style="font-size:12px;color:var(--text-m)">${ad.length} сд${w?' · '+fmtUSD(w):''}</div>
         </div>`;
       }).join('')}
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+    <div class="card">
+      <div class="card-title">Срочные задачи</div>
+      ${openTasks.filter(t=>t.priority==='high').slice(0,5).map(t=>`
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
+          <div class="cb" onclick="quickDoneTask('${t.id}')"></div>
+          <div style="flex:1"><div style="font-size:13px;font-weight:500">${t.title}</div><div style="font-size:11px;color:var(--text-m)">${t.company||''} · ${t.agent||''}</div></div>
+          <span style="font-size:11px;color:var(--text-m)">${t.due||''}</span>
+        </div>`).join('') || '<div style="text-align:center;padding:16px;color:var(--text-m);font-size:13px">Нет срочных задач</div>'}
+    </div>
+    <div class="card">
+      <div class="card-title">Последние компании</div>
+      ${db.companies.slice(-5).reverse().map((c,i)=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="openCompanyDetail('${c.id}')">
+          <div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:28px;height:28px;font-size:10px">${ini(c.name)}</div><div><div style="font-size:13px;font-weight:600">${c.name}</div><div style="font-size:11px;color:var(--text-m)">${c.industry||'—'}</div></div></div>
+          <span class="b ${statusBadge(c.status)}">${c.status||'—'}</span>
+        </div>`).join('') || '<div style="text-align:center;padding:16px;color:var(--text-m);font-size:13px">Нет компаний</div>'}
     </div>
   </div>`;
 }
 
-// ─── Pipeline ─────────────────────────────────────────────────────────────────
-function renderPipeline() {
-  $('content').innerHTML = `<div class="pipeline-wrap">${STAGES.map(stage=>{
-    const cards = db.deals.filter(d=>d.stage===stage);
-    const tot = cards.reduce((s,d)=>s+d.amount,0);
-    return`<div>
-      <div class="p-col-head" style="background:${STAGE_COLORS[stage]}">${stage}<span>${cards.length}${tot?' · $'+Math.round(tot/1000)+'K':''}</span></div>
-      ${cards.map(d=>`<div class="p-card" onclick="openDealDetail('${d.id}')">
-        <div class="p-card-model">${d.model}</div>
-        <div class="p-card-co">${d.company}</div>
-        <div class="p-card-amt">${fmt(d.amount)}</div>
-        <div class="p-card-foot"><span>${d.agent?d.agent.split(' ')[0]:''}</span><span>${d.days}д</span></div>
-      </div>`).join('')}
-    </div>`;
-  }).join('')}</div>`;
+// ─── Pipeline ──────────────────────────────────────────────────────────────
+function renderPipeline(){
+  const visStages=STAGES.filter(s=>s!=='Lost');
+  const pipeVal=db.deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').reduce((s,d)=>s+d.amount,0);
+  $('content').innerHTML=`
+  <div style="display:flex;gap:16px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
+    <div class="metric" style="padding:12px 16px;margin:0"><div class="metric-label">Pipeline</div><div class="metric-value" style="font-size:20px">${fmtUSD(pipeVal)}</div></div>
+    ${visStages.map(s=>{const d=db.deals.filter(x=>x.stage===s);const v=d.reduce((a,x)=>a+x.amount,0);return`<div class="metric" style="padding:12px 16px;margin:0"><div class="metric-label" style="color:${STAGE_COLOR[s]}">${s}</div><div class="metric-value" style="font-size:18px">${d.length}</div><div class="metric-sub">${v?fmtUSD(v):''}</div></div>`;}).join('')}
+  </div>
+  <div class="pipeline">
+    ${visStages.map(stage=>{
+      const cards=db.deals.filter(d=>d.stage===stage);
+      const tot=cards.reduce((s,d)=>s+d.amount,0);
+      return`<div class="p-col">
+        <div class="p-head" style="background:${STAGE_COLOR[stage]}22;color:${STAGE_COLOR[stage]}">${stage}<span class="cnt">${cards.length}${tot?' · $'+Math.round(tot/1000)+'K':''}</span></div>
+        ${cards.map(d=>`<div class="p-card" style="border-left-color:${STAGE_COLOR[d.stage]}" onclick="openDealDetail('${d.id}')">
+          <div class="p-card-co">${d.company}</div>
+          <div class="p-card-model">${d.model||'—'}</div>
+          <div class="p-card-amt">${fmtUSD(d.amount)}</div>
+          <div class="p-card-foot">
+            <span class="p-card-agent">${(d.agent||'').split(' ')[0]}</span>
+            <span class="p-prob b-gray b" style="font-size:10px">${STAGE_P[d.stage]||0}%</span>
+          </div>
+        </div>`).join('')}
+      </div>`;
+    }).join('')}
+  </div>`;
 }
 
-// ─── Contacts ─────────────────────────────────────────────────────────────────
-function renderContacts(filter='') {
-  const f = filter.toLowerCase();
-  const rows = db.contacts.filter(c=>!f||c.company.toLowerCase().includes(f)||c.contact.toLowerCase().includes(f));
-  $('content').innerHTML = `
+// ─── Companies ─────────────────────────────────────────────────────────────
+function renderCompanies(filter=''){
+  const f=filter.toLowerCase();
+  const rows=db.companies.filter(c=>!f||c.name.toLowerCase().includes(f)||(c.industry||'').toLowerCase().includes(f));
+  $('content').innerHTML=`
   <div class="toolbar">
-    <div class="search-wrap"><i class="ti ti-search"></i><input placeholder="Поиск по компании или контакту..." oninput="renderContacts(this.value)" style="width:100%"></div>
-    <button class="btn btn-primary" onclick="openModal('contact')"><i class="ti ti-plus"></i>Добавить</button>
+    <div class="search"><i class="ti ti-search"></i><input placeholder="Поиск по названию или отрасли..." oninput="renderCompanies(this.value)"></div>
+    <button class="btn btn-primary" onclick="openM('company')"><i class="ti ti-plus"></i>Добавить компанию</button>
   </div>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Компания</th><th>Контакт</th><th>Телефон</th><th>Отрасль</th><th>Сделки</th><th>Статус</th><th>Парк</th><th></th></tr></thead>
-    <tbody>${rows.map((c,i)=>{
-      const cf=db.fleet.filter(u=>u.company===c.company);
-      const h=cf.filter(u=>u.brand==='Hitachi').length;
-      return`<tr>
-        <td><div style="display:flex;align-items:center;gap:8px"><div class="avatar" style="width:28px;height:28px;font-size:10px;${avStyle(i)}">${initials(c.company)}</div><strong>${c.company}</strong></div></td>
-        <td>${c.contact||'—'}</td><td style="color:var(--text-muted)">${c.phone||'—'}</td>
-        <td><span class="badge b-blue">${c.industry||'—'}</span></td>
-        <td style="text-align:center">${c.deals||0}</td>
-        <td><span class="badge ${statusBadge(c.status)}">${c.status||'—'}</span></td>
-        <td style="font-size:12px;color:var(--text-muted)">${cf.length?h+'H / '+(cf.length-h)+' др.':'—'}</td>
-        <td><button class="btn btn-sm btn-ghost" onclick="openModal('contact','${c.id}')"><i class="ti ti-edit"></i></button>
-            <button class="btn btn-sm btn-ghost" onclick="deleteRecord('contacts','${c.id}')"><i class="ti ti-trash"></i></button></td>
+    <thead><tr><th>Компания</th><th>Отрасль</th><th>Город</th><th>Контакты</th><th>Сделки</th><th>Парк</th><th>Статус</th><th></th></tr></thead>
+    <tbody>${rows.length?rows.map((c,i)=>{
+      const ctcCount=db.contacts.filter(x=>x.company_id===c.id).length;
+      const dealCount=db.deals.filter(x=>x.company_id===c.id&&x.stage!=='Lost').length;
+      const fleetCount=db.fleet.filter(x=>x.company_id===c.id).length;
+      const hitachiCount=db.fleet.filter(x=>x.company_id===c.id&&x.brand==='Hitachi').length;
+      return`<tr onclick="openCompanyDetail('${c.id}')">
+        <td><div style="display:flex;align-items:center;gap:9px"><div class="av ${avC(i)}" style="width:32px;height:32px;font-size:12px">${ini(c.name)}</div><div><div style="font-weight:700">${c.name}</div>${c.website?`<div style="font-size:11px;color:var(--blue)">${c.website}</div>`:''}</div></div></td>
+        <td>${c.industry?`<span class="b b-blue">${c.industry}</span>`:'-'}</td>
+        <td style="color:var(--text-m)">${c.city||'—'}</td>
+        <td style="text-align:center">${ctcCount}</td>
+        <td style="text-align:center">${dealCount}</td>
+        <td style="font-size:12px;color:var(--text-m)">${fleetCount?hitachiCount+'H / '+(fleetCount-hitachiCount)+' др.':'—'}</td>
+        <td>${c.status?`<span class="b ${statusBadge(c.status)}">${c.status}</span>`:''}</td>
+        <td onclick="event.stopPropagation()"><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('company','${c.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost" onclick="delRecord('companies','${c.id}')"><i class="ti ti-trash"></i></button></div></td>
       </tr>`;
-    }).join('')}</tbody>
+    }).join(''):`<tr><td colspan="8"><div class="empty"><i class="ti ti-building"></i><div class="empty-title">Нет компаний</div>Добавь первую компанию</div></td></tr>`}
+    </tbody>
   </table></div>`;
 }
 
-// ─── Fleet ────────────────────────────────────────────────────────────────────
-function renderFleet() {
-  $('content').innerHTML = `
-  <div class="tab-bar">
-    <div class="tab ${fleetTab==='overview'?'active':''}" onclick="setFleetTab('overview',this)">Все единицы</div>
-    <div class="tab ${fleetTab==='bycompany'?'active':''}" onclick="setFleetTab('bycompany',this)">По компаниям</div>
-    <div class="tab ${fleetTab==='analytics'?'active':''}" onclick="setFleetTab('analytics',this)">Аналитика</div>
-  </div>
-  <div id="fleet-pane"></div>`;
-  renderFleetPane();
+function openCompanyDetail(id){
+  const c=db.companies.find(x=>x.id===id);if(!c)return;
+  cur.company=id;cur.section='company-detail';
+  $('ptitle').textContent=c.name;
+  $('breadcrumb').innerHTML=`<span onclick="go('companies',document.querySelector('.ni:nth-child(2)'))">Компании</span><i class="ti ti-chevron-right" style="font-size:12px"></i>`;
+  $('topbar-right').innerHTML=`
+    <button class="btn" onclick="openM('fleet',null,'${id}')"><i class="ti ti-tractor"></i>+ Техника</button>
+    <button class="btn" onclick="openM('contact',null,'${id}')"><i class="ti ti-user"></i>+ Контакт</button>
+    <button class="btn" onclick="openM('task',null,'${id}')"><i class="ti ti-checkbox"></i>+ Задача</button>
+    <button class="btn btn-primary" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>+ Сделка</button>`;
+
+  const contacts=db.contacts.filter(x=>x.company_id===id);
+  const deals=db.deals.filter(x=>x.company_id===id);
+  const fleet=db.fleet.filter(x=>x.company_id===id);
+  const tasks=db.tasks.filter(x=>x.company_id===id&&!x.done);
+  const activities=db.activities.filter(x=>x.company_id===id).slice(-10).reverse();
+  const hitachi=fleet.filter(f=>f.brand==='Hitachi').length;
+  const pipeVal=deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').reduce((s,d)=>s+d.amount,0);
+  const wonVal=deals.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0);
+
+  $('content').innerHTML=`
+  <div class="detail-grid">
+    <div class="detail-sidebar">
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+          <div class="av av-0" style="width:48px;height:48px;font-size:18px;border-radius:12px">${ini(c.name)}</div>
+          <div><div style="font-size:16px;font-weight:800">${c.name}</div><span class="b ${statusBadge(c.status)}">${c.status||'—'}</span></div>
+        </div>
+        ${[['Отрасль',c.industry],['Город',c.city],['Страна',c.country],['Сайт',c.website?`<a href="${c.website}" style="color:var(--blue)" target="_blank">${c.website}</a>`:null]].filter(r=>r[1]).map(([k,v])=>`<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')}
+        ${c.notes?`<div style="margin-top:12px;font-size:13px;color:var(--text-m);background:var(--gray-50);padding:10px;border-radius:var(--r)">${c.notes}</div>`:''}
+        <div style="margin-top:14px;display:flex;gap:8px"><button class="btn btn-sm" onclick="openM('company','${c.id}')"><i class="ti ti-edit"></i>Редактировать</button></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Показатели</div>
+        <div class="info-row"><span class="info-label">Сделок</span><span class="info-val">${deals.length}</span></div>
+        <div class="info-row"><span class="info-label">Pipeline</span><span class="info-val">${fmtUSD(pipeVal)}</span></div>
+        <div class="info-row"><span class="info-label">Закрыто</span><span class="info-val" style="color:var(--green)">${fmtUSD(wonVal)}</span></div>
+        <div class="info-row"><span class="info-label">Единиц техники</span><span class="info-val">${fleet.length}</span></div>
+        <div class="info-row"><span class="info-label">Hitachi</span><span class="info-val" style="color:var(--blue)">${hitachi} из ${fleet.length}</span></div>
+      </div>
+      ${fleet.length?`<div class="card">
+        <div class="card-title">Парк техники</div>
+        ${fleet.length>1?`<div class="fleet-bar" style="margin-bottom:12px">
+          ${hitachi?`<div class="fleet-seg" style="width:${Math.round(hitachi/fleet.length*100)}%;background:#185FA5">${Math.round(hitachi/fleet.length*100)}%</div>`:''}
+          ${fleet.length-hitachi?`<div class="fleet-seg" style="width:${Math.round((fleet.length-hitachi)/fleet.length*100)}%;background:#ef4444">${Math.round((fleet.length-hitachi)/fleet.length*100)}%</div>`:''}
+        </div>`:''}
+        ${fleet.map(u=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-100)">
+          <span class="brand-dot" style="background:${BRAND_C[u.brand]||'#888'}"></span>
+          <div style="flex:1"><div style="font-size:13px;font-weight:600">${u.brand} ${u.model}</div><div style="font-size:11px;color:var(--text-m)">${u.type} · ${u.year}</div></div>
+          <span class="b ${condBadge(u.condition)}">${u.condition}</span>
+        </div>`).join('')}
+        <button class="btn btn-sm" style="margin-top:10px" onclick="openM('fleet',null,'${id}')"><i class="ti ti-plus"></i>Добавить</button>
+      </div>`:''}
+    </div>
+    <div>
+      <div class="tabs">
+        <div class="tab active" onclick="cdTab('deals','${id}',this)">Сделки (${deals.length})</div>
+        <div class="tab" onclick="cdTab('contacts','${id}',this)">Контакты (${contacts.length})</div>
+        <div class="tab" onclick="cdTab('tasks','${id}',this)">Задачи (${tasks.length})</div>
+        <div class="tab" onclick="cdTab('activity','${id}',this)">История</div>
+      </div>
+      <div id="cd-pane">${renderCdDeals(id)}</div>
+    </div>
+  </div>`;
 }
 
-function setFleetTab(tab) {
-  fleetTab = tab;
-  document.querySelectorAll('.tab-bar .tab').forEach(t=>t.classList.remove('active'));
-  event.target.classList.add('active');
-  renderFleetPane();
+function cdTab(tab,id,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const fns={deals:renderCdDeals,contacts:renderCdContacts,tasks:renderCdTasks,activity:renderCdActivity};
+  $('cd-pane').innerHTML=fns[tab]?fns[tab](id):'';
 }
 
-function renderFleetPane() {
-  const pane = $('fleet-pane');
-  if (!pane) return;
-  if (fleetTab === 'overview') renderFleetOverview(pane);
-  else if (fleetTab === 'bycompany') renderFleetByCompany(pane);
-  else renderFleetAnalytics(pane);
-}
-
-function renderFleetOverview(pane) {
-  const byBrand={};
-  db.fleet.forEach(u=>{byBrand[u.brand]=(byBrand[u.brand]||0)+1});
-  const h=byBrand.Hitachi||0, tot=db.fleet.length, rivals=tot-h;
-  const opp=db.fleet.filter(u=>u.brand!=='Hitachi'&&(u.condition==='Poor'||u.condition==='Fair')).length;
-  pane.innerHTML=`
-  <div class="metrics" style="grid-template-columns:repeat(4,1fr)">
-    <div class="metric"><div class="metric-label">Всего единиц</div><div class="metric-value">${tot}</div></div>
-    <div class="metric"><div class="metric-label">Hitachi</div><div class="metric-value" style="color:var(--blue)">${h}</div></div>
-    <div class="metric"><div class="metric-label">Конкуренты</div><div class="metric-value">${rivals}</div></div>
-    <div class="metric"><div class="metric-label">Возможности замены</div><div class="metric-value" style="color:var(--red)">${opp}</div><div class="metric-sub">плохое/среднее состояние</div></div>
-  </div>
+function renderCdDeals(id){
+  const deals=db.deals.filter(x=>x.company_id===id);
+  if(!deals.length)return`<div class="empty"><i class="ti ti-versions"></i><div class="empty-title">Нет сделок</div><button class="btn btn-primary btn-sm" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>Добавить сделку</button></div>`;
+  return`<div class="stage-strip">${STAGES.map(s=>`<div class="stage-step ${deals.find(d=>d.stage===s)?'active':''}">${s}</div>`).join('')}</div>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Компания</th><th>Бренд</th><th>Модель</th><th>Тип</th><th>Год</th><th>Состояние</th><th>Серийный №</th><th>Примечания</th><th></th></tr></thead>
-    <tbody>${db.fleet.map(u=>`<tr>
-      <td><strong>${u.company}</strong></td>
-      <td><span style="display:inline-flex;align-items:center;gap:5px"><span class="brand-dot" style="background:${BRAND_COLORS[u.brand]||'#888'}"></span>${u.brand}</span></td>
-      <td>${u.model}</td><td>${u.type}</td><td>${u.year}</td>
-      <td><span class="badge ${condBadge(u.condition)}">${u.condition}</span></td>
-      <td style="color:var(--text-muted);font-size:12px">${u.serial||'—'}</td>
-      <td style="color:var(--text-muted);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u.notes||'—'}</td>
-      <td style="white-space:nowrap">
-        <button class="btn btn-sm btn-ghost" onclick="openModal('fleet','${u.id}')"><i class="ti ti-edit"></i></button>
-        <button class="btn btn-sm btn-ghost" onclick="deleteRecord('fleet','${u.id}')"><i class="ti ti-trash"></i></button>
-      </td>
+    <thead><tr><th>Модель</th><th>Сумма</th><th>Этап</th><th>Менеджер</th><th>Дней</th><th>Следующий шаг</th><th></th></tr></thead>
+    <tbody>${deals.map(d=>`<tr onclick="openDealDetail('${d.id}')">
+      <td style="font-weight:700">${d.model||'—'}</td>
+      <td style="font-weight:800">${fmtUSD(d.amount)}</td>
+      <td><span class="b ${stageBadge(d.stage)}">${d.stage}</span></td>
+      <td>${d.agent||'—'}</td><td>${d.days||0}д</td>
+      <td style="font-size:12px;color:var(--text-m)">${d.next_action||'—'}</td>
+      <td onclick="event.stopPropagation()"><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('deal','${d.id}')"><i class="ti ti-edit"></i></button></div></td>
     </tr>`).join('')}</tbody>
   </table></div>`;
 }
 
-function renderFleetByCompany(pane) {
-  const companies=[...new Set(db.fleet.map(u=>u.company))].sort();
-  pane.innerHTML = companies.map(co=>{
-    const units=db.fleet.filter(u=>u.company===co);
-    const h=units.filter(u=>u.brand==='Hitachi').length;
-    const rv=units.length-h;
-    const hp=Math.round(h/units.length*100);
-    return`<div class="card" style="margin-bottom:14px">
-      <div class="card-title">${co}<div style="display:flex;gap:6px"><span class="badge b-blue">${h} Hitachi</span><span class="badge b-gray">${rv} конк.</span></div></div>
-      <div class="share-bar" style="margin-bottom:12px">
-        ${h?`<div class="share-seg" style="width:${hp}%;background:#185FA5">${hp}%</div>`:''}
-        ${rv?`<div class="share-seg" style="width:${100-hp}%;background:#E24B4A">${100-hp}%</div>`:''}
+function renderCdContacts(id){
+  const ctc=db.contacts.filter(x=>x.company_id===id);
+  if(!ctc.length)return`<div class="empty"><i class="ti ti-users"></i><div class="empty-title">Нет контактов</div><button class="btn btn-primary btn-sm" onclick="openM('contact',null,'${id}')"><i class="ti ti-plus"></i>Добавить контакт</button></div>`;
+  return`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
+    ${ctc.map((c,i)=>`<div class="card" style="padding:14px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div class="av ${avC(i)}" style="width:38px;height:38px;font-size:14px">${ini(c.first_name+' '+c.last_name)}</div>
+        <div><div style="font-weight:700;font-size:13px">${c.first_name} ${c.last_name}</div><div style="font-size:12px;color:var(--text-m)">${c.position||'—'}</div></div>
       </div>
-      ${units.map(u=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
-        <span class="brand-dot" style="background:${BRAND_COLORS[u.brand]||'#888'}"></span>
-        <div style="flex:1"><div style="font-weight:600;font-size:13px">${u.brand} ${u.model}</div><div style="font-size:12px;color:var(--text-muted)">${u.type} · ${u.year}${u.notes?' · '+u.notes:''}</div></div>
-        <span class="badge ${condBadge(u.condition)}">${u.condition}</span>
-      </div>`).join('')}
-    </div>`;
-  }).join('') || '<div style="color:var(--text-muted);text-align:center;padding:40px">Нет данных о технике</div>';
-}
-
-function renderFleetAnalytics(pane) {
-  const brandCount={};
-  db.fleet.forEach(u=>{brandCount[u.brand]=(brandCount[u.brand]||0)+1});
-  const tot=db.fleet.length||1;
-  const typeCount={};
-  db.fleet.forEach(u=>{typeCount[u.type]=(typeCount[u.type]||0)+1});
-  const maxT=Math.max(...Object.values(typeCount),1);
-  const condCount={Excellent:0,Good:0,Fair:0,Poor:0};
-  db.fleet.forEach(u=>{if(condCount[u.condition]!==undefined)condCount[u.condition]++;});
-  const ageBuckets={'2023–2025':0,'2020–2022':0,'2017–2019':0,'до 2017':0};
-  db.fleet.forEach(u=>{
-    const y=Number(u.year);
-    if(y>=2023)ageBuckets['2023–2025']++;
-    else if(y>=2020)ageBuckets['2020–2022']++;
-    else if(y>=2017)ageBuckets['2017–2019']++;
-    else ageBuckets['до 2017']++;
-  });
-  const maxA=Math.max(...Object.values(ageBuckets),1);
-  const replOpp=db.fleet.filter(u=>u.brand!=='Hitachi'&&(u.condition==='Poor'||u.condition==='Fair'));
-
-  pane.innerHTML=`
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
-    <div class="card">
-      <div class="card-title">Доля брендов</div>
-      <div class="share-bar" style="height:30px;margin-bottom:14px">
-        ${Object.entries(brandCount).sort((a,b)=>b[1]-a[1]).map(([br,cnt])=>`<div class="share-seg" style="width:${Math.round(cnt/tot*100)}%;background:${BRAND_COLORS[br]||'#888'}" title="${br}: ${cnt}">${Math.round(cnt/tot*100)>8?Math.round(cnt/tot*100)+'%':''}</div>`).join('')}
-      </div>
-      <div class="bar-grid">
-        ${Object.entries(brandCount).sort((a,b)=>b[1]-a[1]).map(([br,cnt])=>`
-          <div class="bar-row">
-            <div class="bar-label" style="display:flex;align-items:center;gap:4px;justify-content:flex-end"><span class="brand-dot" style="background:${BRAND_COLORS[br]||'#888'}"></span>${br}</div>
-            <div class="bar-track"><div class="bar-fill" style="width:${Math.round(cnt/tot*100)}%;background:${BRAND_COLORS[br]||'#888'}"></div></div>
-            <div class="bar-val">${cnt} ед.</div>
-          </div>`).join('')}
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">По типу техники</div>
-      <div class="bar-grid">${Object.entries(typeCount).sort((a,b)=>b[1]-a[1]).map(([t,v])=>`
-        <div class="bar-row"><div class="bar-label">${t}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/maxT*100)}%;background:#1D9E75"></div></div><div class="bar-val">${v}</div></div>`).join('')}
-      </div>
-    </div>
-  </div>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
-    <div class="card">
-      <div class="card-title">Состояние парка</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:4px">
-        ${[['Excellent','b-green'],['Good','b-blue'],['Fair','b-amber'],['Poor','b-red']].map(([c,b])=>`
-          <div style="text-align:center;background:var(--gray-50);border-radius:var(--radius);padding:12px 6px">
-            <div style="font-size:22px;font-weight:700;color:var(--text)">${condCount[c]}</div>
-            <span class="badge ${b}" style="margin-top:4px">${c}</span>
-          </div>`).join('')}
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Возраст техники</div>
-      <div class="bar-grid">${Object.entries(ageBuckets).map(([k,v])=>`
-        <div class="bar-row"><div class="bar-label">${k}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(v/maxA*100)}%;background:#534AB7"></div></div><div class="bar-val">${v}</div></div>`).join('')}
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-title" style="color:var(--red)"><i class="ti ti-alert-triangle" style="margin-right:6px"></i>Возможности замены — конкурентная техника в плохом состоянии (${replOpp.length})</div>
-    ${replOpp.length?`<div class="tbl-wrap" style="margin-top:10px"><table class="tbl">
-      <thead><tr><th>Компания</th><th>Бренд</th><th>Модель</th><th>Год</th><th>Состояние</th><th>Примечания</th></tr></thead>
-      <tbody>${replOpp.map(u=>`<tr>
-        <td><strong>${u.company}</strong></td>
-        <td><span style="display:inline-flex;align-items:center;gap:5px"><span class="brand-dot" style="background:${BRAND_COLORS[u.brand]||'#888'}"></span>${u.brand}</span></td>
-        <td>${u.model}</td><td>${u.year}</td>
-        <td><span class="badge ${condBadge(u.condition)}">${u.condition}</span></td>
-        <td style="color:var(--text-muted)">${u.notes||'—'}</td>
-      </tr>`).join('')}</tbody>
-    </table></div>`:'<div style="color:var(--text-muted);font-size:13px;margin-top:8px">Нет приоритетных целей для замены.</div>'}
+      ${c.phone?`<div style="font-size:12px;color:var(--text-m);margin-bottom:4px"><i class="ti ti-phone" style="font-size:13px"></i> ${c.phone}</div>`:''}
+      ${c.email?`<div style="font-size:12px;color:var(--blue)">${c.email}</div>`:''}
+      <div style="display:flex;gap:6px;margin-top:10px"><button class="btn btn-xs" onclick="openM('contact','${c.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-xs btn-danger" onclick="delRecord('contacts','${c.id}')"><i class="ti ti-trash"></i></button></div>
+    </div>`).join('')}
+    <div class="card" style="padding:14px;border:2px dashed var(--bdr);box-shadow:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-m)" onclick="openM('contact',null,'${id}')"><i class="ti ti-plus" style="margin-right:6px"></i>Добавить</div>
   </div>`;
 }
 
-// ─── Tasks ────────────────────────────────────────────────────────────────────
-function renderTasks() {
-  let list = db.tasks.map(t=>({...t, done: String(t.done)==='true'}));
-  if (taskFilter==='open')   list = list.filter(t=>!t.done);
-  if (taskFilter==='urgent') list = list.filter(t=>!t.done&&t.priority==='high');
+function renderCdTasks(id){
+  const tasks=db.tasks.filter(x=>x.company_id===id);
+  if(!tasks.length)return`<div class="empty"><i class="ti ti-checkbox"></i><div class="empty-title">Нет задач</div><button class="btn btn-primary btn-sm" onclick="openM('task',null,'${id}')"><i class="ti ti-plus"></i>Добавить задачу</button></div>`;
+  return tasks.map(t=>`<div class="task-row">
+    <div class="cb ${t.done?'done':''}" onclick="toggleTask('${t.id}',${!t.done})">${t.done?'<i class="ti ti-check" style="font-size:12px"></i>':''}</div>
+    <div style="flex:1"><div style="font-size:13px;font-weight:600;${t.done?'text-decoration:line-through;color:var(--text-m)':''}">${t.title}</div><div style="font-size:11px;color:var(--text-m);margin-top:2px">${t.type||''} · ${t.agent||''}</div></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <span class="b ${t.priority==='high'?'b-red':t.priority==='medium'?'b-amber':'b-gray'}">${t.priority||''}</span>
+      <span style="font-size:11px;color:var(--text-m)">${t.due||''}</span>
+    </div>
+  </div>`).join('');
+}
+
+function renderCdActivity(id){
+  const acts=db.activities.filter(x=>x.company_id===id).reverse();
+  if(!acts.length)return`<div class="empty"><i class="ti ti-clock"></i><div class="empty-title">Нет активности</div></div>`;
+  const icons={Звонок:'ti-phone',Встреча:'ti-calendar',Email:'ti-mail',КП:'ti-file-text',Демонстрация:'ti-eye',Документы:'ti-file',Другое:'ti-dots'};
+  const colors={Звонок:'b-blue',Встреча:'b-purple',Email:'b-teal',КП:'b-amber',Демонстрация:'b-green',Документы:'b-gray',Другое:'b-gray'};
+  return acts.map(a=>`<div class="act-item">
+    <div class="act-icon b ${colors[a.type]||'b-gray'}"><i class="ti ${icons[a.type]||'ti-dots'}" style="font-size:14px"></i></div>
+    <div><div class="act-text"><strong>${a.type}</strong> — ${a.note||''}</div><div class="act-meta">${a.agent||''} · ${String(a.created||'').slice(0,10)}</div></div>
+  </div>`).join('');
+}
+
+// ─── Deal Detail ────────────────────────────────────────────────────────────
+function openDealDetail(id){
+  const d=db.deals.find(x=>x.id===id);if(!d)return;
+  cur.deal=id;
+  $('ptitle').textContent=d.company+' — '+(d.model||'Сделка');
+  $('breadcrumb').innerHTML=`<span onclick="go('pipeline',document.querySelector('.ni:nth-child(2)'))">Pipeline</span><i class="ti ti-chevron-right" style="font-size:12px"></i>`;
+  $('topbar-right').innerHTML=`<button class="btn" onclick="openM('activity',null,null,'${id}')"><i class="ti ti-plus"></i>Активность</button><button class="btn" onclick="openM('deal','${id}')"><i class="ti ti-edit"></i>Редактировать</button>`;
+  const tasks=db.tasks.filter(t=>t.deal_id===id);
+  const acts=db.activities.filter(a=>a.deal_id===id).reverse();
+  const stageIdx=STAGES.indexOf(d.stage);
+
   $('content').innerHTML=`
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-    <div style="display:flex;gap:6px">
-      ${[['all','Все'],['open','Открытые'],['urgent','Срочные']].map(([f,l])=>`<button class="btn btn-sm ${taskFilter===f?'btn-primary':''}" onclick="setTaskFilter('${f}')">${l}</button>`).join('')}
-    </div>
-    <button class="btn btn-primary" onclick="openModal('task')"><i class="ti ti-plus"></i>Добавить</button>
+  <div class="stage-strip" style="margin-bottom:20px">
+    ${STAGES.map((s,i)=>`<div class="stage-step ${i<stageIdx?'done':i===stageIdx?'active':''}" onclick="moveDeal('${id}','${s}')">${s}</div>`).join('')}
   </div>
-  <div style="display:flex;flex-direction:column;gap:8px">
-    ${list.map(t=>`<div class="task-row">
-      <div class="task-cb ${t.done?'done':''}" onclick="toggleTask('${t.id}',${!t.done})">
-        ${t.done?'<i class="ti ti-check" style="font-size:13px"></i>':''}
+  <div style="display:grid;grid-template-columns:300px 1fr;gap:18px">
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px">${fmtUSD(d.amount)}</div>
+        <span class="b ${stageBadge(d.stage)}" style="margin-bottom:14px;display:inline-block">${d.stage}</span>
+        ${[['Компания',`<span style="cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${d.company_id}')">${d.company}</span>`],['Модель',d.model],['Контакт',d.contact],['Менеджер',d.agent],['Валюта',d.currency],['Вероятность',d.probability?d.probability+'%':''],['Дней в работе',d.days+'д'],['Следующий шаг',d.next_action],['Дата след. шага',d.next_date]].filter(r=>r[1]).map(([k,v])=>`<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')}
       </div>
-      <div style="flex:1">
-        <div style="font-weight:600;font-size:13px;${t.done?'text-decoration:line-through;color:var(--text-muted)':''}">${t.title}</div>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:2px">${t.company||''}${t.agent?' · '+t.agent:''}</div>
+      <div class="card">
+        <div class="card-title">Задачи по сделке</div>
+        ${tasks.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-100)">
+          <div class="cb ${t.done?'done':''}" onclick="toggleTask('${t.id}',${!t.done})">${t.done?'<i class="ti ti-check" style="font-size:11px"></i>':''}</div>
+          <div style="flex:1;font-size:13px;${t.done?'text-decoration:line-through;color:var(--text-m)':''}">${t.title}</div>
+          <span style="font-size:11px;color:var(--text-m)">${t.due||''}</span>
+        </div>`).join('')}
+        <button class="btn btn-sm" style="margin-top:10px" onclick="openM('task',null,'${d.company_id}','${id}')"><i class="ti ti-plus"></i>Задача</button>
       </div>
-      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
-        <span class="badge ${t.priority==='high'?'b-red':t.priority==='medium'?'b-amber':'b-gray'}">${t.priority}</span>
-        <span style="font-size:11px;color:var(--text-muted)">${t.due||''}</span>
+    </div>
+    <div class="card">
+      <div class="card-title">История активности
+        <button class="btn btn-sm" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-plus"></i>Запись</button>
       </div>
-      <div style="margin-left:8px;display:flex;gap:2px">
-        <button class="btn btn-sm btn-ghost" onclick="openModal('task','${t.id}')"><i class="ti ti-edit"></i></button>
-        <button class="btn btn-sm btn-ghost" onclick="deleteRecord('tasks','${t.id}')"><i class="ti ti-trash"></i></button>
-      </div>
-    </div>`).join('') || '<div style="text-align:center;color:var(--text-muted);padding:40px">Нет задач</div>'}
+      ${acts.length?acts.map(a=>{const icons={Звонок:'ti-phone',Встреча:'ti-calendar',Email:'ti-mail',КП:'ti-file-text',Демонстрация:'ti-eye',Документы:'ti-file',Другое:'ti-dots'};const colors={Звонок:'b-blue',Встреча:'b-purple',Email:'b-teal',КП:'b-amber',Демонстрация:'b-green',Документы:'b-gray',Другое:'b-gray'};return`<div class="act-item">
+        <div class="act-icon b ${colors[a.type]||'b-gray'}"><i class="ti ${icons[a.type]||'ti-dots'}" style="font-size:14px"></i></div>
+        <div><div class="act-text"><strong>${a.type}</strong> — ${a.note||''}</div><div class="act-meta">${a.agent||''} · ${String(a.created||'').slice(0,10)}</div></div>
+      </div>`;}).join(''):`<div class="empty" style="padding:24px"><i class="ti ti-clock"></i>Нет активности</div>`}
+    </div>
   </div>`;
 }
 
-async function toggleTask(id, newDone) {
-  const t = db.tasks.find(x=>String(x.id)===String(id));
-  if (!t) return;
-  t.done = newDone;
-  await save('tasks', {...t});
-  renderTasks();
+async function moveDeal(id,stage){
+  const d=db.deals.find(x=>x.id===id);if(!d)return;
+  d.stage=stage;
+  await persist('deals',{...d});
+  openDealDetail(id);
 }
 
-function setTaskFilter(f) { taskFilter=f; renderTasks(); }
+// ─── Contacts ──────────────────────────────────────────────────────────────
+function renderContacts(filter=''){
+  const f=filter.toLowerCase();
+  const rows=db.contacts.filter(c=>!f||(c.first_name+' '+c.last_name).toLowerCase().includes(f)||(c.company||'').toLowerCase().includes(f));
+  $('content').innerHTML=`
+  <div class="toolbar">
+    <div class="search"><i class="ti ti-search"></i><input placeholder="Поиск по имени или компании..." oninput="renderContacts(this.value)"></div>
+    <button class="btn btn-primary" onclick="openM('contact')"><i class="ti ti-plus"></i>Добавить</button>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Имя</th><th>Должность</th><th>Компания</th><th>Телефон</th><th>Email</th><th></th></tr></thead>
+    <tbody>${rows.length?rows.map((c,i)=>`<tr>
+      <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:30px;height:30px;font-size:11px">${ini(c.first_name+' '+c.last_name)}</div><strong>${c.first_name} ${c.last_name}</strong></div></td>
+      <td style="color:var(--text-m)">${c.position||'—'}</td>
+      <td><span style="cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${c.company_id}')">${c.company||'—'}</span></td>
+      <td>${c.phone||'—'}</td><td style="color:var(--blue)">${c.email||'—'}</td>
+      <td><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('contact','${c.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost" onclick="delRecord('contacts','${c.id}')"><i class="ti ti-trash"></i></button></div></td>
+    </tr>`).join(''):`<tr><td colspan="6"><div class="empty"><i class="ti ti-users"></i><div class="empty-title">Нет контактов</div></div></td></tr>`}
+    </tbody>
+  </table></div>`;
+}
 
-// ─── Reports ──────────────────────────────────────────────────────────────────
-function renderReports() {
-  const agentSales = AGENTS.map(a=>({name:a,val:db.deals.filter(d=>d.agent===a).reduce((s,d)=>s+d.amount,0)})).sort((a,b)=>b.val-a.val);
-  const maxA = agentSales[0]?.val||1;
-  const modelSales = MODELS.map(m=>({name:m.replace('-6',''),val:db.deals.filter(d=>d.model===m).reduce((s,d)=>s+d.amount,0)})).sort((a,b)=>b.val-a.val);
-  const maxM = modelSales[0]?.val||1;
+// ─── Fleet ─────────────────────────────────────────────────────────────────
+function renderFleet(){
+  const byBrand={};
+  db.fleet.forEach(u=>{byBrand[u.brand]=(byBrand[u.brand]||0)+1});
+  const tot=db.fleet.length;
+  const h=byBrand.Hitachi||0;
+  const opp=db.fleet.filter(u=>u.brand!=='Hitachi'&&(u.condition==='Poor'||u.condition==='Fair')).length;
+  $('content').innerHTML=`
+  <div class="metrics" style="margin-bottom:18px">
+    <div class="metric"><div class="metric-label">Всего единиц</div><div class="metric-value">${tot}</div></div>
+    <div class="metric"><div class="metric-label">Hitachi</div><div class="metric-value" style="color:var(--blue)">${h}</div><div class="metric-sub">${tot?Math.round(h/tot*100):0}% парка</div></div>
+    <div class="metric"><div class="metric-label">Конкуренты</div><div class="metric-value">${tot-h}</div></div>
+    <div class="metric"><div class="metric-label" style="color:var(--red)">Под замену</div><div class="metric-value" style="color:var(--red)">${opp}</div><div class="metric-sub">плохое/среднее состояние</div></div>
+  </div>
+  ${opp?`<div class="card" style="margin-bottom:18px;border-color:#fca5a5">
+    <div class="card-title" style="color:var(--red)"><i class="ti ti-alert-triangle"></i>Приоритетные замены (${opp})</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Компания</th><th>Бренд</th><th>Модель</th><th>Год</th><th>Состояние</th><th>Примечания</th><th></th></tr></thead>
+      <tbody>${db.fleet.filter(u=>u.brand!=='Hitachi'&&(u.condition==='Poor'||u.condition==='Fair')).map(u=>`<tr>
+        <td style="font-weight:700;cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${u.company_id}')">${u.company}</td>
+        <td><span style="display:inline-flex;align-items:center;gap:5px"><span class="brand-dot" style="background:${BRAND_C[u.brand]||'#888'}"></span>${u.brand}</span></td>
+        <td>${u.model}</td><td>${u.year}</td>
+        <td><span class="b ${condBadge(u.condition)}">${u.condition}</span></td>
+        <td style="font-size:12px;color:var(--text-m)">${u.notes||'—'}</td>
+        <td><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('fleet','${u.id}')"><i class="ti ti-edit"></i></button></div></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div>`:''}
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Компания</th><th>Бренд</th><th>Модель</th><th>Тип</th><th>Год</th><th>Состояние</th><th>Серийный №</th><th></th></tr></thead>
+    <tbody>${db.fleet.length?db.fleet.map(u=>`<tr>
+      <td style="font-weight:700;cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${u.company_id}')">${u.company}</td>
+      <td><span style="display:inline-flex;align-items:center;gap:5px"><span class="brand-dot" style="background:${BRAND_C[u.brand]||'#888'}"></span>${u.brand}</span></td>
+      <td style="font-weight:600">${u.model}</td><td>${u.type}</td><td>${u.year}</td>
+      <td><span class="b ${condBadge(u.condition)}">${u.condition}</span></td>
+      <td style="color:var(--text-m);font-size:12px">${u.serial||'—'}</td>
+      <td><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('fleet','${u.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost" onclick="delRecord('fleet','${u.id}')"><i class="ti ti-trash"></i></button></div></td>
+    </tr>`).join(''):`<tr><td colspan="8"><div class="empty"><i class="ti ti-tractor"></i><div class="empty-title">Нет данных о технике</div></div></td></tr>`}
+    </tbody>
+  </table></div>`;
+}
+
+// ─── Tasks ─────────────────────────────────────────────────────────────────
+function renderTasks(filter='all'){
+  let list=db.tasks.filter(t=>filter==='all'?true:filter==='open'?!t.done:!t.done&&t.priority==='high');
+  $('content').innerHTML=`
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+    <div style="display:flex;gap:6px">
+      ${[['all','Все'],['open','Открытые'],['urgent','Срочные']].map(([f,l])=>`<button class="btn btn-sm ${filter===f?'btn-primary':''}" onclick="renderTasks('${f}')">${l}</button>`).join('')}
+    </div>
+    <button class="btn btn-primary" onclick="openM('task')"><i class="ti ti-plus"></i>Добавить</button>
+  </div>
+  ${list.length?list.map(t=>`<div class="task-row">
+    <div class="cb ${t.done?'done':''}" onclick="toggleTask('${t.id}',${!t.done})">${t.done?'<i class="ti ti-check" style="font-size:12px"></i>':''}</div>
+    <div style="flex:1">
+      <div style="font-size:13px;font-weight:600;${t.done?'text-decoration:line-through;color:var(--text-m)':''}">${t.title}</div>
+      <div style="font-size:11px;color:var(--text-m);margin-top:3px">${t.company?`<span style="cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${t.company_id}')">${t.company}</span> · `:''} ${t.type||''} · ${t.agent||''}</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;margin-left:12px">
+      <span class="b ${t.priority==='high'?'b-red':t.priority==='medium'?'b-amber':'b-gray'}">${t.priority||''}</span>
+      <span style="font-size:11px;color:var(--text-m)">${t.due||''}</span>
+    </div>
+    <div style="display:flex;gap:4px;margin-left:8px"><button class="btn btn-sm btn-ghost" onclick="openM('task','${t.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost" onclick="delRecord('tasks','${t.id}')"><i class="ti ti-trash"></i></button></div>
+  </div>`).join(''):`<div class="empty"><i class="ti ti-checkbox"></i><div class="empty-title">Нет задач</div></div>`}`;
+}
+
+async function toggleTask(id,done){
+  const t=db.tasks.find(x=>x.id===id);if(!t)return;
+  t.done=done;
+  await persist('tasks',{...t});
+  if(cur.company)openCompanyDetail(cur.company);
+  else if(cur.deal)openDealDetail(cur.deal);
+  else renderTasks();
+}
+async function quickDoneTask(id){
+  const t=db.tasks.find(x=>x.id===id);if(!t)return;
+  t.done=true;await persist('tasks',{...t});renderDashboard();
+}
+
+// ─── Reports ───────────────────────────────────────────────────────────────
+function renderReports(){
+  const agentSales=AGENTS.map(a=>({n:a,v:db.deals.filter(d=>d.agent===a&&d.stage==='Won').reduce((s,d)=>s+d.amount,0)})).sort((a,b)=>b.v-a.v);
+  const maxA=agentSales[0]?.v||1;
+  const stageCounts=STAGES.map(s=>({s,cnt:db.deals.filter(d=>d.stage===s).length,val:db.deals.filter(d=>d.stage===s).reduce((a,d)=>a+d.amount,0)}));
   const brandCount={};
   db.fleet.filter(u=>u.brand!=='Hitachi').forEach(u=>{brandCount[u.brand]=(brandCount[u.brand]||0)+1});
-  const brands = Object.keys(brandCount).sort((a,b)=>brandCount[b]-brandCount[a]);
+  const brands=Object.keys(brandCount).sort((a,b)=>brandCount[b]-brandCount[a]);
+  const convRate=db.deals.length?Math.round(db.deals.filter(d=>d.stage==='Won').length/db.deals.length*100):0;
 
   $('content').innerHTML=`
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
-    <div class="card"><div class="card-title">Продажи по менеджерам</div>
-      <div class="bar-grid">${agentSales.map(a=>`
-        <div class="bar-row"><div class="bar-label">${a.name.split(' ').slice(0,2).join(' ')}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(a.val/maxA*100)}%;background:#185FA5"></div></div>
-        <div class="bar-val">${a.val?'$'+Math.round(a.val/1000)+'K':'—'}</div></div>`).join('')}
-    </div></div>
-    <div class="card"><div class="card-title">Продажи по моделям</div>
-      <div class="bar-grid">${modelSales.map(m=>`
-        <div class="bar-row"><div class="bar-label">${m.name}</div>
-        <div class="bar-track"><div class="bar-fill" style="width:${Math.round(m.val/maxM*100)}%;background:#0F6E56"></div></div>
-        <div class="bar-val">${m.val?'$'+Math.round(m.val/1000)+'K':'—'}</div></div>`).join('')}
-    </div></div>
+  <div class="metrics" style="margin-bottom:20px">
+    <div class="metric"><div class="metric-label">Всего сделок</div><div class="metric-value">${db.deals.length}</div></div>
+    <div class="metric"><div class="metric-label">Конверсия</div><div class="metric-value">${convRate}%</div></div>
+    <div class="metric"><div class="metric-label">Выручка Won</div><div class="metric-value">${fmtUSD(db.deals.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0))}</div></div>
+    <div class="metric"><div class="metric-label">Средняя сделка</div><div class="metric-value">${fmtUSD(db.deals.length?Math.round(db.deals.reduce((s,d)=>s+d.amount,0)/db.deals.length):0)}</div></div>
   </div>
-  <div class="card" style="margin-bottom:18px">
-    <div class="card-title">Конкурентный парк — потенциал замены на Hitachi</div>
-    ${brands.length?`<div style="position:relative;width:100%;height:${Math.max(brands.length*44+60,160)}px"><canvas id="compChart" role="img" aria-label="Количество единиц конкурентов в парках клиентов по брендам">Данные о конкурентах.</canvas></div>`:'<div style="color:var(--text-muted);text-align:center;padding:30px">Нет данных о конкурентной технике</div>'}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+    <div class="card"><div class="card-title">Закрытые продажи по менеджерам</div>
+      ${agentSales.map(a=>`<div class="bar-row"><div class="bar-label">${a.n.split(' ').slice(0,2).join(' ')}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(a.v/maxA*100)}%;background:#185FA5"></div></div><div class="bar-val">${a.v?'$'+Math.round(a.v/1000)+'K':'—'}</div></div>`).join('')}
+    </div>
+    <div class="card"><div class="card-title">Воронка продаж</div>
+      <div style="position:relative;width:100%;height:${Math.max(STAGES.length*44+60,200)}px"><canvas id="funnelChart" role="img" aria-label="Воронка продаж по этапам">Данные воронки.</canvas></div>
+    </div>
   </div>
   <div class="card">
-    <div class="card-title">Воронка по этапам</div>
-    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:4px">
-      ${STAGES.map(s=>{
-        const d=db.deals.filter(x=>x.stage===s);
-        const tot=d.reduce((a,x)=>a+x.amount,0);
-        return`<div style="text-align:center;background:${STAGE_COLORS[s]};border-radius:var(--radius);padding:14px 8px">
-          <div style="font-size:11px;font-weight:600;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase">${s}</div>
-          <div style="font-size:24px;font-weight:700;color:var(--text)">${d.length}</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">${tot?'$'+Math.round(tot/1000)+'K':'—'}</div>
-        </div>`;
-      }).join('')}
-    </div>
+    <div class="card-title">Конкурентный парк — потенциал замены</div>
+    ${brands.length?`<div style="position:relative;width:100%;height:${Math.max(brands.length*44+80,160)}px"><canvas id="compChart" role="img" aria-label="Конкурентные бренды в парках клиентов">Данные.</canvas></div>`:`<div class="empty" style="padding:24px"><i class="ti ti-chart-bar"></i>Нет данных о конкурентах</div>`}
   </div>`;
 
-  if (brands.length) {
-    if (compChart) compChart.destroy();
-    compChart = new Chart($('compChart'),{
-      type:'bar',
-      data:{labels:brands,datasets:[{label:'Единиц в парках клиентов',data:brands.map(b=>brandCount[b]),backgroundColor:brands.map(b=>BRAND_COLORS[b]||'#888'),borderWidth:0}]},
-      options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,color:'#6C757D'},grid:{color:'rgba(0,0,0,0.05)'}},y:{grid:{display:false},ticks:{color:'#6C757D'}}}}
-    });
-  }
+  setTimeout(()=>{
+    if(charts.funnel)charts.funnel.destroy();
+    const fCtx=$('funnelChart');
+    if(fCtx)charts.funnel=new Chart(fCtx,{type:'bar',data:{labels:stageCounts.map(x=>x.s),datasets:[{label:'Сделок',data:stageCounts.map(x=>x.cnt),backgroundColor:STAGES.map(s=>STAGE_COLOR[s]),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,color:'#6b7280'},grid:{color:'rgba(0,0,0,0.05)'}},y:{grid:{display:false},ticks:{color:'#6b7280'}}}}});
+    if(brands.length){
+      if(charts.comp)charts.comp.destroy();
+      const cCtx=$('compChart');
+      if(cCtx)charts.comp=new Chart(cCtx,{type:'bar',data:{labels:brands,datasets:[{label:'Единиц',data:brands.map(b=>brandCount[b]),backgroundColor:brands.map(b=>BRAND_C[b]||'#888'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,color:'#6b7280'},grid:{color:'rgba(0,0,0,0.05)'}},y:{grid:{display:false},ticks:{color:'#6b7280'}}}}});
+    }
+  },100);
 }
 
-// ─── Modals ───────────────────────────────────────────────────────────────────
-function openModal(type, id=null) {
-  modalType = type;
-  editId = id;
-  const existing = id ? db[type==='deal'?'deals':type==='contact'?'contacts':type==='fleet'?'fleet':'tasks']?.find(x=>String(x.id)===String(id)) : null;
-  const e = existing || {};
-  const coOpts = coList().map(c=>`<option>${c}</option>`).join('');
-  const titles = {deal:'Сделка',contact:'Контакт',fleet:'Единица техники',task:'Задача'};
-  $('modal-title').textContent = (id?'Редактировать ':'Добавить ') + (titles[type]||type);
-  $('modal-footer').style.display = 'flex';
+// ─── Modals ──────────────────────────────────────────────────────────────────────
+function openM(type,id=null,coId=null,dealId=null){
+  mtype=type;eid=id;
+  const co=coId?db.companies.find(x=>x.id===coId):null;
+  const sheet={company:'companies',contact:'contacts',deal:'deals',fleet:'fleet',task:'tasks',activity:'activities'}[type];
+  const ex=id&&sheet?(db[sheet]||[]).find(x=>x.id===id):null;
+  const e=ex||{};
+  const labels={company:'Компания',contact:'Контакт',deal:'Сделка',fleet:'Единица техники',task:'Задача',activity:'Активность'};
+  $('mtitle').textContent=(id?'Редактировать ':'Добавить ')+labels[type];
+  $('mfoot').style.display='flex';
 
-  const bodies = {
-    deal:`
-      <div class="form-group"><label class="form-label">Компания</label><input class="form-control" id="f-company" list="co-dl" value="${e.company||''}" placeholder="Введи название компании" autocomplete="off"><datalist id="co-dl">${coOpts}</datalist></div>
-      <div class="form-group"><label class="form-label">Контакт</label><input class="form-control" id="f-contact" value="${e.contact||''}"></div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Модель техники</label><input class="form-control" id="f-model" list="model-dl" value="${e.model||''}" placeholder="Напр. ZX470LC-6"><datalist id="model-dl">${HITACHI_MODELS.map(m=>`<option>${m}</option>`).join('')}</datalist></div>
-        <div class="form-group"><label class="form-label">Сумма (USD)</label><input class="form-control" id="f-amount" type="number" value="${e.amount||''}"></div>
+  const coSel=()=>`<select class="fc" id="f-co"><option value="">-- выбери --</option>${db.companies.map(c=>`<option value="${c.id}" ${(ex&&ex.company_id===c.id)?'selected':''}>${c.name}</option>`).join('')}</select>`;
+  const coDL=()=>`<input class="fc" id="f-co-name" list="co-dl" value="${co?co.name:(ex?ex.company:'')}" placeholder="Название компании"><datalist id="co-dl">${db.companies.map(c=>`<option>${c.name}</option>`).join('')}</datalist>`;
+
+  const bodies={
+    company:`
+      <div class="fg"><label class="fl">Название *</label><input class="fc" id="f-name" value="${e.name||''}"></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Отрасль</label><select class="fc" id="f-industry">${['','Горнодобывающая','Строительство','Дорожное строительство','Карьеры','Инфраструктура','Промышленность','Другое'].map(x=>`<option ${e.industry===x?'selected':''}>${x}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Статус</label><select class="fc" id="f-status">${['Активный','Потенциальный','Переговоры','Партнёр','Неактивный'].map(x=>`<option ${e.status===x?'selected':''}>${x}</option>`).join('')}</select></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Этап</label><select class="form-control" id="f-stage">${STAGES.map(s=>`<option ${e.stage===s?'selected':''}>${s}</option>`).join('')}</select></div>
-        <div class="form-group"><label class="form-label">Менеджер</label><select class="form-control" id="f-agent">${AGENTS.map(a=>`<option ${e.agent===a?'selected':''}>${a}</option>`).join('')}</select></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Город</label><input class="fc" id="f-city" value="${e.city||''}"></div>
+        <div class="fg"><label class="fl">Страна</label><input class="fc" id="f-country" value="${e.country||'Armenia'}"></div>
       </div>
-      <div class="form-group"><label class="form-label">Дней в работе</label><input class="form-control" id="f-days" type="number" value="${e.days||0}"></div>`,
+      <div class="fg"><label class="fl">Сайт</label><input class="fc" id="f-website" value="${e.website||''}" placeholder="https://"></div>
+      <div class="fg"><label class="fl">Примечания</label><textarea class="fc" id="f-notes" rows="2">${e.notes||''}</textarea></div>`,
     contact:`
-      <div class="form-group"><label class="form-label">Компания</label><input class="form-control" id="f-company" value="${e.company||''}"></div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Имя контакта</label><input class="form-control" id="f-contact" value="${e.contact||''}"></div>
-        <div class="form-group"><label class="form-label">Телефон</label><input class="form-control" id="f-phone" value="${e.phone||''}"></div>
+      <div class="fg"><label class="fl">Компания *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coSel()}</div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Имя *</label><input class="fc" id="f-fname" value="${e.first_name||''}"></div>
+        <div class="fg"><label class="fl">Фамилия *</label><input class="fc" id="f-lname" value="${e.last_name||''}"></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Отрасль</label><select class="form-control" id="f-industry">${INDUSTRIES.map(i=>`<option ${e.industry===i?'selected':''}>${i}</option>`).join('')}</select></div>
-        <div class="form-group"><label class="form-label">Статус</label><select class="form-control" id="f-status">${['Prospect','Active','Negotiating','Inactive'].map(s=>`<option ${e.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">Должность</label><input class="fc" id="f-pos" value="${e.position||''}"></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Телефон</label><input class="fc" id="f-phone" value="${e.phone||''}" placeholder="+374..."></div>
+        <div class="fg"><label class="fl">Email</label><input class="fc" id="f-email" value="${e.email||''}"></div>
+      </div>`,
+    deal:`
+      <div class="fg"><label class="fl">Компания *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Модель техники</label><input class="fc" id="f-model" list="mdl" value="${e.model||''}" placeholder="ZX470LC-6..."><datalist id="mdl">${['ZX85USB-6','ZX135US-6','ZX175LC-6','ZX210LC-6','ZX330LC-6','ZX350LCN-6','ZX470LC-6','ZX490LCH-6','ZX890LCH-6'].map(m=>`<option>${m}</option>`).join('')}</datalist></div>
+        <div class="fg"><label class="fl">Сумма</label><input class="fc" id="f-amount" type="number" value="${e.amount||''}"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Валюта</label><select class="fc" id="f-currency">${['USD','EUR','AMD','RUB'].map(c=>`<option ${(e.currency||'USD')===c?'selected':''}>${c}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Этап</label><select class="fc" id="f-stage">${['Lead','Qualified','Proposal','Negotiation','Won','Lost'].map(s=>`<option ${(e.stage||'Lead')===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Менеджер</label><select class="fc" id="f-agent">${['А. Мартиросян','Г. Петросян','Н. Арутюнян','С. Саргсян','В. Акопян','Л. Мкртчян','К. Давтян','А. Карапетян','Р. Овсепян','Т. Григорян'].map(a=>`<option ${e.agent===a?'selected':''}>${a}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Дней в работе</label><input class="fc" id="f-days" type="number" value="${e.days||0}"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Следующий шаг</label><input class="fc" id="f-next" value="${e.next_action||''}" placeholder="Отправить КП..."></div>
+        <div class="fg"><label class="fl">Дата</label><input class="fc" id="f-ndate" type="date" value="${e.next_date||''}"></div>
       </div>`,
     fleet:`
-      <div class="form-group"><label class="form-label">Компания</label><input class="form-control" id="f-company" list="co-dl2" value="${e.company||''}"><datalist id="co-dl2">${coOpts}</datalist></div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Бренд</label><select class="form-control" id="f-brand" onchange="onBrandChange(this.value)"><option ${e.brand==='Hitachi'?'selected':''}>Hitachi</option>${COMPETITOR_BRANDS.map(b=>`<option ${e.brand===b?'selected':''}>${b}</option>`).join('')}</select></div>
-        <div class="form-group"><label class="form-label">Модель</label><input class="form-control" id="f-model" list="model-dl" value="${e.model||''}"><datalist id="model-dl">${HITACHI_MODELS.map(m=>`<option>${m}</option>`).join('')}</datalist></div>
+      <div class="fg"><label class="fl">Компания *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Бренд *</label><select class="fc" id="f-brand">${['Hitachi','Caterpillar','Komatsu','Volvo','Liebherr','Doosan','John Deere','Hyundai','Sany','XCMG','Другое'].map(b=>`<option ${(e.brand||'Hitachi')===b?'selected':''}>${b}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Модель *</label><input class="fc" id="f-model" list="mdl2" value="${e.model||''}"><datalist id="mdl2">${['ZX85USB-6','ZX135US-6','ZX210LC-6','ZX330LC-6','ZX470LC-6','ZX890LCH-6'].map(m=>`<option>${m}</option>`).join('')}</datalist></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Тип</label><select class="form-control" id="f-type">${EQ_TYPES.map(t=>`<option ${e.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
-        <div class="form-group"><label class="form-label">Год выпуска</label><input class="form-control" id="f-year" type="number" min="2000" max="2026" value="${e.year||''}"></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Тип</label><select class="fc" id="f-type">${['Экскаватор','Погрузчик','Бульдозер','Буровая установка','Самосвал','Компрессор','Кран','Грейдер'].map(t=>`<option ${e.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Год</label><input class="fc" id="f-year" type="number" min="2000" max="2026" value="${e.year||''}"></div>
       </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Серийный номер</label><input class="form-control" id="f-serial" value="${e.serial||''}"></div>
-        <div class="form-group"><label class="form-label">Состояние</label><select class="form-control" id="f-condition">${['Excellent','Good','Fair','Poor'].map(c=>`<option ${e.condition===c?'selected':''}>${c}</option>`).join('')}</select></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Серийный №</label><input class="fc" id="f-serial" value="${e.serial||''}"></div>
+        <div class="fg"><label class="fl">Состояние</label><select class="fc" id="f-cond">${['Excellent','Good','Fair','Poor'].map(c=>`<option ${(e.condition||'Good')===c?'selected':''}>${c}</option>`).join('')}</select></div>
       </div>
-      <div class="form-group"><label class="form-label">Примечания</label><input class="form-control" id="f-notes" value="${e.notes||''}" placeholder="Напр.: устаревает, под замену в 2026"></div>`,
+      <div class="fg"><label class="fl">Примечания</label><input class="fc" id="f-notes" value="${e.notes||''}" placeholder="Устаревает, под замену..."></div>`,
     task:`
-      <div class="form-group"><label class="form-label">Задача</label><input class="form-control" id="f-title" value="${e.title||''}"></div>
-      <div class="form-group"><label class="form-label">Компания</label><input class="form-control" id="f-company" list="co-dl3" value="${e.company||''}"><datalist id="co-dl3">${coOpts}</datalist></div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Менеджер</label><select class="form-control" id="f-agent">${AGENTS.map(a=>`<option ${e.agent===a?'selected':''}>${a}</option>`).join('')}</select></div>
-        <div class="form-group"><label class="form-label">Приоритет</label><select class="form-control" id="f-priority">${['high','medium','low'].map(p=>`<option ${e.priority===p?'selected':''}>${p}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">Задача *</label><input class="fc" id="f-title" value="${e.title||''}"></div>
+      <div class="fg"><label class="fl">Компания</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Тип</label><select class="fc" id="f-type">${['Звонок','Встреча','Email','КП','Демонстрация','Документы','Другое'].map(t=>`<option ${e.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Приоритет</label><select class="fc" id="f-priority"><option ${e.priority==='high'?'selected':''} value="high">Срочный</option><option ${e.priority==='medium'?'selected':''} value="medium">Средний</option><option ${e.priority==='low'?'selected':''} value="low">Низкий</option></select></div>
       </div>
-      <div class="form-group"><label class="form-label">Срок</label><input class="form-control" id="f-due" type="date" value="${e.due||''}"></div>`
+      <div class="fr">
+        <div class="fg"><label class="fl">Менеджер</label><select class="fc" id="f-agent">${['А. Мартиросян','Г. Петросян','Н. Арутюнян','С. Саргсян','В. Акопян','Л. Мкртчян','К. Давтян','А. Карапетян','Р. Овсепян','Т. Григорян'].map(a=>`<option ${e.agent===a?'selected':''}>${a}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Срок</label><input class="fc" id="f-due" type="date" value="${e.due||''}"></div>
+      </div>`,
+    activity:`
+      <div class="fg"><label class="fl">Тип</label><select class="fc" id="f-type">${['Звонок','Встреча','Email','КП','Демонстрация','Документы','Другое'].map(t=>`<option>${t}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">Заметка</label><textarea class="fc" id="f-note" rows="3" placeholder="Что обсуждали, что решили..."></textarea></div>
+      <div class="fg"><label class="fl">Менеджер</label><select class="fc" id="f-agent">${['А. Мартиросян','Г. Петросян','Н. Арутюнян','С. Саргсян','В. Акопян','Л. Мкртчян','К. Давтян','А. Карапетян','Р. Овсепян','Т. Григорян'].map(a=>`<option>${a}</option>`).join('')}</select></div>`
   };
-  $('modal-body').innerHTML = bodies[type] || '';
+  $('mbody').innerHTML=bodies[type]||'';
   $('overlay').classList.add('open');
 }
 
-function openDealDetail(id) {
-  const d = db.deals.find(x=>String(x.id)===String(id));
-  if (!d) return;
-  modalType = '_detail';
-  $('modal-title').textContent = d.model + ' — ' + d.company;
-  $('modal-footer').style.display = 'none';
-  $('modal-body').innerHTML=`
-    <table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:16px">
-      ${[['Модель',d.model],['Компания',d.company],['Контакт',d.contact||'—'],['Сумма',fmt(d.amount)],['Этап',`<span class="badge ${stageBadge(d.stage)}">${d.stage}</span>`],['Менеджер',d.agent],['Дней в работе',d.days+'д']].map(([k,v])=>`<tr><td style="color:var(--text-muted);padding:8px 0;border-bottom:1px solid var(--gray-100);width:40%;font-weight:600;font-size:12px;text-transform:uppercase">${k}</td><td style="padding:8px 0;border-bottom:1px solid var(--gray-100);font-weight:500">${v}</td></tr>`).join('')}
-    </table>
-    <div style="margin-bottom:14px"><div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">Переместить на этап</div><div style="display:flex;gap:6px;flex-wrap:wrap">${STAGES.map(s=>`<button class="btn btn-sm ${d.stage===s?'btn-primary':''}" onclick="moveDeal('${d.id}','${s}')">${s}</button>`).join('')}</div></div>
-    <div style="display:flex;gap:8px"><button class="btn btn-sm" onclick="openModal('deal','${d.id}');"><i class="ti ti-edit"></i>Редактировать</button><button class="btn btn-sm btn-danger" onclick="deleteRecord('deals','${d.id}')"><i class="ti ti-trash"></i>Удалить</button></div>`;
-  $('overlay').classList.add('open');
-}
+const g=id=>{const el=document.getElementById(id);return el?el.value:null;};
 
-async function moveDeal(id, stage) {
-  const d = db.deals.find(x=>String(x.id)===String(id));
-  if (d) { d.stage=stage; await save('deals',{...d}); renderPipeline(); }
-  closeModal();
-}
-
-async function saveModal() {
-  const g = id => { const el=document.getElementById(id); return el?el.value:''; };
-  let row = {};
-  if (editId) row.id = editId;
-
-  if (modalType==='deal') {
-    row = {...row, model:g('f-model'),company:g('f-company'),contact:g('f-contact'),amount:Number(g('f-amount'))||0,stage:g('f-stage'),agent:g('f-agent'),days:Number(g('f-days'))||0,created:row.created||new Date().toISOString().slice(0,10)};
-    if (!row.company) return;
-    const saved = await save('deals', row);
-    if (!editId) db.deals.push(saved); else Object.assign(db.deals.find(d=>String(d.id)===String(editId)),saved);
-    // auto-save company name for shared autocomplete
-    const coName = row.company.trim();
-    if (coName && !db.companies.find(c=>c.name===coName)) {
-      const savedCo = await save('companies', {name: coName});
-      db.companies.push(savedCo);
-    }
-    renderPipeline();
-  } else if (modalType==='contact') {
-    row = {...row, company:g('f-company'),contact:g('f-contact'),phone:g('f-phone'),industry:g('f-industry'),status:g('f-status'),deals:row.deals||0};
-    if (!row.company) return;
-    const saved = await save('contacts', row);
-    if (!editId) db.contacts.push(saved); else Object.assign(db.contacts.find(c=>String(c.id)===String(editId)),saved);
-    renderContacts();
-  } else if (modalType==='fleet') {
-    row = {...row, company:g('f-company'),brand:g('f-brand'),model:g('f-model'),type:g('f-type'),year:Number(g('f-year'))||0,serial:g('f-serial'),condition:g('f-condition'),notes:g('f-notes')};
-    if (!row.company||!row.brand||!row.model) return;
-    const saved = await save('fleet', row);
-    if (!editId) db.fleet.push(saved); else Object.assign(db.fleet.find(f=>String(f.id)===String(editId)),saved);
-    renderFleet();
-  } else if (modalType==='task') {
-    row = {...row, title:g('f-title'),company:g('f-company'),agent:g('f-agent'),due:g('f-due'),priority:g('f-priority'),done:row.done||false};
-    if (!row.title) return;
-    const saved = await save('tasks', row);
-    if (!editId) db.tasks.push(saved); else Object.assign(db.tasks.find(t=>String(t.id)===String(editId)),saved);
-    renderTasks();
+function getCompanyFromForm(){
+  const fixedId=g('f-co-id');
+  if(fixedId)return{id:fixedId,name:db.companies.find(x=>x.id===fixedId)?.name||''};
+  const nameEl=document.getElementById('f-co-name');
+  if(nameEl){
+    const name=(nameEl.value||'').trim();
+    const found=db.companies.find(c=>c.name.toLowerCase()===name.toLowerCase());
+    return{id:found?found.id:null,name};
   }
-  closeModal();
+  const sel=document.getElementById('f-co');
+  if(sel&&sel.value){const c=db.companies.find(x=>x.id===sel.value);return c?{id:c.id,name:c.name}:{id:null,name:''};}
+  return{id:null,name:''};
 }
 
-async function deleteRecord(sheet, id) {
-  if (!confirm('Удалить запись?')) return;
-  await del(sheet, id);
-  db[sheet] = db[sheet].filter(x=>String(x.id)!==String(id));
-  closeModal();
-  renderSection(currentSection);
+async function saveM(){
+  const sheet={company:'companies',contact:'contacts',deal:'deals',fleet:'fleet',task:'tasks',activity:'activities'}[mtype];
+  const ex=eid&&sheet?(db[sheet]||[]).find(x=>x.id===eid):null;
+  let row=ex?{...ex}:{};
+
+  if(mtype==='company'){
+    const name=(g('f-name')||'').trim();if(!name)return alert('Введи название');
+    row={...row,name,industry:g('f-industry'),status:g('f-status'),city:g('f-city'),country:g('f-country'),website:g('f-website'),notes:g('f-notes'),created:row.created||new Date().toISOString().slice(0,10)};
+    const s=await persist('companies',row);
+    if(!eid)db.companies.push(s);else Object.assign(db.companies.find(x=>x.id===eid),s);
+    updateCounts();renderCompanies();
+  }else if(mtype==='contact'){
+    const {id:coId,name:coName}=getCompanyFromForm();
+    const fname=(g('f-fname')||'').trim();if(!fname)return alert('Введи имя');
+    row={...row,company_id:coId,company:coName,first_name:fname,last_name:g('f-lname')||'',position:g('f-pos')||'',phone:g('f-phone')||'',email:g('f-email')||'',notes:g('f-notes')||'',created:row.created||new Date().toISOString().slice(0,10)};
+    const s=await persist('contacts',row);
+    if(!eid)db.contacts.push(s);else Object.assign(db.contacts.find(x=>x.id===eid),s);
+    updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderContacts();
+  }else if(mtype==='deal'){
+    let {id:coId,name:coName}=getCompanyFromForm();
+    if(!coName)return alert('Укажи компанию');
+    if(!coId){const s=await persist('companies',{name:coName,status:'Потенциальный',created:new Date().toISOString().slice(0,10)});db.companies.push(s);coId=s.id;updateCounts();}
+    row={...row,company_id:coId,company:coName,model:g('f-model')||'',amount:Number(g('f-amount'))||0,currency:g('f-currency')||'USD',stage:g('f-stage')||'Lead',agent:g('f-agent')||'',next_action:g('f-next')||'',next_date:g('f-ndate')||'',days:Number(g('f-days'))||0,probability:{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[g('f-stage')]||0,created:row.created||new Date().toISOString().slice(0,10)};
+    const s=await persist('deals',row);
+    if(!eid)db.deals.push(s);else Object.assign(db.deals.find(x=>x.id===eid),s);
+    updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderPipeline();
+  }else if(mtype==='fleet'){
+    let {id:coId,name:coName}=getCompanyFromForm();
+    if(!coName||!g('f-model'))return alert('Заполни компанию и модель');
+    if(!coId&&coName){const s=await persist('companies',{name:coName,status:'Потенциальный',created:new Date().toISOString().slice(0,10)});db.companies.push(s);coId=s.id;updateCounts();}
+    row={...row,company_id:coId,company:coName,brand:g('f-brand')||'Hitachi',model:g('f-model'),type:g('f-type')||'',year:Number(g('f-year'))||0,serial:g('f-serial')||'',condition:g('f-cond')||'Good',notes:g('f-notes')||''};
+    const s=await persist('fleet',row);
+    if(!eid)db.fleet.push(s);else Object.assign(db.fleet.find(x=>x.id===eid),s);
+    updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderFleet();
+  }else if(mtype==='task'){
+    if(!g('f-title'))return alert('Введи задачу');
+    let {id:coId,name:coName}=getCompanyFromForm();
+    row={...row,company_id:coId,company:coName,title:g('f-title'),type:g('f-type')||'',priority:g('f-priority')||'medium',agent:g('f-agent')||'',due:g('f-due')||'',done:row.done||false,created:row.created||new Date().toISOString().slice(0,10)};
+    const s=await persist('tasks',row);
+    if(!eid)db.tasks.push(s);else Object.assign(db.tasks.find(x=>x.id===eid),s);
+    updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderTasks();
+  }else if(mtype==='activity'){
+    const coId=cur.company||null;const coName=coId?(db.companies.find(x=>x.id===coId)?.name||''):'';
+    row={...row,company_id:coId,company:coName,deal_id:cur.deal||null,type:g('f-type')||'',note:g('f-note')||'',agent:g('f-agent')||'',created:new Date().toISOString().slice(0,10)};
+    const s=await persist('activities',row);
+    db.activities.push(s);
+    if(cur.deal)openDealDetail(cur.deal);else if(cur.company)openCompanyDetail(cur.company);
+  }
+  closeM();
 }
 
-function closeModal() { $('overlay').classList.remove('open'); }
-function overlayClick(e) { if(e.target===$('overlay')) closeModal(); }
-function onBrandChange(val) {
-  const dl=$('model-dl');
-  if(dl) { while(dl.firstChild)dl.removeChild(dl.firstChild); (val==='Hitachi'?HITACHI_MODELS:[]).forEach(m=>{const o=document.createElement('option');o.value=m;dl.appendChild(o)}); }
+async function delRecord(sheet,id){
+  if(!confirm('Удалить запись?'))return;
+  await remove(sheet,id);
+  db[sheet]=db[sheet].filter(x=>x.id!==id);
+  closeM();updateCounts();
+  if(cur.company)openCompanyDetail(cur.company);
+  else render(cur.section);
 }
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
-(function init() {
-  const saved = localStorage.getItem('wayland_crm_url');
-  if (saved) {
-    API_URL = saved;
-    $('setup-url').value = saved;
-    $('setup-screen').style.display='none';
-    $('crm-app').style.display='flex';
-    $('content').innerHTML='<div class="loading"><div class="spinner"></div>Загрузка данных...</div>';
-    loadAll().then(()=>renderSection('dashboard')).catch(()=>{
-      $('crm-app').style.display='none';
-      $('setup-screen').style.display='flex';
-      showSetupError('Не удалось загрузить данные. Проверь URL или переподключись.');
+function closeM(){$('overlay').classList.remove('open');}
+function overlayBg(e){if(e.target===$('overlay'))closeM();}
+
+// ─── Init ──────────────────────────────────────────────────────────────────────
+(function(){
+  const saved=localStorage.getItem('wcrm_url');
+  if(saved){
+    API=saved;$('su-url').value=saved;
+    $('setup').style.display='none';$('app').style.display='flex';
+    $('content').innerHTML='<div style="text-align:center;padding:80px;color:var(--text-m)">Загрузка...</div>';
+    load().then(()=>render('dashboard')).catch(()=>{
+      $('app').style.display='none';$('setup').style.display='flex';
+      showErr('Не удалось загрузить данные. Проверь URL.');
     });
   }
 })();
