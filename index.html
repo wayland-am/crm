@@ -964,10 +964,9 @@ function openCompanyDetail(id){
   const c=db.companies.find(x=>x.id===id);if(!c)return;
   cur.company=id;cur.section='company-detail';
   $('ptitle').textContent=c.name;
-  $('breadcrumb').innerHTML=`<span onclick="go('companies',document.querySelector('.ni:nth-child(2)'))">Companies</span><i class="ti ti-chevron-right" style="font-size:12px"></i>`;
+  $('breadcrumb').innerHTML=`<span style="cursor:pointer;color:var(--blue)" onclick="go('companies',document.querySelector('.ni:nth-child(2)'))">Companies</span><i class="ti ti-chevron-right" style="font-size:12px;margin:0 4px"></i>`;
   $('topbar-right').innerHTML=`
     <button class="btn" onclick="openM('activity',null,'${id}')"><i class="ti ti-message-circle"></i>Log Activity</button>
-    <button class="btn" onclick="openM('fleet',null,'${id}')"><i class="ti ti-tractor"></i>+ Equipment</button>
     <button class="btn" onclick="openM('contact',null,'${id}')"><i class="ti ti-user"></i>+ Contact</button>
     <button class="btn" onclick="openM('task',null,'${id}')"><i class="ti ti-checkbox"></i>+ Task</button>
     <button class="btn btn-primary" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>+ Deal</button>`;
@@ -976,69 +975,134 @@ function openCompanyDetail(id){
   const deals=db.deals.filter(x=>x.company_id===id);
   const fleet=db.fleet.filter(x=>x.company_id===id);
   const tasks=db.tasks.filter(x=>x.company_id===id&&!x.done);
-  const activities=db.activities.filter(x=>x.company_id===id).slice(-10).reverse();
+  const acts=db.activities.filter(x=>x.company_id===id).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
   const hitachi=fleet.filter(f=>f.brand==='Hitachi').length;
   const pipeVal=deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').reduce((s,d)=>s+d.amount,0);
   const wonVal=deals.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0);
+  const lastAct=acts[0];
 
   $('content').innerHTML=`
-  <div class="detail-grid" style="display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start">
-    <div class="detail-sidebar">
-      <div class="card">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-          <div class="av av-0" style="width:48px;height:48px;font-size:18px;border-radius:12px;${c.category&&CAT_RULES[c.category]?'background:'+CAT_RULES[c.category].bg+';color:'+CAT_RULES[c.category].color:''}">${ini(c.name)}</div>
-          <div>
-            <div style="font-size:16px;font-weight:800">${c.name}</div>
-            <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
-              <span class="b ${statusBadge(c.status)}">${c.status||'—'}</span>
-              ${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Cat. ${c.category} · ${CAT_RULES[c.category].desc}</span>`:''}
-            </div>
-          </div>
+  <!-- TOP HERO CARD -->
+  <div class="card" style="padding:20px 24px;margin-bottom:16px">
+    <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
+      <div class="av av-0" style="width:56px;height:56px;font-size:22px;border-radius:14px;flex-shrink:0;${c.category&&CAT_RULES[c.category]?'background:'+CAT_RULES[c.category].bg+';color:'+CAT_RULES[c.category].color:''}">${ini(c.name)}</div>
+      <div style="flex:1;min-width:200px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+          <span style="font-size:20px;font-weight:800">${c.name}</span>
+          <span class="b ${statusBadge(c.status)}">${c.status||'—'}</span>
+          ${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Cat. ${c.category} · ${CAT_RULES[c.category].desc}</span>`:''}
         </div>
-        ${[['Industry',c.industry],['City',c.city],['Country',c.country],['Agent',c.assigned_agent],['Website',c.website?`<a href="${c.website}" style="color:var(--blue)" target="_blank">${c.website}</a>`:null]].filter(r=>r[1]).map(([k,v])=>`<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')}
-        ${c.notes?`<div style="margin-top:12px;font-size:13px;color:var(--text-m);background:var(--gray-50);padding:10px;border-radius:var(--r)">${c.notes}</div>`:''}
-        <div style="margin-top:14px;display:flex;gap:8px"><button class="btn btn-sm" onclick="openM('company','${c.id}')"><i class="ti ti-edit"></i>Edit</button></div>
+        <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:13px;color:var(--text-m)">
+          ${c.industry?`<span><i class="ti ti-building" style="margin-right:4px"></i>${c.industry}</span>`:''}
+          ${c.city?`<span><i class="ti ti-map-pin" style="margin-right:4px"></i>${c.city}${c.country?', '+c.country:''}</span>`:''}
+          ${c.website?`<a href="${c.website}" target="_blank" style="color:var(--blue)"><i class="ti ti-world" style="margin-right:4px"></i>${c.website}</a>`:''}
+          ${c.assigned_agent?`<span><i class="ti ti-user" style="margin-right:4px"></i>${c.assigned_agent}</span>`:''}
+        </div>
+        ${c.notes?`<div style="margin-top:10px;font-size:13px;color:var(--text-m);background:var(--gray-50);padding:8px 12px;border-radius:8px;border-left:3px solid var(--bdr)">${c.notes}</div>`:''}
       </div>
-      <div class="card">
-        <div class="card-title">Stats</div>
-        <div class="info-row"><span class="info-label">Deals</span><span class="info-val">${deals.length}</span></div>
-        <div class="info-row"><span class="info-label">Pipeline</span><span class="info-val">${fmtUSD(pipeVal)}</span></div>
-        <div class="info-row"><span class="info-label">Closed</span><span class="info-val" style="color:var(--green)">${fmtUSD(wonVal)}</span></div>
-        <div class="info-row"><span class="info-label">Equipment Units</span><span class="info-val">${fleet.length}</span></div>
-        <div class="info-row"><span class="info-label">Hitachi</span><span class="info-val" style="color:var(--blue)">${hitachi} of ${fleet.length}</span></div>
+      <div style="display:flex;gap:24px;flex-shrink:0;flex-wrap:wrap">
+        <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:var(--blue)">${deals.length}</div><div style="font-size:11px;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px">Deals</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:var(--amber)">${fmtUSD(pipeVal)}</div><div style="font-size:11px;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px">Pipeline</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:var(--green)">${fmtUSD(wonVal)}</div><div style="font-size:11px;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px">Won</div></div>
+        <div style="text-align:center"><div style="font-size:22px;font-weight:800">${fleet.length}</div><div style="font-size:11px;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px">Fleet</div></div>
       </div>
-      ${fleet.length?`<div class="card">
-        <div class="card-title">Fleet</div>
-        ${fleet.length>1?`<div class="fleet-bar" style="margin-bottom:12px">
-          ${hitachi?`<div class="fleet-seg" style="width:${Math.round(hitachi/fleet.length*100)}%;background:#185FA5">${Math.round(hitachi/fleet.length*100)}%</div>`:''}
-          ${fleet.length-hitachi?`<div class="fleet-seg" style="width:${Math.round((fleet.length-hitachi)/fleet.length*100)}%;background:#ef4444">${Math.round((fleet.length-hitachi)/fleet.length*100)}%</div>`:''}
-        </div>`:''}
-        ${fleet.map(u=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-100)">
-          <span class="brand-dot" style="background:${BRAND_C[u.brand]||'#888'}"></span>
-          <div style="flex:1"><div style="font-size:13px;font-weight:600">${u.brand} ${u.model}</div><div style="font-size:11px;color:var(--text-m)">${u.type} · ${u.year}</div></div>
-          <span class="b ${condBadge(u.condition)}">${u.condition}</span>
+      <button class="btn btn-sm" onclick="openM('company','${c.id}')"><i class="ti ti-edit"></i>Edit</button>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+    <!-- CONTACTS -->
+    <div class="card">
+      <div class="card-title">Contacts <span style="font-weight:400;font-size:12px;color:var(--text-m)">(${contacts.length})</span>
+        <button class="btn btn-sm" onclick="openM('contact',null,'${id}')"><i class="ti ti-plus"></i>Add</button>
+      </div>
+      ${contacts.length?`<div style="display:flex;flex-direction:column;gap:10px">
+        ${contacts.map((ct,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--gray-50);border-radius:8px">
+          <div class="av ${avC(i)}" style="width:36px;height:36px;font-size:13px;flex-shrink:0">${ini((ct.first_name||'')+' '+(ct.last_name||''))}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:13px">${ct.first_name||''} ${ct.last_name||''}</div>
+            <div style="font-size:12px;color:var(--text-m)">${ct.position||''}</div>
+            ${ct.phone?`<div style="font-size:12px;margin-top:2px"><i class="ti ti-phone" style="font-size:11px;color:var(--blue)"></i> <a href="tel:${ct.phone}" style="color:var(--text)">${ct.phone}</a></div>`:''}
+            ${ct.email?`<div style="font-size:12px;color:var(--blue);margin-top:1px"><i class="ti ti-mail" style="font-size:11px"></i> ${ct.email}</div>`:''}
+          </div>
+          <div style="display:flex;gap:4px">
+            <button class="btn btn-xs btn-ghost" onclick="openM('contact','${ct.id}')"><i class="ti ti-edit"></i></button>
+            <button class="btn btn-xs btn-ghost btn-danger" onclick="delRecord('contacts','${ct.id}')"><i class="ti ti-trash"></i></button>
+          </div>
         </div>`).join('')}
-        <button class="btn btn-sm" style="margin-top:10px" onclick="openM('fleet',null,'${id}')"><i class="ti ti-plus"></i>Add</button>
-      </div>`:''}
+      </div>`:`<div class="empty" style="padding:20px"><i class="ti ti-users"></i><div class="empty-title" style="font-size:13px">No contacts</div><button class="btn btn-sm btn-primary" onclick="openM('contact',null,'${id}')"><i class="ti ti-plus"></i>Add Contact</button></div>`}
     </div>
-    <div>
-      <div class="tabs">
-        <div class="tab active" onclick="cdTab('deals','${id}',this)">Deals (${deals.length})</div>
-        <div class="tab" onclick="cdTab('contacts','${id}',this)">Contacts (${contacts.length})</div>
-        <div class="tab" onclick="cdTab('tasks','${id}',this)">Tasks (${tasks.length})</div>
-        <div class="tab" onclick="cdTab('activity','${id}',this)">History</div>
+
+    <!-- DEALS -->
+    <div class="card">
+      <div class="card-title">Deals <span style="font-weight:400;font-size:12px;color:var(--text-m)">(${deals.length})</span>
+        <button class="btn btn-sm" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>Add</button>
       </div>
-      <div id="cd-pane">${renderCdDeals(id)}</div>
+      ${deals.length?`<div style="display:flex;flex-direction:column;gap:8px">
+        ${deals.map(d=>`<div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--gray-50);border-radius:8px;cursor:pointer" onclick="openDealDetail('${d.id}')">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:700;font-size:13px">${d.model||'Deal'}</div>
+            <div style="font-size:12px;color:var(--text-m)">${d.next_action||''}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0">
+            <div style="font-weight:800;font-size:14px">${fmtUSD(d.amount)}</div>
+            <span class="b ${stageBadge(d.stage)}" style="font-size:10px">${d.stage}</span>
+          </div>
+        </div>`).join('')}
+      </div>`:`<div class="empty" style="padding:20px"><i class="ti ti-versions"></i><div class="empty-title" style="font-size:13px">No deals</div><button class="btn btn-sm btn-primary" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>Add Deal</button></div>`}
     </div>
+  </div>
+
+  <!-- TASKS + FLEET -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+
+    <!-- TASKS -->
+    <div class="card">
+      <div class="card-title">Tasks <span style="font-weight:400;font-size:12px;color:var(--text-m)">(${tasks.length})</span>
+        <button class="btn btn-sm" onclick="openM('task',null,'${id}')"><i class="ti ti-plus"></i>Add</button>
+      </div>
+      ${tasks.length?tasks.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-100)">
+        <div class="cb ${t.done?'done':''}" onclick="toggleTask('${t.id}',${!t.done})">${t.done?'<i class="ti ti-check" style="font-size:11px"></i>':''}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;${t.done?'text-decoration:line-through;color:var(--text-m)':''}">${t.title}</div>
+          <div style="font-size:11px;color:var(--text-m)">${t.type||''} · ${t.agent||''}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <span class="b ${t.priority==='high'?'b-red':t.priority==='medium'?'b-amber':'b-gray'}" style="font-size:10px">${t.priority||''}</span>
+          <div style="font-size:11px;margin-top:2px">${dueFmt(t.due)}</div>
+        </div>
+      </div>`).join(''):`<div class="empty" style="padding:20px"><i class="ti ti-checkbox"></i><div class="empty-title" style="font-size:13px">No tasks</div><button class="btn btn-sm btn-primary" onclick="openM('task',null,'${id}')"><i class="ti ti-plus"></i>Add Task</button></div>`}
+    </div>
+
+    <!-- FLEET -->
+    <div class="card">
+      <div class="card-title">Fleet <span style="font-weight:400;font-size:12px;color:var(--text-m)">(${fleet.length})</span>
+        <button class="btn btn-sm" onclick="openM('fleet',null,'${id}')"><i class="ti ti-plus"></i>Add</button>
+      </div>
+      ${fleet.length?fleet.map(u=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-100)">
+        <span class="brand-dot" style="background:${BRAND_C[u.brand]||'#888'};width:10px;height:10px;flex-shrink:0"></span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">${u.brand} ${u.model}</div>
+          <div style="font-size:11px;color:var(--text-m)">${u.type||''}${u.year?' · '+u.year:''}</div>
+        </div>
+        <span class="b ${condBadge(u.condition)}" style="font-size:10px">${u.condition||'—'}</span>
+        <button class="btn btn-xs btn-ghost" onclick="openM('fleet','${u.id}')"><i class="ti ti-edit"></i></button>
+      </div>`).join(''):`<div class="empty" style="padding:20px"><i class="ti ti-tractor"></i><div class="empty-title" style="font-size:13px">No equipment</div><button class="btn btn-sm" onclick="openM('fleet',null,'${id}')"><i class="ti ti-plus"></i>Add</button></div>`}
+    </div>
+  </div>
+
+  <!-- ACTIVITY HISTORY -->
+  <div class="card">
+    <div class="card-title">Activity History
+      <button class="btn btn-sm" onclick="openM('activity',null,'${id}')"><i class="ti ti-plus"></i>Log Activity</button>
+    </div>
+    ${renderCdActivity(id)}
   </div>`;
 }
 
-function cdTab(tab,id,el){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  const fns={deals:renderCdDeals,contacts:renderCdContacts,tasks:renderCdTasks,activity:renderCdActivity};
-  $('cd-pane').innerHTML=fns[tab]?fns[tab](id):'';
-}
+function cdTab(tab,id,el){} // kept for compatibility
 
 function renderCdDeals(id){
   const deals=db.deals.filter(x=>x.company_id===id);
