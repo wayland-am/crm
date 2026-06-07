@@ -789,6 +789,7 @@ function renderCompanies(filter){
       ${th('contacts','Contacts')}
       ${th('deals','Deals')}
       ${th('fleet','Fleet')}
+      ${th('last_activity','Last Contact')}
       ${th('status','Status')}
       <th></th>
     </tr></thead>
@@ -810,7 +811,7 @@ function renderCompaniesRows(){
   if(thead)thead.innerHTML=`
     ${th('name','Company')}${th('industry','Industry')}${th('category','Cat.')}
     ${th('city','City')}${th('contacts','Contacts')}${th('deals','Deals')}
-    ${th('fleet','Fleet')}${th('status','Status')}<th></th>`;
+    ${th('fleet','Fleet')}${th('last_activity','Last Contact')}${th('status','Status')}<th></th>`;
 
   // Update clear button
   const inp=$('co-search-input');
@@ -844,17 +845,25 @@ function renderCompaniesRows(){
     else if(coSort.col==='contacts'){return(db.contacts.filter(x=>x.company_id===a.id).length-db.contacts.filter(x=>x.company_id===b.id).length)*coSort.dir;}
     else if(coSort.col==='deals'){return(db.deals.filter(x=>x.company_id===a.id&&x.stage!=='Lost').length-db.deals.filter(x=>x.company_id===b.id&&x.stage!=='Lost').length)*coSort.dir;}
     else if(coSort.col==='fleet'){return(db.fleet.filter(x=>x.company_id===a.id).length-db.fleet.filter(x=>x.company_id===b.id).length)*coSort.dir;}
+    else if(coSort.col==='last_activity'){
+      const la=a=>db.activities.filter(x=>x.company_id===a).map(x=>x.date||x.created||'').sort().pop()||'';
+      return la(a.id).localeCompare(la(b.id))*coSort.dir;
+    }
     else{av=a.name||'';bv=b.name||'';}
     return av.localeCompare(bv)*coSort.dir;
   });
 
-  const tb=$('co-tbody');
-  if(!tb)return;
+  const tb=$('co-tbody');if(!tb)return;
   tb.innerHTML=rows.length?rows.map((c,i)=>{
     const ctcCount=db.contacts.filter(x=>x.company_id===c.id).length;
     const dealCount=db.deals.filter(x=>x.company_id===c.id&&x.stage!=='Lost').length;
     const fleetCount=db.fleet.filter(x=>x.company_id===c.id).length;
     const hitachiCount=db.fleet.filter(x=>x.company_id===c.id&&x.brand==='Hitachi').length;
+    const acts=db.activities.filter(x=>x.company_id===c.id).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
+    const lastAct=acts[0];
+    const daysSince=lastAct?(Math.floor((new Date()-new Date(lastAct.date||lastAct.created))/(1000*60*60*24))):null;
+    const actColor=daysSince===null?'var(--text-l)':daysSince<=7?'var(--green)':daysSince<=30?'var(--amber)':'var(--red)';
+    const actLabel=daysSince===null?'—':daysSince===0?'Today':daysSince===1?'Yesterday':daysSince+'d ago';
     return`<tr onclick="openCompanyDetail('${c.id}')">
       <td><div style="display:flex;align-items:center;gap:9px"><div class="av ${avC(i)}" style="width:32px;height:32px;font-size:12px">${ini(c.name)}</div><div><div style="font-weight:700">${c.name}</div>${c.website?`<div style="font-size:11px;color:var(--blue)">${c.website}</div>`:''}</div></div></td>
       <td><div style="display:flex;align-items:center;gap:6px">${c.category?`<span class="cat-badge cat-${c.category}">${c.category}</span>`:''}<span style="font-size:12px;color:var(--text-m)">${c.industry||''}</span></div></td>
@@ -863,10 +872,13 @@ function renderCompaniesRows(){
       <td style="text-align:center">${ctcCount}</td>
       <td style="text-align:center">${dealCount}</td>
       <td style="font-size:12px;color:var(--text-m)">${fleetCount?hitachiCount+'H / '+(fleetCount-hitachiCount)+' other':'—'}</td>
+      <td style="font-size:12px">
+        ${lastAct?`<div style="color:${actColor};font-weight:600">${actLabel}</div><div style="font-size:11px;color:var(--text-m);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lastAct.type}${lastAct.note?' — '+lastAct.note:''}</div>`:`<span style="color:var(--text-l)">—</span>`}
+      </td>
       <td>${c.status?`<span class="b ${statusBadge(c.status)}">${c.status}</span>`:''}</td>
       <td onclick="event.stopPropagation()"><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('company','${c.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost btn-danger" onclick="delRecord('companies','${c.id}')"><i class="ti ti-trash"></i></button></div></td>
     </tr>`;
-  }).join(''):`<tr><td colspan="9"><div class="empty"><i class="ti ti-building"></i><div class="empty-title">No companies found</div>${coFilter?`<button class="btn btn-sm" onclick="coFilter='';document.getElementById('co-search-input').value='';renderCompaniesRows()">Clear filter</button>`:'Add first company'}</div></td></tr>`;
+  }).join(''):`<tr><td colspan="10"><div class="empty"><i class="ti ti-building"></i><div class="empty-title">No companies found</div>${coFilter?`<button class="btn btn-sm" onclick="coFilter='';document.getElementById('co-search-input').value='';renderCompaniesRows()">Clear filter</button>`:'Add first company'}</div></td></tr>`;
 }
 
 function openCompanyDetail(id){
@@ -996,13 +1008,21 @@ function renderCdTasks(id){
 }
 
 function renderCdActivity(id){
-  const acts=db.activities.filter(x=>x.company_id===id).reverse();
-  if(!acts.length)return`<div class="empty"><i class="ti ti-clock"></i><div class="empty-title">No activity</div></div>`;
-  const icons={Call:'ti-phone',Meeting:'ti-calendar',Email:'ti-mail',Proposal:'ti-file-text',Demo:'ti-eye',Documents:'ti-file',Other:'ti-dots'};
-  const colors={Call:'b-blue',Meeting:'b-purple',Email:'b-teal',Proposal:'b-amber',Demo:'b-green',Documents:'b-gray',Other:'b-gray'};
-  return acts.map(a=>`<div class="act-item">
-    <div class="act-icon b ${colors[a.type]||'b-gray'}"><i class="ti ${icons[a.type]||'ti-dots'}" style="font-size:14px"></i></div>
-    <div><div class="act-text"><strong>${a.type}</strong> — ${a.note||''}</div><div class="act-meta">${a.agent||''} · ${String(a.created||'').slice(0,10)}</div></div>
+  const acts=db.activities.filter(x=>x.company_id===id).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
+  if(!acts.length)return`<div class="empty"><i class="ti ti-clock"></i><div class="empty-title">No activity yet</div><div style="font-size:13px;color:var(--text-m)">Log calls, meetings and WhatsApp conversations here</div></div>`;
+  const icons={Call:'ti-phone',Meeting:'ti-calendar-event',WhatsApp:'ti-brand-whatsapp',Email:'ti-mail',Proposal:'ti-file-text',Demo:'ti-eye',Documents:'ti-file',Other:'ti-dots',stage:'ti-arrow-right',note:'ti-note'};
+  const colors={Call:'b-blue',Meeting:'b-purple',WhatsApp:'b-green',Email:'b-teal',Proposal:'b-amber',Demo:'b-green',Documents:'b-gray',Other:'b-gray',stage:'b-gray',note:'b-gray'};
+  return acts.map(a=>`<div class="act-item" style="align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--gray-100)">
+    <div class="act-icon b ${colors[a.type]||'b-gray'}" style="flex-shrink:0;margin-top:2px"><i class="ti ${icons[a.type]||'ti-dots'}" style="font-size:14px"></i></div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <strong style="font-size:13px">${a.type}</strong>
+        <span style="font-size:11px;color:var(--text-m)">${a.date||String(a.created||'').slice(0,10)} · ${a.agent||''}</span>
+      </div>
+      ${a.note?`<div style="font-size:13px;color:var(--text);margin-bottom:4px">${a.note}</div>`:''}
+      ${a.outcome?`<div style="background:var(--green-lt,#f0fdf4);border-left:3px solid var(--green);padding:6px 10px;border-radius:0 6px 6px 0;font-size:12px;margin-bottom:4px"><strong>✓ Agreed:</strong> ${a.outcome}</div>`:''}
+      ${a.next_step?`<div style="background:var(--blue-lt);border-left:3px solid var(--blue);padding:6px 10px;border-radius:0 6px 6px 0;font-size:12px"><strong>→ Next:</strong> ${a.next_step}${a.next_date?' · <em>'+a.next_date+'</em>':''}</div>`:''}
+    </div>
   </div>`).join('');
 }
 
@@ -1065,36 +1085,92 @@ async function moveDeal(id,stage){
 }
 
 // ─── Contacts ──────────────────────────────────────────────────────────────
-function renderContacts(filter=''){
-  const f=filter.toLowerCase();
-  const rows=db.contacts.filter(c=>!f||(c.first_name+' '+c.last_name).toLowerCase().includes(f)||(c.company||'').toLowerCase().includes(f));
+// ─── Contacts ──────────────────────────────────────────────────────────────
+let ctSort={col:'name',dir:1}, ctFilter='';
+
+function sortContacts(col){if(ctSort.col===col)ctSort.dir*=-1;else{ctSort.col=col;ctSort.dir=1;}renderContactsRows();}
+
+function renderContacts(filter){
+  if(filter!==undefined)ctFilter=filter;
   const seen2=new Set(db.contacts.map(c=>c.first_name+'|'+c.last_name+'|'+c.company));const dupes=db.contacts.length-seen2.size;
   $('content').innerHTML=`
   <div class="toolbar">
-    <div class="search"><i class="ti ti-search"></i><input placeholder="Search by name, company, phone..." oninput="renderContacts(this.value)"></div>
+    <div class="search" style="flex:1;max-width:400px">
+      <i class="ti ti-search"></i>
+      <input id="ct-search-input" placeholder="Search by name, company, phone..." oninput="ctFilter=this.value;renderContactsRows()" value="${ctFilter}" autocomplete="off">
+      ${ctFilter?`<button onclick="ctFilter='';document.getElementById('ct-search-input').value='';renderContactsRows()" style="background:none;border:none;cursor:pointer;padding:0 4px;color:var(--text-m);font-size:18px">×</button>`:''}
+    </div>
     ${dupes>0?`<button class="btn btn-danger btn-sm" onclick="dedupContacts()"><i class="ti ti-copy-off"></i>Remove Duplicates (${dupes})</button>`:''}
-    <button class="btn btn-primary" onclick="openM('contact')"><i class="ti ti-plus"></i>Add</button>
+    <button class="btn btn-primary" onclick="openM('contact')"><i class="ti ti-plus"></i>Add Contact</button>
   </div>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Name</th><th>Position</th><th>Company</th><th>Phone</th><th>Email</th><th></th></tr></thead>
-    <tbody>${rows.length?rows.map((c,i)=>`<tr>
-      <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:30px;height:30px;font-size:11px">${ini(c.first_name+' '+c.last_name)}</div><strong>${c.first_name} ${c.last_name}</strong></div></td>
-      <td style="color:var(--text-m)">${c.position||'—'}</td>
-      <td><span style="cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${c.company_id}')">${c.company||'—'}</span></td>
-      <td>${c.phone||'—'}</td><td style="color:var(--blue)">${c.email||'—'}</td>
-      <td><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('contact','${c.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost" onclick="delRecord('contacts','${c.id}')"><i class="ti ti-trash"></i></button></div></td>
-    </tr>`).join(''):`<tr><td colspan="6"><div class="empty"><i class="ti ti-users"></i><div class="empty-title">No contacts</div></div></td></tr>`}
-    </tbody>
+    <thead id="ct-thead"></thead>
+    <tbody id="ct-tbody"></tbody>
   </table></div>`;
+  renderContactsRows();
+  const inp=$('ct-search-input');if(inp&&ctFilter){inp.focus();const l=ctFilter.length;inp.setSelectionRange(l,l);}
+}
+
+function renderContactsRows(){
+  const si=col=>`<i class="ti ti-${ctSort.col===col?(ctSort.dir===1?'arrow-up':'arrow-down'):'arrows-sort'}" style="font-size:11px;margin-left:4px;opacity:${ctSort.col===col?1:0.3}"></i>`;
+  const th=(col,label)=>`<th style="cursor:pointer;user-select:none" onclick="sortContacts('${col}')">${label}${si(col)}</th>`;
+  const thead=$('ct-thead');
+  if(thead)thead.innerHTML=`<tr>${th('name','Name')}${th('position','Position')}${th('company','Company')}${th('phone','Phone')}${th('email','Email')}<th></th></tr>`;
+
+  const f=ctFilter.toLowerCase();
+  let rows=db.contacts.filter(c=>!f||
+    (c.first_name+' '+c.last_name).toLowerCase().includes(f)||
+    (c.company||'').toLowerCase().includes(f)||
+    (c.phone||'').includes(f)||
+    (c.email||'').toLowerCase().includes(f)||
+    (c.position||'').toLowerCase().includes(f)
+  );
+  rows=[...rows].sort((a,b)=>{
+    let av,bv;
+    if(ctSort.col==='name'){av=(a.first_name+' '+a.last_name).trim();bv=(b.first_name+' '+b.last_name).trim();}
+    else if(ctSort.col==='position'){av=a.position||'';bv=b.position||'';}
+    else if(ctSort.col==='company'){av=a.company||'';bv=b.company||'';}
+    else if(ctSort.col==='phone'){av=a.phone||'';bv=b.phone||'';}
+    else if(ctSort.col==='email'){av=a.email||'';bv=b.email||'';}
+    else{av=(a.first_name+' '+a.last_name).trim();bv=(b.first_name+' '+b.last_name).trim();}
+    return av.localeCompare(bv)*ctSort.dir;
+  });
+
+  const tb=$('ct-tbody');if(!tb)return;
+  tb.innerHTML=rows.length?rows.map((c,i)=>`<tr>
+    <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:30px;height:30px;font-size:11px">${ini(c.first_name+' '+c.last_name)}</div><strong>${c.first_name} ${c.last_name}</strong></div></td>
+    <td style="color:var(--text-m)">${c.position||'—'}</td>
+    <td><span style="cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${c.company_id}')">${c.company||'—'}</span></td>
+    <td>${c.phone||'—'}</td>
+    <td style="color:var(--blue)">${c.email||'—'}</td>
+    <td><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('contact','${c.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost btn-danger" onclick="delRecord('contacts','${c.id}')"><i class="ti ti-trash"></i></button></div></td>
+  </tr>`).join(''):`<tr><td colspan="6"><div class="empty"><i class="ti ti-users"></i><div class="empty-title">No contacts${ctFilter?' matching filter':''}</div>${ctFilter?`<button class="btn btn-sm" onclick="ctFilter='';document.getElementById('ct-search-input').value='';renderContactsRows()">Clear</button>`:''}</div></td></tr>`;
 }
 
 // ─── Fleet ─────────────────────────────────────────────────────────────────
+let flSort={col:'company',dir:1};
+function sortFleet(col){if(flSort.col===col)flSort.dir*=-1;else{flSort.col=col;flSort.dir=1;}renderFleet();}
+
 function renderFleet(){
-  const byBrand={};
-  db.fleet.forEach(u=>{byBrand[u.brand]=(byBrand[u.brand]||0)+1});
-  const tot=db.fleet.length;
-  const h=byBrand.Hitachi||0;
+  const si=col=>`<i class="ti ti-${flSort.col===col?(flSort.dir===1?'arrow-up':'arrow-down'):'arrows-sort'}" style="font-size:11px;margin-left:4px;opacity:${flSort.col===col?1:0.3}"></i>`;
+  const th=(col,label)=>`<th style="cursor:pointer;user-select:none;white-space:nowrap" onclick="sortFleet('${col}')">${label}${si(col)}</th>`;
+
+  const byBrand={};db.fleet.forEach(u=>{byBrand[u.brand]=(byBrand[u.brand]||0)+1});
+  const tot=db.fleet.length;const h=byBrand.Hitachi||0;
   const opp=db.fleet.filter(u=>u.brand!=='Hitachi'&&(u.condition==='Poor'||u.condition==='Fair')).length;
+
+  let sorted=[...db.fleet].sort((a,b)=>{
+    let av,bv;
+    if(flSort.col==='company'){av=a.company||'';bv=b.company||'';}
+    else if(flSort.col==='brand'){av=a.brand||'';bv=b.brand||'';}
+    else if(flSort.col==='model'){av=a.model||'';bv=b.model||'';}
+    else if(flSort.col==='type'){av=a.type||'';bv=b.type||'';}
+    else if(flSort.col==='year'){return((Number(a.year)||0)-(Number(b.year)||0))*flSort.dir;}
+    else if(flSort.col==='condition'){av=a.condition||'';bv=b.condition||'';}
+    else{av=a.company||'';bv=b.company||'';}
+    return av.localeCompare(bv)*flSort.dir;
+  });
+
   $('content').innerHTML=`
   <div class="metrics" style="margin-bottom:18px">
     <div class="metric"><div class="metric-label">Total Units</div><div class="metric-value">${tot}</div></div>
@@ -1117,14 +1193,14 @@ function renderFleet(){
     </table></div>
   </div>`:''}
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Company</th><th>Brand</th><th>Model</th><th>Type</th><th>Year</th><th>Condition</th><th>Serial No.</th><th></th></tr></thead>
-    <tbody>${db.fleet.length?db.fleet.map(u=>`<tr>
+    <thead><tr>${th('company','Company')}${th('brand','Brand')}${th('model','Model')}${th('type','Type')}${th('year','Year')}${th('condition','Condition')}<th>Serial No.</th><th></th></tr></thead>
+    <tbody>${sorted.length?sorted.map(u=>`<tr>
       <td style="font-weight:700;cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${u.company_id}')">${u.company}</td>
       <td><span style="display:inline-flex;align-items:center;gap:5px"><span class="brand-dot" style="background:${BRAND_C[u.brand]||'#888'}"></span>${u.brand}</span></td>
-      <td style="font-weight:600">${u.model}</td><td>${u.type}</td><td>${u.year}</td>
+      <td style="font-weight:600">${u.model}</td><td>${u.type}</td><td>${u.year||'—'}</td>
       <td><span class="b ${condBadge(u.condition)}">${u.condition}</span></td>
       <td style="color:var(--text-m);font-size:12px">${u.serial||'—'}</td>
-      <td><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('fleet','${u.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost" onclick="delRecord('fleet','${u.id}')"><i class="ti ti-trash"></i></button></div></td>
+      <td><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('fleet','${u.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost btn-danger" onclick="delRecord('fleet','${u.id}')"><i class="ti ti-trash"></i></button></div></td>
     </tr>`).join(''):`<tr><td colspan="8"><div class="empty"><i class="ti ti-tractor"></i><div class="empty-title">No equipment data</div></div></td></tr>`}
     </tbody>
   </table></div>`;
@@ -1309,9 +1385,17 @@ function openM(type,id=null,coId=null,dealId=null){
       </div>
       <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option>Sales Manager</option><option ${e.role==='Senior Manager'?'selected':''}>Senior Manager</option><option ${e.role==='Manager'?'selected':''}>Manager</option></select></div>`,
     activity:`
-      <div class="fg"><label class="fl">Type</label><select class="fc" id="f-type">${['Call','Meeting','Email','Proposal','Demo','Documents','Other'].map(t=>`<option>${t}</option>`).join('')}</select></div>
-      <div class="fg"><label class="fl">Note</label><textarea class="fc" id="f-note" rows="3" placeholder="What was discussed,what was discussed..."></textarea></div>
-      <div class="fg"><label class="fl">Manager</label><select class="fc" id="f-agent">${['A. Martirosyan','G. Petrosyan','N. Harutyunyan','S. Sargsyan','V. Hakobyan','L. Mkrtchyan','K. Davtyan','A. Karapetyan','R. Hovsepyan','T. Grigoryan'].map(a=>`<option>${a}</option>`).join('')}</select></div>`
+      <div class="fr">
+        <div class="fg"><label class="fl">Type</label><select class="fc" id="f-type">${['Call','Meeting','WhatsApp','Email','Proposal','Demo','Documents','Other'].map(t=>`<option>${t}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Date</label><input class="fc" id="f-act-date" type="date" value="${today()}"></div>
+      </div>
+      <div class="fg"><label class="fl">Summary — what was discussed</label><textarea class="fc" id="f-note" rows="3" placeholder="Topics covered, client's situation, questions raised..."></textarea></div>
+      <div class="fg"><label class="fl">Outcome / Agreement</label><textarea class="fc" id="f-outcome" rows="2" placeholder="What was agreed, client's decision, objections..."></textarea></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Next Step</label><input class="fc" id="f-next-step" placeholder="Send proposal, call back, arrange demo..."></div>
+        <div class="fg"><label class="fl">Follow-up Date</label><input class="fc" id="f-next-date" type="date"></div>
+      </div>
+      <div class="fg"><label class="fl">Assigned To</label><select class="fc" id="f-agent">${(db.agents.length?db.agents.map(a=>a.name):['Maxim Kalashnikov']).map(a=>`<option ${a===(currentUser?.name||'')?' selected':''}>${a}</option>`).join('')}</select></div>`
   };
   $('mbody').innerHTML=bodies[type]||'';
   $('overlay').classList.add('open');
@@ -1403,9 +1487,18 @@ async function _saveM(){
     renderAgents();
   }else if(mtype==='activity'){
     const coId=cur.company||null;const coName=coId?(db.companies.find(x=>x.id===coId)?.name||''):'';
-    row={...row,company_id:coId,company:coName,deal_id:cur.deal||null,type:g('f-type')||'',note:g('f-note')||'',agent:g('f-agent')||'',created:new Date().toISOString().slice(0,10)};
+    const nextStep=g('f-next-step')||'';const nextDate=g('f-next-date')||'';const agent=g('f-agent')||currentUser?.name||'';
+    row={...row,company_id:coId,company:coName,deal_id:cur.deal||null,type:g('f-type')||'',note:g('f-note')||'',outcome:g('f-outcome')||'',next_step:nextStep,next_date:nextDate,agent,date:g('f-act-date')||today(),created:today()};
     const s=await persist('activities',row);
     db.activities.push(s);
+    // Auto-create follow-up task if date is set
+    if(nextDate){
+      const taskTitle=nextStep||`Follow-up: ${coName}`;
+      const task={id:uid(),company_id:coId,company:coName,deal_id:cur.deal||null,title:taskTitle,text:nextStep,type:'Call',priority:'medium',agent,due:nextDate,done:false,auto_scheduled:'false',created:today()};
+      const ts=await persist('tasks',task);
+      db.tasks.push(ts);
+      updateCounts();
+    }
     if(cur.deal)openDealDetail(cur.deal);else if(cur.company)openCompanyDetail(cur.company);
   }
   closeM();
