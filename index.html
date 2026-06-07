@@ -579,6 +579,8 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 const ini=s=>String(s||'').split(' ').map(p=>p[0]||'').join('').slice(0,2).toUpperCase()||'?';
 const avC=i=>'av-'+(i%10);
 const today=()=>new Date().toISOString().slice(0,10);
+const fmtDate=d=>{if(!d)return'';return String(d).includes('T')?String(d).slice(0,10):String(d);};
+const dueFmt=d=>{if(!d)return'';const s=fmtDate(d);const diff=Math.round((new Date(s)-new Date(today()))/(1000*60*60*24));if(diff===0)return`<span style="color:var(--amber);font-weight:600">Today</span>`;if(diff===1)return`<span style="color:var(--blue)">Tomorrow</span>`;if(diff<0)return`<span style="color:var(--red);font-weight:600">${Math.abs(diff)}d overdue</span>`;return`<span style="color:var(--text-m)">${s}</span>`;}
 const coName=id=>{const c=db.companies.find(x=>x.id==id);return c?c.name:id||''};
 const stageBadge=s=>({Lead:'b-gray',Qualified:'b-purple',Proposal:'b-amber',Negotiation:'b-blue',Won:'b-green',Lost:'b-red'}[s]||'b-gray');
 const condBadge=c=>({Excellent:'b-green',Good:'b-blue',Fair:'b-amber',Poor:'b-red'}[c]||'b-gray');
@@ -608,7 +610,12 @@ async function load(){
   sheets.forEach((s,i)=>{db[s]=res[i]||[];});
   db.deals.forEach(d=>{d.amount=Number(d.amount)||0;d.days=Number(d.days)||0;});
   db.fleet.forEach(f=>{f.year=Number(f.year)||0;});
-  db.tasks.forEach(t=>{t.done=String(t.done)==='true';});
+  db.tasks.forEach(t=>{
+    t.done=String(t.done)==='true';
+    // Normalize ISO timestamps to date-only
+    if(t.due&&t.due.includes('T'))t.due=t.due.slice(0,10);
+    if(t.created&&t.created.includes('T'))t.created=t.created.slice(0,10);
+  });
   db.leads.forEach(l=>{l.created=l.created||today();});
   updateCounts();
 }
@@ -714,7 +721,7 @@ function renderDashboard(){
         <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
           <div class="cb" onclick="quickDoneTask('${t.id}')"></div>
           <div style="flex:1"><div style="font-size:13px;font-weight:500">${t.title}</div><div style="font-size:11px;color:var(--text-m)">${t.company||''} · ${t.agent||''}</div></div>
-          <span style="font-size:11px;color:var(--text-m)">${t.due||''}</span>
+          <span style="font-size:11px">${dueFmt(t.due)}</span>
         </div>`).join('') || '<div style="text-align:center;padding:16px;color:var(--text-m);font-size:13px">No urgent tasks</div>'}
     </div>
     <div class="card">
@@ -887,6 +894,7 @@ function openCompanyDetail(id){
   $('ptitle').textContent=c.name;
   $('breadcrumb').innerHTML=`<span onclick="go('companies',document.querySelector('.ni:nth-child(2)'))">Companies</span><i class="ti ti-chevron-right" style="font-size:12px"></i>`;
   $('topbar-right').innerHTML=`
+    <button class="btn" onclick="openM('activity',null,'${id}')"><i class="ti ti-message-circle"></i>Log Activity</button>
     <button class="btn" onclick="openM('fleet',null,'${id}')"><i class="ti ti-tractor"></i>+ Equipment</button>
     <button class="btn" onclick="openM('contact',null,'${id}')"><i class="ti ti-user"></i>+ Contact</button>
     <button class="btn" onclick="openM('task',null,'${id}')"><i class="ti ti-checkbox"></i>+ Task</button>
@@ -1002,7 +1010,7 @@ function renderCdTasks(id){
     <div style="flex:1"><div style="font-size:13px;font-weight:600;${t.done?'text-decoration:line-through;color:var(--text-m)':''}">${t.title}</div><div style="font-size:11px;color:var(--text-m);margin-top:2px">${t.type||''} · ${t.agent||''}</div></div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
       <span class="b ${t.priority==='high'?'b-red':t.priority==='medium'?'b-amber':'b-gray'}">${t.priority||''}</span>
-      <span style="font-size:11px;color:var(--text-m)">${t.due||''}</span>
+      <span style="font-size:11px">${dueFmt(t.due)}</span>
     </div>
   </div>`).join('');
 }
@@ -1053,7 +1061,7 @@ function openDealDetail(id){
         ${tasks.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-100)">
           <div class="cb ${t.done?'done':''}" onclick="toggleTask('${t.id}',${!t.done})">${t.done?'<i class="ti ti-check" style="font-size:11px"></i>':''}</div>
           <div style="flex:1;font-size:13px;${t.done?'text-decoration:line-through;color:var(--text-m)':''}">${t.title}</div>
-          <span style="font-size:11px;color:var(--text-m)">${t.due||''}</span>
+          <span style="font-size:11px">${dueFmt(t.due)}</span>
         </div>`).join('')}
         <button class="btn btn-sm" style="margin-top:10px" onclick="openM('task',null,'${d.company_id}','${id}')"><i class="ti ti-plus"></i>Task</button>
       </div>
@@ -1224,7 +1232,7 @@ function renderTasks(filter='all'){
     </div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;margin-left:12px">
       <span class="b ${t.priority==='high'?'b-red':t.priority==='medium'?'b-amber':'b-gray'}">${t.priority||''}</span>
-      <span style="font-size:11px;color:var(--text-m)">${t.due||''}</span>
+      <span style="font-size:11px">${dueFmt(t.due)}</span>
     </div>
     <div style="display:flex;gap:4px;margin-left:8px"><button class="btn btn-sm btn-ghost" onclick="openM('task','${t.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost" onclick="delRecord('tasks','${t.id}')"><i class="ti ti-trash"></i></button></div>
   </div>`).join(''):`<div class="empty"><i class="ti ti-checkbox"></i><div class="empty-title">No tasks</div></div>`}`;
