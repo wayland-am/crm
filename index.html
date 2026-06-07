@@ -758,35 +758,115 @@ function renderPipeline(){
 }
 
 // ─── Companies ─────────────────────────────────────────────────────────────
-function renderCompanies(filter=''){
-  const f=filter.toLowerCase();
-  const rows=db.companies.filter(c=>!f||c.name.toLowerCase().includes(f)||(c.industry||'').toLowerCase().includes(f));
+let coSort={col:'name',dir:1};
+let coFilter='';
+
+function sortCompanies(col){
+  if(coSort.col===col)coSort.dir*=-1;else{coSort.col=col;coSort.dir=1;}
+  renderCompaniesRows();
+}
+
+function renderCompanies(filter){
+  if(filter!==undefined)coFilter=filter;
+  const si=col=>`<i class="ti ti-${coSort.col===col?(coSort.dir===1?'arrow-up':'arrow-down'):'arrows-sort'}" style="font-size:11px;margin-left:4px;opacity:${coSort.col===col?1:0.3}"></i>`;
+  const th=(col,label)=>`<th style="cursor:pointer;user-select:none;white-space:nowrap" onclick="sortCompanies('${col}')">${label}${si(col)}</th>`;
+
   $('content').innerHTML=`
   <div class="toolbar">
-    <div class="search"><i class="ti ti-search"></i><input placeholder="Search by name or industry..." oninput="renderCompanies(this.value)"></div>
+    <div class="search" style="flex:1;max-width:400px">
+      <i class="ti ti-search"></i>
+      <input id="co-search-input" placeholder="Search by name, industry, city..." oninput="coFilter=this.value;renderCompaniesRows()" value="${coFilter}" autocomplete="off">
+      ${coFilter?`<button onclick="coFilter='';document.getElementById('co-search-input').value='';renderCompaniesRows()" style="background:none;border:none;cursor:pointer;padding:0 4px;color:var(--text-m);font-size:16px;line-height:1" title="Clear search">×</button>`:''}
+    </div>
     <button class="btn btn-primary" onclick="openM('company')"><i class="ti ti-plus"></i>Add Company</button>
   </div>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Company</th><th>Industry</th><th>Cat.</th><th>City</th><th>Contacts</th><th>Deals</th><th>Fleet</th><th>Status</th><th></th></tr></thead>
-    <tbody>${rows.length?rows.map((c,i)=>{
-      const ctcCount=db.contacts.filter(x=>x.company_id===c.id).length;
-      const dealCount=db.deals.filter(x=>x.company_id===c.id&&x.stage!=='Lost').length;
-      const fleetCount=db.fleet.filter(x=>x.company_id===c.id).length;
-      const hitachiCount=db.fleet.filter(x=>x.company_id===c.id&&x.brand==='Hitachi').length;
-      return`<tr onclick="openCompanyDetail('${c.id}')">
-        <td><div style="display:flex;align-items:center;gap:9px"><div class="av ${avC(i)}" style="width:32px;height:32px;font-size:12px">${ini(c.name)}</div><div><div style="font-weight:700">${c.name}</div>${c.website?`<div style="font-size:11px;color:var(--blue)">${c.website}</div>`:''}</div></div></td>
-        <td><div style="display:flex;align-items:center;gap:6px">${c.category?`<span class="cat-badge cat-${c.category}">${c.category}</span>`:''}<span style="font-size:12px;color:var(--text-m)">${c.industry||''}</span></div></td>
-        <td>${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Cat. ${c.category}</span>`:'-'}</td>
-        <td style="color:var(--text-m)">${c.city||'—'}</td>
-        <td style="text-align:center">${ctcCount}</td>
-        <td style="text-align:center">${dealCount}</td>
-        <td style="font-size:12px;color:var(--text-m)">${fleetCount?hitachiCount+'H / '+(fleetCount-hitachiCount)+' other':'—'}</td>
-        <td>${c.status?`<span class="b ${statusBadge(c.status)}">${c.status}</span>`:''}</td>
-        <td onclick="event.stopPropagation()"><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('company','${c.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost" onclick="delRecord('companies','${c.id}')"><i class="ti ti-trash"></i></button></div></td>
-      </tr>`;
-    }).join(''):`<tr><td colspan="8"><div class="empty"><i class="ti ti-building"></i><div class="empty-title">No companies</div>Add first company</div></td></tr>`}
-    </tbody>
+    <thead><tr>
+      ${th('name','Company')}
+      ${th('industry','Industry')}
+      ${th('category','Cat.')}
+      ${th('city','City')}
+      ${th('contacts','Contacts')}
+      ${th('deals','Deals')}
+      ${th('fleet','Fleet')}
+      ${th('status','Status')}
+      <th></th>
+    </tr></thead>
+    <tbody id="co-tbody"></tbody>
   </table></div>`;
+
+  renderCompaniesRows();
+  // Restore focus and cursor position
+  const inp=$('co-search-input');
+  if(inp&&coFilter){inp.focus();const l=coFilter.length;inp.setSelectionRange(l,l);}
+}
+
+function renderCompaniesRows(){
+  const si=col=>`<i class="ti ti-${coSort.col===col?(coSort.dir===1?'arrow-up':'arrow-down'):'arrows-sort'}" style="font-size:11px;margin-left:4px;opacity:${coSort.col===col?1:0.3}"></i>`;
+  const th=(col,label)=>`<th style="cursor:pointer;user-select:none;white-space:nowrap" onclick="sortCompanies('${col}')">${label}${si(col)}</th>`;
+
+  // Update sort headers
+  const thead=document.querySelector('.tbl thead tr');
+  if(thead)thead.innerHTML=`
+    ${th('name','Company')}${th('industry','Industry')}${th('category','Cat.')}
+    ${th('city','City')}${th('contacts','Contacts')}${th('deals','Deals')}
+    ${th('fleet','Fleet')}${th('status','Status')}<th></th>`;
+
+  // Update clear button
+  const inp=$('co-search-input');
+  if(inp){
+    let btn=inp.parentNode.querySelector('button');
+    if(coFilter&&!btn){
+      btn=document.createElement('button');
+      btn.innerHTML='×';btn.title='Clear search';
+      btn.style.cssText='background:none;border:none;cursor:pointer;padding:0 4px;color:var(--text-m);font-size:18px;line-height:1';
+      btn.onclick=()=>{coFilter='';inp.value='';renderCompaniesRows();};
+      inp.parentNode.appendChild(btn);
+    } else if(!coFilter&&btn){btn.remove();}
+  }
+
+  const f=coFilter.toLowerCase();
+  let rows=db.companies.filter(c=>!f||
+    (c.name||'').toLowerCase().includes(f)||
+    (c.industry||'').toLowerCase().includes(f)||
+    (c.city||'').toLowerCase().includes(f)||
+    (c.status||'').toLowerCase().includes(f)||
+    (c.category||'').toLowerCase().includes(f)
+  );
+
+  rows=[...rows].sort((a,b)=>{
+    let av,bv;
+    if(coSort.col==='name'){av=a.name||'';bv=b.name||'';}
+    else if(coSort.col==='industry'){av=a.industry||'';bv=b.industry||'';}
+    else if(coSort.col==='category'){av=a.category||'Z';bv=b.category||'Z';}
+    else if(coSort.col==='city'){av=a.city||'';bv=b.city||'';}
+    else if(coSort.col==='status'){av=a.status||'';bv=b.status||'';}
+    else if(coSort.col==='contacts'){return(db.contacts.filter(x=>x.company_id===a.id).length-db.contacts.filter(x=>x.company_id===b.id).length)*coSort.dir;}
+    else if(coSort.col==='deals'){return(db.deals.filter(x=>x.company_id===a.id&&x.stage!=='Lost').length-db.deals.filter(x=>x.company_id===b.id&&x.stage!=='Lost').length)*coSort.dir;}
+    else if(coSort.col==='fleet'){return(db.fleet.filter(x=>x.company_id===a.id).length-db.fleet.filter(x=>x.company_id===b.id).length)*coSort.dir;}
+    else{av=a.name||'';bv=b.name||'';}
+    return av.localeCompare(bv)*coSort.dir;
+  });
+
+  const tb=$('co-tbody');
+  if(!tb)return;
+  tb.innerHTML=rows.length?rows.map((c,i)=>{
+    const ctcCount=db.contacts.filter(x=>x.company_id===c.id).length;
+    const dealCount=db.deals.filter(x=>x.company_id===c.id&&x.stage!=='Lost').length;
+    const fleetCount=db.fleet.filter(x=>x.company_id===c.id).length;
+    const hitachiCount=db.fleet.filter(x=>x.company_id===c.id&&x.brand==='Hitachi').length;
+    return`<tr onclick="openCompanyDetail('${c.id}')">
+      <td><div style="display:flex;align-items:center;gap:9px"><div class="av ${avC(i)}" style="width:32px;height:32px;font-size:12px">${ini(c.name)}</div><div><div style="font-weight:700">${c.name}</div>${c.website?`<div style="font-size:11px;color:var(--blue)">${c.website}</div>`:''}</div></div></td>
+      <td><div style="display:flex;align-items:center;gap:6px">${c.category?`<span class="cat-badge cat-${c.category}">${c.category}</span>`:''}<span style="font-size:12px;color:var(--text-m)">${c.industry||''}</span></div></td>
+      <td>${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Cat. ${c.category}</span>`:'-'}</td>
+      <td style="color:var(--text-m)">${c.city||'—'}</td>
+      <td style="text-align:center">${ctcCount}</td>
+      <td style="text-align:center">${dealCount}</td>
+      <td style="font-size:12px;color:var(--text-m)">${fleetCount?hitachiCount+'H / '+(fleetCount-hitachiCount)+' other':'—'}</td>
+      <td>${c.status?`<span class="b ${statusBadge(c.status)}">${c.status}</span>`:''}</td>
+      <td onclick="event.stopPropagation()"><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('company','${c.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost btn-danger" onclick="delRecord('companies','${c.id}')"><i class="ti ti-trash"></i></button></div></td>
+    </tr>`;
+  }).join(''):`<tr><td colspan="9"><div class="empty"><i class="ti ti-building"></i><div class="empty-title">No companies found</div>${coFilter?`<button class="btn btn-sm" onclick="coFilter='';document.getElementById('co-search-input').value='';renderCompaniesRows()">Clear filter</button>`:'Add first company'}</div></td></tr>`;
 }
 
 function openCompanyDetail(id){
@@ -1687,7 +1767,7 @@ function renderOperations(){
         Upload an Excel or CSV file with company list.<br>
         Columns: <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px">Name, Industry, City, Phone, Email, Status</code>
       </div>
-      <div style="border:2px dashed var(--bdr);border-radius:var(--r);padding:28px;text-align:center;margin-bottom:12px" id="drop-zone" ondragover="event.preventDefault()" ondrop="handleDrop(event,'companies')">
+      <div style="border:2px dashed var(--bdr);border-radius:var(--r);padding:28px;text-align:center;margin-bottom:12px" ondragover="event.preventDefault()" ondrop="handleDrop(event,'companies')">
         <i class="ti ti-file-spreadsheet" style="font-size:36px;color:var(--gray-300);display:block;margin-bottom:10px"></i>
         <div style="font-size:13px;color:var(--text-m);margin-bottom:12px">Drop file here or click</div>
         <input type="file" id="import-co-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFile(this,'companies')">
@@ -1697,6 +1777,24 @@ function renderOperations(){
       <div id="import-co-result" style="margin-top:10px"></div>
     </div>
 
+    <div class="card">
+      <div class="card-title"><i class="ti ti-upload" style="color:var(--green);margin-right:8px"></i>Import Contacts from CSV</div>
+      <div style="font-size:13px;color:var(--text-m);margin-bottom:16px;line-height:1.6">
+        Upload a CSV with contacts linked to companies.<br>
+        Columns: <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px">first_name, last_name, company, position, phone, email, notes</code>
+      </div>
+      <div style="border:2px dashed var(--bdr);border-radius:var(--r);padding:28px;text-align:center;margin-bottom:12px" ondragover="event.preventDefault()" ondrop="handleDrop(event,'contacts')">
+        <i class="ti ti-users" style="font-size:36px;color:var(--gray-300);display:block;margin-bottom:10px"></i>
+        <div style="font-size:13px;color:var(--text-m);margin-bottom:12px">Drop file here or click</div>
+        <input type="file" id="import-ct-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFile(this,'contacts')">
+        <button class="btn btn-primary" onclick="document.getElementById('import-ct-file').click()"><i class="ti ti-upload"></i>Choose File</button>
+      </div>
+      <div style="font-size:12px;color:var(--text-m)">Company is matched by name automatically</div>
+      <div id="import-ct-result" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
     <div class="card">
       <div class="card-title"><i class="ti ti-upload" style="color:var(--purple);margin-right:8px"></i>Import Fleet from Excel/CSV</div>
       <div style="font-size:13px;color:var(--text-m);margin-bottom:16px;line-height:1.6">
@@ -1711,6 +1809,22 @@ function renderOperations(){
       </div>
       <div style="font-size:12px;color:var(--text-m)">Companies are created automatically if they do not exist</div>
       <div id="import-fleet-result" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-upload" style="color:var(--amber);margin-right:8px"></i>Import Deals from CSV</div>
+      <div style="font-size:13px;color:var(--text-m);margin-bottom:16px;line-height:1.6">
+        Upload deals to populate the pipeline.<br>
+        Columns: <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px">company, model, amount, currency, stage, probability, agent, next_action, notes</code>
+      </div>
+      <div style="border:2px dashed var(--bdr);border-radius:var(--r);padding:28px;text-align:center;margin-bottom:12px" ondragover="event.preventDefault()" ondrop="handleDrop(event,'deals')">
+        <i class="ti ti-versions" style="font-size:36px;color:var(--gray-300);display:block;margin-bottom:10px"></i>
+        <div style="font-size:13px;color:var(--text-m);margin-bottom:12px">Drop file here or click</div>
+        <input type="file" id="import-deals-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFile(this,'deals')">
+        <button class="btn btn-primary" onclick="document.getElementById('import-deals-file').click()"><i class="ti ti-upload"></i>Choose File</button>
+      </div>
+      <div style="font-size:12px;color:var(--text-m)">Stage: Prospecting, Proposal Sent, Negotiation, Won, Lost</div>
+      <div id="import-deals-result" style="margin-top:10px"></div>
     </div>
   </div>
 
@@ -1736,7 +1850,9 @@ function renderOperations(){
     <div class="card-title"><i class="ti ti-info-circle" style="color:var(--amber);margin-right:8px"></i>Import Templates</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn" onclick="downloadTemplate('companies')"><i class="ti ti-file-spreadsheet"></i>Company Template</button>
+      <button class="btn" onclick="downloadTemplate('contacts')"><i class="ti ti-file-spreadsheet"></i>Contacts Template</button>
       <button class="btn" onclick="downloadTemplate('fleet')"><i class="ti ti-file-spreadsheet"></i>Fleet Template</button>
+      <button class="btn" onclick="downloadTemplate('deals')"><i class="ti ti-file-spreadsheet"></i>Deals Template</button>
     </div>
   </div>`;
 }
@@ -1745,36 +1861,66 @@ function handleDrop(e,type){e.preventDefault();const f=e.dataTransfer.files[0];i
 function importFile(input,type){if(input.files[0])processImportFile(input.files[0],type);}
 
 async function processImportFile(file,type){
-  const resultEl=$(type==='companies'?'import-co-result':'import-fleet-result');
-  resultEl.innerHTML=`<div style="color:var(--text-m);font-size:13px">⏳ Processing file...</div>`;
+  const resultId={companies:'import-co-result',contacts:'import-ct-result',fleet:'import-fleet-result',deals:'import-deals-result'}[type]||'import-co-result';
+  const resultEl=$(resultId);
+  if(resultEl)resultEl.innerHTML=`<div style="color:var(--text-m);font-size:13px">⏳ Processing file...</div>`;
   try{
     const text=await readFileAsText(file);
     const rows=parseCSV(text);
-    if(rows.length<2){resultEl.innerHTML=`<div style="color:var(--red)">File is empty or has an invalid format</div>`;return;}
+    if(rows.length<2){if(resultEl)resultEl.innerHTML=`<div style="color:var(--red)">File is empty or has an invalid format</div>`;return;}
     const headers=rows[0].map(h=>h.trim().toLowerCase());
     const data=rows.slice(1).filter(r=>r.some(c=>c.trim()));
     let imported=0,skipped=0;
     for(const row of data){
-      const get=(...keys)=>{for(const k of keys){const i=headers.findIndex(h=>h.includes(k));if(i>=0&&row[i])return row[i].trim();}return '';};
+      const get=(...keys)=>{for(const k of keys){const i=headers.findIndex(h=>h.includes(k));if(i>=0&&row[i]&&row[i].trim())return row[i].trim();}return '';};
       if(type==='companies'){
-        const name=get('назван','name','company','компан');
+        const name=get('name','назван','company','компан');
         if(!name){skipped++;continue;}
         const exists=db.companies.find(c=>c.name.toLowerCase()===name.toLowerCase());
         if(exists){skipped++;continue;}
-        const rec={name,industry:get('отрасл','industry'),city:get('город','city'),status:get('статус','status')||'Prospect',country:'Armenia',created:today()};
+        const rec={name,industry:get('industry','отрасл'),city:get('city','город'),status:get('status','статус')||'Prospect',country:get('country')||'Armenia',website:get('website','сайт'),notes:get('notes','примеч'),category:get('category','категор'),assigned_agent:get('agent','менедж','ответ'),created:today()};
         const s=await persist('companies',rec);db.companies.push(s);imported++;
-      }else if(type==='fleet'){
-        const coName=get('компан','company');const model=get('модел','model');
+      } else if(type==='contacts'){
+        const fname=get('first_name','first','имя','fname');
+        const lname=get('last_name','last','фамил','lname');
+        const phone=get('phone','телеф');
+        if(!fname&&!phone){skipped++;continue;}
+        const coName=get('company','компан','org');
+        let co=coName?db.companies.find(c=>c.name.toLowerCase()===coName.toLowerCase()):null;
+        // Create company if not found
+        if(coName&&!co){
+          const s=await persist('companies',{name:coName,status:'Prospect',created:today()});
+          db.companies.push(s);co=s;
+        }
+        // Check duplicate by phone
+        if(phone){
+          const norm=phone.replace(/[\s\-\(\)\+]/g,'');
+          const dup=db.contacts.find(c=>c.phone&&c.phone.replace(/[\s\-\(\)\+]/g,'')===norm);
+          if(dup){skipped++;continue;}
+        }
+        const rec={company_id:co?.id||'',company:co?.name||coName,first_name:fname,last_name:lname,position:get('position','должн','pos','title'),phone,email:get('email'),notes:get('notes','примеч'),created:today()};
+        const s=await persist('contacts',rec);db.contacts.push(s);imported++;
+      } else if(type==='fleet'){
+        const coName=get('company','компан');const model=get('model','модел');
         if(!coName||!model){skipped++;continue;}
         let co=db.companies.find(c=>c.name.toLowerCase()===coName.toLowerCase());
         if(!co){const s=await persist('companies',{name:coName,status:'Prospect',created:today()});db.companies.push(s);co=s;}
-        const rec={company_id:co.id,company:co.name,brand:get('бренд','brand')||'Hitachi',model,type:get('тип','type')||'Excavator',year:Number(get('год','year'))||0,serial:get('серийн','serial'),condition:get('состоян','condition')||'Good',notes:get('примеч','notes')};
+        const rec={company_id:co.id,company:co.name,brand:get('brand','бренд')||'Hitachi',model,type:get('type','тип')||'Excavator',year:Number(get('year','год'))||0,serial:get('serial','серийн'),condition:get('condition','состоян')||'Good',notes:get('notes','примеч')};
         const s=await persist('fleet',rec);db.fleet.push(s);imported++;
+      } else if(type==='deals'){
+        const coName=get('company','компан');const model=get('model','модел','equipment');
+        if(!coName){skipped++;continue;}
+        let co=db.companies.find(c=>c.name.toLowerCase()===coName.toLowerCase());
+        if(!co){const s=await persist('companies',{name:coName,status:'Prospect',created:today()});db.companies.push(s);co=s;}
+        const amount=Number((get('amount','сумм','value')||'0').replace(/[^0-9.]/g,''))||0;
+        const prob=Number(get('probability','prob','вероят')||'0');
+        const rec={company_id:co.id,company:co.name,model:model||'',amount,currency:get('currency','валют')||'USD',stage:get('stage','стади')||'Prospecting',agent:get('agent','менедж')||currentUser?.name||'',probability:prob<=1?Math.round(prob*100):prob,next_action:get('next_action','следующ'),next_date:get('next_date','дата'),days:0,notes:get('notes','примеч'),created:today()};
+        const s=await persist('deals',rec);db.deals.push(s);imported++;
       }
     }
     updateCounts();
-    resultEl.innerHTML=`<div style="color:var(--green);font-size:13px;font-weight:600">✓ Imported: ${imported} records${skipped?` · Skipped: ${skipped}`:''}</div>`;
-  }catch(e){resultEl.innerHTML=`<div style="color:var(--red);font-size:13px">Error: ${e.message}</div>`;}
+    if(resultEl)resultEl.innerHTML=`<div style="color:var(--green);font-size:13px;font-weight:600">✓ Imported: ${imported} records${skipped?` · Skipped: ${skipped}`:''}</div>`;
+  }catch(e){if(resultEl)resultEl.innerHTML=`<div style="color:var(--red);font-size:13px">Error: ${e.message}</div>`;}
 }
 
 function readFileAsText(file){
@@ -1818,8 +1964,10 @@ function exportCSV(sheet){
 
 function downloadTemplate(type){
   const templates={
-    companies:'Name,Industry,City,Country,Status,Website\n"Example LLC","Mining","Yerevan","Armenia","Prospect",""',
-    fleet:'Company,Brand,Model,Type,Year,Serial No.,Condition\n"Example LLC","Hitachi","ZX470LC-6","Excavator","2022","H470-001","Good"',
+    companies:'Name,Industry,City,Country,Status,Website,Category,Notes\n"Example LLC","Mining","Yerevan","Armenia","Prospect","","A","Key account"',
+    contacts:'first_name,last_name,company,position,phone,email,notes\n"John","Smith","Example LLC","Director","+374 99 123456","john@example.com",""',
+    fleet:'Company,Brand,Model,Type,Year,Serial No.,Condition,Notes\n"Example LLC","Hitachi","ZX470LC-6","Excavator","2022","H470-001","Good",""',
+    deals:'company,model,amount,currency,stage,probability,agent,next_action,notes\n"Example LLC","ZX330-5A","295000","USD","Proposal Sent","30","Maxim Kalashnikov","Follow up",""',
   };
   const blob=new Blob(['\uFEFF'+templates[type]],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`template_${type}.csv`;a.click();
