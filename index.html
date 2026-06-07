@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Wayland CRM</title>
+<link rel="icon" type="image/png" href="https://www.waylandholding.com/img/core-img/logo.png">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <style>
@@ -183,7 +184,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .stage-step.active{background:var(--blue);color:#fff}
 .stage-step.done{background:var(--green-lt);color:var(--green)}
 
-/* ── Mobile ────────────────────────────────────────────────────── */
+.cat-badge{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:12px;font-weight:800;flex-shrink:0}
+.cat-A{background:#fee2e2;color:#b91c1c}
+.cat-B{background:#fef3c7;color:#b45309}
+.cat-C{background:#dbeafe;color:#1d4ed8}
+.cat-D{background:#f3f4f6;color:#6b7280}
+.cal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.cal-month{background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rlg);overflow:hidden;box-shadow:var(--sh)}
+.cal-month-head{padding:10px 14px;font-size:13px;font-weight:700;color:var(--text);border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.cal-month-head.current{background:var(--blue);color:#fff}
+.cal-month-head.past{background:var(--gray-100);color:var(--text-m)}
+.cal-event{display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--gray-100);cursor:pointer;font-size:12px}
+.cal-event:hover{background:var(--gray-50)}
+.cal-event:last-child{border-bottom:none}
+.cal-empty{padding:12px;text-align:center;font-size:12px;color:var(--text-l)}
+/* ── Mobile/* ── Mobile ────────────────────────────────────────────────────── */
 @media(max-width:960px){
   body{overflow:auto}
   .app{flex-direction:column;height:auto;min-height:100vh}
@@ -273,15 +288,96 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   .p-col{min-width:150px;width:150px}
   .tbl th,.tbl td{padding:7px 8px;font-size:11px}
 }
+
+/* ── Mobile fixes for Segments, Leads, Automation ── */
+@media(max-width:960px){
+  .hide-sm{display:none!important}
+  /* Segments: stack filters above table */
+  div[style*="grid-template-columns:280px 1fr"]{grid-template-columns:1fr!important}
+  .seg-layout{grid-template-columns:1fr!important}
+
+  /* Leads: status bar horizontal scroll */
+  div[style*="overflow-x:auto;padding-bottom:4px"]{flex-wrap:nowrap!important;-webkit-overflow-scrolling:touch}
+
+  /* Automation template cards: 2 columns on tablet, 1 on phone */
+  div[style*="repeat(auto-fit,minmax(240px,1fr))"]{grid-template-columns:repeat(2,1fr)!important}
+
+  /* Calendar grid */
+  .cal-grid{grid-template-columns:repeat(2,1fr)!important}
+
+  /* Parts table: ensure scroll */
+  .tbl-wrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+
+  /* Toolbar: wrap on small screens */
+  .toolbar{flex-wrap:wrap}
+  .toolbar .search{min-width:100%!important;max-width:100%!important}
+  .toolbar select,.toolbar .fc{width:100%!important;min-width:unset!important}
+
+  /* Automation card layout */
+  div[style*="display:flex;align-items:center;justify-content:space-between"]{flex-wrap:wrap;gap:8px}
+
+  /* Lead status cards: smaller */
+  div[style*="min-width:130px"]{min-width:100px!important;padding:8px 12px!important}
+}
+
+@media(max-width:600px){
+  .hide-xs{display:none!important}
+  /* Automation templates: 1 column */
+  div[style*="repeat(auto-fit,minmax(240px,1fr))"]{grid-template-columns:1fr!important}
+
+  /* Calendar: 1 column */
+  .cal-grid{grid-template-columns:1fr!important}
+
+  /* Lead status strip: smaller pills */
+  div[style*="min-width:130px"]{min-width:80px!important;font-size:11px!important}
+
+  /* Segment stats card */
+  div[style*="grid-template-columns:repeat(auto-fit,minmax(150px"]{grid-template-columns:repeat(2,1fr)!important}
+
+  /* Modal form rows already 1 col, ensure task days input full width */
+  #auto-task-days{width:100%!important}
+
+  /* Deal detail stage strip */
+  .stage-strip{gap:0}
+
+  /* Topbar: hide breadcrumb text on very small */
+  .breadcrumb{display:none}
+
+  /* Reports bar labels shorter */
+  .bar-label{width:55px!important;font-size:10px!important}
+  .bar-val{width:55px!important;font-size:10px!important}
+}
 </style>
 </head>
 <body>
+
+
+<!-- LOGIN -->
+<div class="setup" id="login-screen" style="display:none">
+  <div class="setup-card" style="width:400px;padding:36px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:28px">
+      <div style="width:44px;height:44px;background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:4px"><img src="https://www.waylandholding.com/img/core-img/logo.png" style="width:100%;height:100%;object-fit:contain"></div>
+      <div><div style="font-size:22px;font-weight:800">Wayland CRM</div><div style="font-size:13px;color:var(--text-m)">Armenia</div></div>
+    </div>
+    <div class="fg"><label class="fl">Вы</label>
+      <select class="fc" id="login-user" style="font-size:14px">
+        <option value="">— выберите —</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">Пароль</label>
+      <input class="fc" id="login-pass" type="password" placeholder="Введите пароль" style="font-size:14px" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px;font-size:14px;margin-top:4px" onclick="doLogin()"><i class="ti ti-login"></i>Войти</button>
+    <div id="login-err" style="margin-top:12px;font-size:13px;color:var(--red);text-align:center;display:none"></div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--bdr);font-size:12px;color:var(--text-l);text-align:center">Забыл пароль — обратись к руководителю</div>
+  </div>
+</div>
 
 <!-- SETUP -->
 <div class="setup" id="setup">
   <div class="setup-card">
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-      <div style="width:40px;height:40px;background:var(--blue);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px"><i class="ti ti-tractor"></i></div>
+      <div style="width:40px;height:40px;background:#fff;border:1px solid var(--bdr);border-radius:10px;padding:3px"><img src="https://www.waylandholding.com/img/core-img/logo.png" style="width:100%;height:100%;object-fit:contain"></div>
       <div style="font-size:22px;font-weight:800;color:var(--text)">Wayland CRM</div>
     </div>
     <div style="font-size:14px;color:var(--text-m);margin-bottom:28px">Подключи Google Sheets как базу данных для всей команды.</div>
@@ -299,7 +395,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 <div class="app" id="app" style="display:none">
   <div class="sidebar">
     <div class="logo">
-      <div class="logo-icon"><i class="ti ti-tractor"></i></div>
+      <div class="logo-icon" style="background:#fff;padding:2px"><img src="https://www.waylandholding.com/img/core-img/logo.png" style="width:30px;height:30px;object-fit:contain"></div>
       <div><div class="logo-text">Wayland CRM</div><div class="logo-sub">Armenia</div></div>
     </div>
     <nav class="nav">
@@ -307,13 +403,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div class="ni active" onclick="go('dashboard',this)"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
       <div class="ni" onclick="go('pipeline',this)"><i class="ti ti-versions"></i>Pipeline<span class="count" id="nc-pipeline">0</span></div>
       <div class="nav-sec">Клиенты</div>
+      <div class="ni" onclick="go('leads',this)"><i class="ti ti-user-plus"></i>Лиды<span class="count" id="nc-leads">0</span></div>
       <div class="ni" onclick="go('companies',this)"><i class="ti ti-building"></i>Компании<span class="count" id="nc-companies">0</span></div>
       <div class="ni" onclick="go('contacts',this)"><i class="ti ti-users"></i>Контакты<span class="count" id="nc-contacts">0</span></div>
       <div class="ni" onclick="go('fleet',this)"><i class="ti ti-tractor"></i>Парк техники<span class="count" id="nc-fleet">0</span></div>
       <div class="nav-sec">Работа</div>
       <div class="ni" onclick="go('tasks',this)"><i class="ti ti-checkbox"></i>Задачи<span class="count" id="nc-tasks">0</span></div>
       <div class="ni" onclick="go('reports',this)"><i class="ti ti-chart-bar"></i>Отчёты</div>
+      <div class="ni" onclick="go('segments',this)"><i class="ti ti-filter"></i>Сегментация</div>
+      <div class="ni" onclick="go('automation',this)"><i class="ti ti-robot"></i>Автоматизация</div>
+      <div class="ni" onclick="go('calendar',this)"><i class="ti ti-calendar"></i>Календарь</div>
       <div class="ni" onclick="go('agents',this)"><i class="ti ti-users-group"></i>Продавцы</div>
+      <div class="nav-sec">Планирование</div>
+      <div class="ni" onclick="go('calendar',this)"><i class="ti ti-calendar"></i>Календарь</div>
+      <div class="nav-sec">Сервис</div>
+      <div class="ni" onclick="go('parts',this)"><i class="ti ti-tool"></i>Запчасти</div>
+      <div class="ni" onclick="go('operations',this)"><i class="ti ti-database-import"></i>Операции</div>
+      <div class="ni manager-only" onclick="go('users',this)"><i class="ti ti-shield-lock"></i>Пользователи</div>
     </nav>
     <div class="sidebar-footer">
       <div class="sync-row"><div class="dot" id="dot"></div><span id="sync-txt">Не подключено</span></div>
@@ -330,6 +436,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         <div class="search" style="flex:1"><i class="ti ti-search"></i><input id="global-search" placeholder="Поиск по всей CRM..." oninput="globalSearch(this.value)" style="width:100%"></div>
       </div>
       <button class="btn btn-ghost" id="mobile-search-btn" style="display:none" onclick="toggleMobileSearch()"><i class="ti ti-search" style="font-size:20px"></i></button>
+      <button class="btn btn-ghost" id="notif-btn" onclick="showNotifPanel()" style="position:relative"><i class="ti ti-bell" style="font-size:20px"></i><span id="notif-badge" style="display:none;position:absolute;top:4px;right:4px;width:16px;height:16px;background:var(--red);color:#fff;border-radius:50%;font-size:9px;font-weight:700;align-items:center;justify-content:center">0</span></button>
       <div class="topbar-right" id="topbar-right"></div>
     </div>
     <div class="content" id="content"><div style="text-align:center;padding:60px;color:var(--text-m)">Загрузка...</div></div>
@@ -362,13 +469,106 @@ const BRAND_C={Hitachi:'#185FA5',Caterpillar:'#EF9F27',Komatsu:'#E24B4A',Volvo:'
 const HITACHI_M=['ZX85USB-6','ZX130-6','ZX135US-6','ZX175LC-6','ZX210LC-6','ZX250LC-6','ZX330LC-6','ZX350LCN-6','ZX470LC-6','ZX490LCH-6','ZX690LCH-6','ZX890LCH-6'];
 const TASK_TYPES=['Звонок','Встреча','Email','КП','Демонстрация','Документы','Другое'];
 const CO_STATUS=['Активный','Потенциальный','Переговоры','Партнёр','Неактивный'];
+const CO_CATEGORIES={
+  A:{label:'A — Горячий',color:'#b91c1c',bg:'#fee2e2',desc:'Контакт раз в месяц',months:1},
+  B:{label:'B — Тёплый',color:'#b45309',bg:'#fef3c7',desc:'Контакт раз в квартал',months:3},
+  C:{label:'C — Холодный',color:'#1d4ed8',bg:'#dbeafe',desc:'Контакт раз в полгода',months:6},
+  D:{label:'D — Спящий',color:'#6b7280',bg:'#f3f4f6',desc:'Контакт раз в год',months:12},
+};
 const CURRENCIES=['USD','EUR','AMD','RUB'];
 
+// Account categories and visit frequency
+const CAT_RULES={
+  A:{label:'A — Горячий',color:'#b91c1c',bg:'#fee2e2',freq:1,unit:'month',desc:'Раз в месяц'},
+  B:{label:'B — Тёплый',color:'#b45309',bg:'#fef3c7',freq:1,unit:'quarter',desc:'Раз в квартал'},
+  C:{label:'C — Холодный',color:'#1d4ed8',bg:'#dbeafe',freq:2,unit:'halfyear',desc:'Раз в полгода'},
+  D:{label:'D — Спящий',color:'#6b7280',bg:'#f3f4f6',freq:1,unit:'year',desc:'Раз в год'},
+};
+
+
+
+// ─── Parts catalog ─────────────────────────────────────────────────────────
+const PARTS_CATALOG = {
+  'ZX135US-6': [
+    {part:'Масло гидравлическое',code:'4666116',unit:'л',qty:95,interval_h:2000,price_usd:580},
+    {part:'Фильтр гидравлический',code:'4659492',unit:'шт',qty:1,interval_h:500,price_usd:85},
+    {part:'Фильтр масляный двигатель',code:'4205772',unit:'шт',qty:1,interval_h:500,price_usd:45},
+    {part:'Масло моторное',code:'4666108',unit:'л',qty:13,interval_h:500,price_usd:130},
+    {part:'Фильтр топливный',code:'4259362',unit:'шт',qty:1,interval_h:1000,price_usd:55},
+    {part:'Масло трансмиссионное (поворот)',code:'4666124',unit:'л',qty:5.5,interval_h:2000,price_usd:65},
+    {part:'Фильтр воздушный (внешний)',code:'4634045',unit:'шт',qty:1,interval_h:1000,price_usd:95},
+    {part:'Фильтр воздушный (внутренний)',code:'4634046',unit:'шт',qty:1,interval_h:2000,price_usd:65},
+    {part:'Антифриз',code:'4666140',unit:'л',qty:14,interval_h:4000,price_usd:90},
+    {part:'Зубья ковша (BOT)',code:'0772211',unit:'компл',qty:5,interval_h:1000,price_usd:320},
+    {part:'Ремень приводной',code:'4255101',unit:'шт',qty:1,interval_h:2000,price_usd:145},
+  ],
+  'ZX210LC-6': [
+    {part:'Масло гидравлическое',code:'4666116',unit:'л',qty:180,interval_h:2000,price_usd:1080},
+    {part:'Фильтр гидравлический',code:'4659490',unit:'шт',qty:1,interval_h:500,price_usd:95},
+    {part:'Фильтр масляный двигатель',code:'4205770',unit:'шт',qty:1,interval_h:500,price_usd:48},
+    {part:'Масло моторное',code:'4666108',unit:'л',qty:18,interval_h:500,price_usd:180},
+    {part:'Фильтр топливный',code:'4259360',unit:'шт',qty:1,interval_h:1000,price_usd:58},
+    {part:'Масло трансмиссионное (поворот)',code:'4666124',unit:'л',qty:6.5,interval_h:2000,price_usd:78},
+    {part:'Фильтр воздушный (внешний)',code:'4634043',unit:'шт',qty:1,interval_h:1000,price_usd:105},
+    {part:'Фильтр воздушный (внутренний)',code:'4634044',unit:'шт',qty:1,interval_h:2000,price_usd:72},
+    {part:'Антифриз',code:'4666140',unit:'л',qty:22,interval_h:4000,price_usd:140},
+    {part:'Зубья ковша (BOT)',code:'0772212',unit:'компл',qty:5,interval_h:800,price_usd:480},
+    {part:'Ремень приводной',code:'4255102',unit:'шт',qty:1,interval_h:2000,price_usd:165},
+    {part:'Цепь гусеничная (к-т)',code:'9195271',unit:'компл',qty:1,interval_h:3000,price_usd:4200},
+  ],
+  'ZX330LC-6': [
+    {part:'Масло гидравлическое',code:'4666117',unit:'л',qty:270,interval_h:2000,price_usd:1620},
+    {part:'Фильтр гидравлический',code:'4659491',unit:'шт',qty:1,interval_h:500,price_usd:110},
+    {part:'Фильтр масляный двигатель',code:'4205771',unit:'шт',qty:1,interval_h:500,price_usd:52},
+    {part:'Масло моторное',code:'4666108',unit:'л',qty:26,interval_h:500,price_usd:260},
+    {part:'Фильтр топливный',code:'4259361',unit:'шт',qty:1,interval_h:1000,price_usd:62},
+    {part:'Масло трансмиссионное (поворот)',code:'4666124',unit:'л',qty:8,interval_h:2000,price_usd:96},
+    {part:'Фильтр воздушный (внешний)',code:'4634041',unit:'шт',qty:1,interval_h:1000,price_usd:120},
+    {part:'Фильтр воздушный (внутренний)',code:'4634042',unit:'шт',qty:1,interval_h:2000,price_usd:82},
+    {part:'Антифриз',code:'4666140',unit:'л',qty:30,interval_h:4000,price_usd:190},
+    {part:'Зубья ковша (BOT)',code:'0772213',unit:'компл',qty:6,interval_h:800,price_usd:680},
+    {part:'Цепь гусеничная (к-т)',code:'9195272',unit:'компл',qty:1,interval_h:3000,price_usd:6800},
+    {part:'Ремень приводной',code:'4255103',unit:'шт',qty:1,interval_h:2000,price_usd:185},
+  ],
+  'ZX470LC-6': [
+    {part:'Масло гидравлическое',code:'4666118',unit:'л',qty:400,interval_h:2000,price_usd:2400},
+    {part:'Фильтр гидравлический',code:'4659489',unit:'шт',qty:1,interval_h:500,price_usd:135},
+    {part:'Фильтр масляный двигатель',code:'4205769',unit:'шт',qty:1,interval_h:500,price_usd:58},
+    {part:'Масло моторное',code:'4666108',unit:'л',qty:36,interval_h:500,price_usd:360},
+    {part:'Фильтр топливный',code:'4259359',unit:'шт',qty:2,interval_h:1000,price_usd:140},
+    {part:'Масло трансмиссионное (поворот)',code:'4666124',unit:'л',qty:11,interval_h:2000,price_usd:132},
+    {part:'Масло редуктора хода',code:'4666125',unit:'л',qty:7.2,interval_h:2000,price_usd:86},
+    {part:'Фильтр воздушный (внешний)',code:'4634039',unit:'шт',qty:1,interval_h:1000,price_usd:145},
+    {part:'Фильтр воздушный (внутренний)',code:'4634040',unit:'шт',qty:1,interval_h:2000,price_usd:98},
+    {part:'Антифриз',code:'4666140',unit:'л',qty:52,interval_h:4000,price_usd:330},
+    {part:'Зубья ковша (BOT)',code:'0772214',unit:'компл',qty:6,interval_h:600,price_usd:1100},
+    {part:'Цепь гусеничная (к-т)',code:'9195273',unit:'компл',qty:1,interval_h:3000,price_usd:11500},
+    {part:'Ремень приводной',code:'4255104',unit:'шт',qty:1,interval_h:2000,price_usd:220},
+  ],
+  'ZX890LCH-6': [
+    {part:'Масло гидравлическое',code:'4666119',unit:'л',qty:720,interval_h:2000,price_usd:4320},
+    {part:'Фильтр гидравлический',code:'4659488',unit:'шт',qty:2,interval_h:500,price_usd:290},
+    {part:'Фильтр масляный двигатель',code:'4205768',unit:'шт',qty:2,interval_h:500,price_usd:116},
+    {part:'Масло моторное',code:'4666108',unit:'л',qty:52,interval_h:500,price_usd:520},
+    {part:'Фильтр топливный',code:'4259358',unit:'шт',qty:2,interval_h:1000,price_usd:180},
+    {part:'Масло трансмиссионное (поворот)',code:'4666124',unit:'л',qty:18,interval_h:2000,price_usd:216},
+    {part:'Масло редуктора хода',code:'4666125',unit:'л',qty:12,interval_h:2000,price_usd:144},
+    {part:'Фильтр воздушный (внешний)',code:'4634037',unit:'шт',qty:1,interval_h:1000,price_usd:185},
+    {part:'Фильтр воздушный (внутренний)',code:'4634038',unit:'шт',qty:1,interval_h:2000,price_usd:125},
+    {part:'Антифриз',code:'4666140',unit:'л',qty:90,interval_h:4000,price_usd:570},
+    {part:'Зубья ковша (BOT)',code:'0772215',unit:'компл',qty:8,interval_h:500,price_usd:2200},
+    {part:'Цепь гусеничная (к-т)',code:'9195274',unit:'компл',qty:1,interval_h:2500,price_usd:22000},
+    {part:'Ремень приводной',code:'4255105',unit:'шт',qty:1,interval_h:2000,price_usd:310},
+  ],
+};
+// Default annual hours by machine type / work intensity
+const ANNUAL_HOURS = {mining: 5000, quarry: 4500, construction: 3000, road: 3500, default: 3000};
 // ─── State ─────────────────────────────────────────────────────────────────
 let API='';
-let db={companies:[],contacts:[],deals:[],fleet:[],tasks:[],activities:[],agents:[]};
+let db={companies:[],contacts:[],deals:[],fleet:[],tasks:[],activities:[],agents:[],users:[],leads:[],automations:[]};
 let cur={section:'dashboard',company:null,deal:null};
 let mtype='',eid=null,saving=false;
+let currentUser=null; // {name, role: 'manager'|'rep'}
 let charts={};
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
@@ -403,12 +603,13 @@ async function apiCall(params){
   }
 }
 async function load(){
-  const sheets=['companies','contacts','deals','fleet','tasks','activities','agents'];
+  const sheets=['companies','contacts','deals','fleet','tasks','activities','agents','users','leads','automations'];
   const res=await Promise.all(sheets.map(s=>apiCall({action:'read',sheet:s})));
   sheets.forEach((s,i)=>{db[s]=res[i]||[];});
   db.deals.forEach(d=>{d.amount=Number(d.amount)||0;d.days=Number(d.days)||0;});
   db.fleet.forEach(f=>{f.year=Number(f.year)||0;});
   db.tasks.forEach(t=>{t.done=String(t.done)==='true';});
+  db.leads.forEach(l=>{l.created=l.created||today();});
   updateCounts();
 }
 async function persist(sheet,row){const r=await apiCall({action:'upsert',sheet,row});return r;}
@@ -421,6 +622,7 @@ function updateCounts(){
   $('nc-contacts').textContent=db.contacts.length;
   $('nc-fleet').textContent=db.fleet.length;
   $('nc-tasks').textContent=db.tasks.filter(t=>!t.done).length;
+  const lel=$('nc-leads');if(lel)lel.textContent=db.leads.filter(l=>l.status!=='Converted'&&l.status!=='Lost').length;
 }
 
 // ─── Setup ─────────────────────────────────────────────────────────────────
@@ -449,15 +651,18 @@ function go(sec,el){
 function render(sec){
   const tr=$('topbar-right');tr.innerHTML='';
   $('breadcrumb').innerHTML='';
-  const titles={dashboard:'Dashboard',pipeline:'Pipeline',companies:'Компании',contacts:'Контакты',fleet:'Парк техники',tasks:'Задачи',reports:'Отчёты'};
+  const titles={dashboard:'Dashboard',pipeline:'Pipeline',leads:'Лиды',companies:'Компании',contacts:'Контакты',fleet:'Парк техники',tasks:'Задачи',reports:'Отчёты',segments:'Сегментация',automation:'Автоматизация'};
   $('ptitle').textContent=titles[sec]||sec;
   if(sec==='pipeline')tr.innerHTML=mkBtn('deal','Добавить сделку');
+  if(sec==='leads')tr.innerHTML=mkBtn('lead','Добавить лид');
   if(sec==='companies')tr.innerHTML=mkBtn('company','Добавить компанию');
   if(sec==='contacts')tr.innerHTML=mkBtn('contact','Добавить контакт');
   if(sec==='fleet')tr.innerHTML=mkBtn('fleet','Добавить технику');
   if(sec==='tasks')tr.innerHTML=mkBtn('task','Добавить задачу');
   if(sec==='agents')tr.innerHTML=mkBtn('agent','Добавить продавца');
-  const fns={dashboard:renderDashboard,pipeline:renderPipeline,companies:renderCompanies,contacts:renderContacts,fleet:renderFleet,tasks:renderTasks,reports:renderReports,agents:renderAgents};
+  if(sec==='automation')tr.innerHTML=mkBtn('automation','Новое правило');
+  if(sec==='calendar')tr.innerHTML=`<button class="btn" onclick="generateVisitPlan()"><i class="ti ti-refresh"></i>Обновить план</button>`;
+  const fns={dashboard:renderDashboard,pipeline:renderPipeline,leads:renderLeads,companies:renderCompanies,contacts:renderContacts,fleet:renderFleet,tasks:renderTasks,reports:renderReports,agents:renderAgents,calendar:renderCalendar,parts:renderParts,operations:renderOperations,users:renderUsers,segments:renderSegments,automation:renderAutomation};
   if(fns[sec])fns[sec]();
 }
 function mkBtn(type,label){return`<button class="btn btn-primary" onclick="openM('${type}')"><i class="ti ti-plus"></i>${label}</button>`;}
@@ -562,7 +767,7 @@ function renderCompanies(filter=''){
     <button class="btn btn-primary" onclick="openM('company')"><i class="ti ti-plus"></i>Добавить компанию</button>
   </div>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Компания</th><th>Отрасль</th><th>Город</th><th>Контакты</th><th>Сделки</th><th>Парк</th><th>Статус</th><th></th></tr></thead>
+    <thead><tr><th>Компания</th><th>Отрасль</th><th>Кат.</th><th>Город</th><th>Контакты</th><th>Сделки</th><th>Парк</th><th>Статус</th><th></th></tr></thead>
     <tbody>${rows.length?rows.map((c,i)=>{
       const ctcCount=db.contacts.filter(x=>x.company_id===c.id).length;
       const dealCount=db.deals.filter(x=>x.company_id===c.id&&x.stage!=='Lost').length;
@@ -570,7 +775,8 @@ function renderCompanies(filter=''){
       const hitachiCount=db.fleet.filter(x=>x.company_id===c.id&&x.brand==='Hitachi').length;
       return`<tr onclick="openCompanyDetail('${c.id}')">
         <td><div style="display:flex;align-items:center;gap:9px"><div class="av ${avC(i)}" style="width:32px;height:32px;font-size:12px">${ini(c.name)}</div><div><div style="font-weight:700">${c.name}</div>${c.website?`<div style="font-size:11px;color:var(--blue)">${c.website}</div>`:''}</div></div></td>
-        <td>${c.industry?`<span class="b b-blue">${c.industry}</span>`:'-'}</td>
+        <td><div style="display:flex;align-items:center;gap:6px">${c.category?`<span class="cat-badge cat-${c.category}">${c.category}</span>`:''}<span style="font-size:12px;color:var(--text-m)">${c.industry||''}</span></div></td>
+        <td>${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Кат. ${c.category}</span>`:'-'}</td>
         <td style="color:var(--text-m)">${c.city||'—'}</td>
         <td style="text-align:center">${ctcCount}</td>
         <td style="text-align:center">${dealCount}</td>
@@ -608,10 +814,16 @@ function openCompanyDetail(id){
     <div class="detail-sidebar">
       <div class="card">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-          <div class="av av-0" style="width:48px;height:48px;font-size:18px;border-radius:12px">${ini(c.name)}</div>
-          <div><div style="font-size:16px;font-weight:800">${c.name}</div><span class="b ${statusBadge(c.status)}">${c.status||'—'}</span></div>
+          <div class="av av-0" style="width:48px;height:48px;font-size:18px;border-radius:12px;${c.category&&CAT_RULES[c.category]?'background:'+CAT_RULES[c.category].bg+';color:'+CAT_RULES[c.category].color:''}">${ini(c.name)}</div>
+          <div>
+            <div style="font-size:16px;font-weight:800">${c.name}</div>
+            <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
+              <span class="b ${statusBadge(c.status)}">${c.status||'—'}</span>
+              ${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Кат. ${c.category} · ${CAT_RULES[c.category].desc}</span>`:''}
+            </div>
+          </div>
         </div>
-        ${[['Отрасль',c.industry],['Город',c.city],['Страна',c.country],['Сайт',c.website?`<a href="${c.website}" style="color:var(--blue)" target="_blank">${c.website}</a>`:null]].filter(r=>r[1]).map(([k,v])=>`<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')}
+        ${[['Отрасль',c.industry],['Город',c.city],['Страна',c.country],['Продавец',c.assigned_agent],['Сайт',c.website?`<a href="${c.website}" style="color:var(--blue)" target="_blank">${c.website}</a>`:null]].filter(r=>r[1]).map(([k,v])=>`<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')}
         ${c.notes?`<div style="margin-top:12px;font-size:13px;color:var(--text-m);background:var(--gray-50);padding:10px;border-radius:var(--r)">${c.notes}</div>`:''}
         <div style="margin-top:14px;display:flex;gap:8px"><button class="btn btn-sm" onclick="openM('company','${c.id}')"><i class="ti ti-edit"></i>Редактировать</button></div>
       </div>
@@ -760,9 +972,16 @@ function openDealDetail(id){
 
 async function moveDeal(id,stage){
   const d=db.deals.find(x=>x.id===id);if(!d)return;
+  const prevStage=d.stage;
   d.stage=stage;
   await persist('deals',{...d});
-  openDealDetail(id);
+  // Log activity
+  const act={id:uid(),company_id:d.company||'',type:'stage',text:`Стадия сделки изменена: ${prevStage} → ${stage}`,date:today(),agent:currentUser?.name||''};
+  db.activities.push(act);await persist('activities',act);
+  // Run automations
+  await runAutomations('deal_stage_change',{newStage:stage,deal_id:id,company_id:d.company,agent:d.agent,amount:d.amount,message:`Сделка перешла в ${stage}`});
+  if(Number(d.amount)>0)await runAutomations('deal_amount',{amount:d.amount,deal_id:id,company_id:d.company,agent:d.agent,message:`Сделка на $${fmt(d.amount)}`});
+  updateCounts();openDealDetail(id);
 }
 
 // ─── Contacts ──────────────────────────────────────────────────────────────
@@ -917,7 +1136,7 @@ function openM(type,id=null,coId=null,dealId=null){
   const sheet={company:'companies',contact:'contacts',deal:'deals',fleet:'fleet',task:'tasks',activity:'activities'}[type];
   const ex=id&&sheet?(db[sheet]||[]).find(x=>x.id===id):null;
   const e=ex||{};
-  const labels={company:'Компания',contact:'Контакт',deal:'Сделка',fleet:'Единица техники',task:'Задача',activity:'Активность',agent:'Продавец'};
+  const labels={company:'Компания',contact:'Контакт',deal:'Сделка',fleet:'Единица техники',task:'Задача',activity:'Активность',agent:'Продавец',user:'Пользователь'};
   $('mtitle').textContent=(id?'Редактировать ':'Добавить ')+labels[type];
   $('mfoot').style.display='flex';
 
@@ -935,6 +1154,10 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Город</label><input class="fc" id="f-city" list="armenia-cities" value="${e.city||''}" placeholder="Напр. Yerevan, Gyumri..."></div>
         <div class="fg"><label class="fl">Страна</label><input class="fc" id="f-country" value="${e.country||'Armenia'}"></div>
       </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Категория клиента</label><select class="fc" id="f-category"><option value="">— не задана —</option>${Object.entries(CAT_RULES).map(([k,v])=>`<option value="${k}" ${e.category===k?'selected':''}>${v.label} (${v.desc})</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Закреплённый продавец</label><select class="fc" id="f-assigned">${[{name:'— не закреплён —',id:''},...db.agents].map(a=>`<option value="${a.name||''}" ${(e.assigned_agent||'')===(a.name||'')?'selected':''}>${a.name||'— не закреплён —'}</option>`).join('')}${db.agents.length===0?AGENTS().map(a=>`<option value="${a}" ${(e.assigned_agent||'')===a?'selected':''}>${a}</option>`).join(''):''}</select></div>
+      </div>
       <div class="fg"><label class="fl">Сайт</label><input class="fc" id="f-website" value="${e.website||''}" placeholder="https://"></div>
       <div class="fg"><label class="fl">Примечания</label><textarea class="fc" id="f-notes" rows="2">${e.notes||''}</textarea></div>`,
     contact:`
@@ -945,9 +1168,10 @@ function openM(type,id=null,coId=null,dealId=null){
       </div>
       <div class="fg"><label class="fl">Должность</label><input class="fc" id="f-pos" value="${e.position||''}"></div>
       <div class="fr">
-        <div class="fg"><label class="fl">Телефон</label><input class="fc" id="f-phone" value="${e.phone||''}" placeholder="+374..."></div>
-        <div class="fg"><label class="fl">Email</label><input class="fc" id="f-email" value="${e.email||''}"></div>
-      </div>`,
+        <div class="fg"><label class="fl">Телефон</label><input class="fc" id="f-phone" data-phone data-exclude-id="${id||''}" value="${e.phone||''}" placeholder="+374 XX XXX XXX"></div>
+        <div class="fg"><label class="fl">Email</label><input class="fc" id="f-email" data-email data-exclude-id="${id||''}" value="${e.email||''}" placeholder="example@company.com" autocomplete="email"></div>
+      </div>
+      <div id="dup-warn"></div>`,
     deal:`
       <div class="fg"><label class="fl">Компания *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
       <div class="fr">
@@ -992,11 +1216,16 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Менеджер</label><select class="fc" id="f-agent">${['А. Мартиросян','Г. Петросян','Н. Арутюнян','С. Саргсян','В. Акопян','Л. Мкртчян','К. Давтян','А. Карапетян','Р. Овсепян','Т. Григорян'].map(a=>`<option ${e.agent===a?'selected':''}>${a}</option>`).join('')}</select></div>
         <div class="fg"><label class="fl">Срок</label><input class="fc" id="f-due" type="date" value="${e.due||''}"></div>
       </div>`,
+    user:`
+      <div class="fg"><label class="fl">Имя и фамилия *</label><input class="fc" id="f-name" value="${e.name||''}" placeholder="А. Иванов"></div>
+      <div class="fg"><label class="fl">Роль</label><select class="fc" id="f-role"><option value="rep" ${(e.role||'rep')==='rep'?'selected':''}>Sales Representative</option><option value="manager" ${e.role==='manager'?'selected':''}>Manager</option></select></div>
+      <div class="fg"><label class="fl">Пароль ${e.id?'(оставь пустым чтобы не менять)':'*'}</label><input class="fc" id="f-pass" type="password" placeholder="${e.id?'Новый пароль...':'Минимум 4 символа'}"></div>
+      <div class="fg"><label class="fl">Статус</label><select class="fc" id="f-active"><option value="true" ${String(e.active)!=='false'?'selected':''}>Активен</option><option value="false" ${String(e.active)==='false'?'selected':''}>Заблокирован</option></select></div>`,
     agent:`
       <div class="fg"><label class="fl">Имя и фамилия *</label><input class="fc" id="f-name" value="${e.name||''}" placeholder="А. Иванов"></div>
       <div class="fr">
-        <div class="fg"><label class="fl">Телефон</label><input class="fc" id="f-phone" value="${e.phone||''}" placeholder="+374..."></div>
-        <div class="fg"><label class="fl">Email</label><input class="fc" id="f-email" value="${e.email||''}"></div>
+        <div class="fg"><label class="fl">Телефон</label><input class="fc" id="f-phone" data-phone value="${e.phone||''}" placeholder="+374 XX XXX XXX"></div>
+        <div class="fg"><label class="fl">Email</label><input class="fc" id="f-email" data-email value="${e.email||''}"></div>
       </div>
       <div class="fg"><label class="fl">Роль</label><select class="fc" id="f-role"><option>Менеджер по продажам</option><option ${e.role==='Senior менеджер'?'selected':''}>Senior менеджер</option><option ${e.role==='Руководитель'?'selected':''}>Руководитель</option></select></div>`,
     activity:`
@@ -1006,6 +1235,7 @@ function openM(type,id=null,coId=null,dealId=null){
   };
   $('mbody').innerHTML=bodies[type]||'';
   $('overlay').classList.add('open');
+  setTimeout(initInputs,30);
 }
 
 const g=id=>{const el=document.getElementById(id);return el?el.value:null;};
@@ -1035,13 +1265,13 @@ async function saveM(){
   }
 }
 async function _saveM(){
-  const sheet={company:'companies',contact:'contacts',deal:'deals',fleet:'fleet',task:'tasks',activity:'activities',agent:'agents'}[mtype];
+  const sheet={company:'companies',contact:'contacts',deal:'deals',fleet:'fleet',task:'tasks',activity:'activities',agent:'agents',user:'users'}[mtype];
   const ex=eid&&sheet?(db[sheet]||[]).find(x=>x.id===eid):null;
   let row=ex?{...ex}:{};
 
   if(mtype==='company'){
     const name=(g('f-name')||'').trim();if(!name)return alert('Введи название');
-    row={...row,name,industry:g('f-industry'),status:g('f-status'),city:g('f-city'),country:g('f-country'),website:g('f-website'),notes:g('f-notes'),created:row.created||new Date().toISOString().slice(0,10)};
+    row={...row,name,industry:g('f-industry'),status:g('f-status'),city:g('f-city'),country:g('f-country'),website:g('f-website'),notes:g('f-notes'),category:g('f-category')||'',assigned_agent:g('f-assigned')||'',created:row.created||new Date().toISOString().slice(0,10)};
     const s=await persist('companies',row);
     if(!eid)db.companies.push(s);else Object.assign(db.companies.find(x=>x.id===eid),s);
     updateCounts();renderCompanies();
@@ -1075,6 +1305,16 @@ async function _saveM(){
     const s=await persist('tasks',row);
     if(!eid)db.tasks.push(s);else Object.assign(db.tasks.find(x=>x.id===eid),s);
     updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderTasks();
+  }else if(mtype==='user'){
+    const uname=(g('f-name')||'').trim();if(!uname)return alert('Введи имя');
+    const pass=g('f-pass')||'';
+    if(!eid&&pass.length<4)return alert('Пароль минимум 4 символа');
+    row={...row,name:uname,role:g('f-role')||'rep',active:g('f-active')||'true'};
+    if(pass.length>=4)row.password_hash=simpleHash(pass);
+    else if(!eid)return alert('Введи пароль');
+    const s=await persist('users',row);
+    if(!eid)db.users.push(s);else Object.assign(db.users.find(x=>x.id===eid),s);
+    renderUsers();
   }else if(mtype==='agent'){
     const aname=(g('f-name')||'').trim();if(!aname)return alert('Введи имя');
     row={...row,name:aname,phone:g('f-phone')||'',email:g('f-email')||'',role:g('f-role')||'Менеджер по продажам'};
@@ -1166,17 +1406,1360 @@ async function dedupContacts(){
 function closeSearch(){const el=$('search-results');if(el)el.remove();const inp=$('global-search');if(inp)inp.value='';}
 document.addEventListener('click',e=>{if(!e.target.closest('#search-results')&&e.target.id!=='global-search')closeSearch();});
 
-function closeM(){$('overlay').classList.remove('open');}
-function overlayBg(e){if(e.target===$('overlay'))closeM();}
+// ─── Visit Plan Generator ───────────────────────────────────────────────────
+function getVisitDates(category, year){
+  const dates=[];
+  const now=new Date(year,0,1);
+  if(category==='A'){// monthly
+    for(let m=0;m<12;m++){const d=new Date(year,m,15);if(d>=new Date())dates.push(d);}
+  }else if(category==='B'){// quarterly
+    [1,4,7,10].forEach(m=>{const d=new Date(year,m,15);if(d>=new Date())dates.push(d);});
+  }else if(category==='C'){// biannual
+    [2,8].forEach(m=>{const d=new Date(year,m,15);if(d>=new Date())dates.push(d);});
+  }else if(category==='D'){// annual
+    dates.push(new Date(year,5,15));
+  }
+  return dates;
+}
 
-// ─── Init ──────────────────────────────────────────────────────────────────────
+async function generateVisitPlan(){
+  const cats=db.companies.filter(c=>c.category&&CAT_RULES[c.category]);
+  if(!cats.length){alert('Нет компаний с категорией A/B/C/D. Сначала задай категории.');return;}
+  const year=new Date().getFullYear();
+  let added=0;
+  for(const co of cats){
+    const dates=getVisitDates(co.category,year);
+    for(const d of dates){
+      const due=d.toISOString().slice(0,10);
+      const exists=db.tasks.find(t=>t.company_id===co.id&&t.due===due&&(t.type==='Звонок'||t.type==='Встреча'));
+      if(!exists){
+        const taskType=co.category==='A'?'Звонок':'Встреча';
+        const row={company_id:co.id,company:co.name,title:`${CAT_RULES[co.category].desc}: ${co.name}`,type:taskType,priority:co.category==='A'?'high':co.category==='B'?'medium':'low',agent:co.assigned_agent||'',due,done:false,created:new Date().toISOString().slice(0,10)};
+        const saved=await persist('tasks',row);
+        db.tasks.push({...saved,done:false});
+        added++;
+      }
+    }
+  }
+  updateCounts();
+  alert(`Готово! Добавлено ${added} задач в план на ${year}.`);
+  renderCalendar();
+}
 
-// Mobile helpers
+let calYear=new Date().getFullYear();
+let calAgent='all';
+
+function renderCalendar(){
+  const agents=['all',...new Set([...db.tasks.filter(t=>t.agent).map(t=>t.agent),...db.companies.filter(c=>c.assigned_agent).map(c=>c.assigned_agent)])].filter(Boolean);
+  const months=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  const visitTasks=db.tasks.filter(t=>(t.type==='Звонок'||t.type==='Встреча')&&!t.done);
+  const filtered=calAgent==='all'?visitTasks:visitTasks.filter(t=>t.agent===calAgent);
+
+  // Group by month
+  const byMonth={};
+  for(let m=0;m<12;m++)byMonth[m]=[];
+  filtered.forEach(t=>{
+    if(!t.due)return;
+    const d=new Date(t.due);
+    if(d.getFullYear()===calYear)byMonth[d.getMonth()].push(t);
+  });
+
+  const catColors={A:'#b91c1c',B:'#b45309',C:'#1d4ed8',D:'#6b7280'};
+
+  $('content').innerHTML=`
+  <div style="display:flex;gap:12px;align-items:center;margin-bottom:18px;flex-wrap:wrap">
+    <div style="display:flex;gap:6px;align-items:center">
+      <button class="btn btn-sm" onclick="calYear--;renderCalendar()"><i class="ti ti-chevron-left"></i></button>
+      <span style="font-size:16px;font-weight:700;min-width:60px;text-align:center">${calYear}</span>
+      <button class="btn btn-sm" onclick="calYear++;renderCalendar()"><i class="ti ti-chevron-right"></i></button>
+    </div>
+    <select class="fc" style="width:200px;padding:6px 10px" onchange="calAgent=this.value;renderCalendar()">
+      <option value="all" ${calAgent==='all'?'selected':''}>Все продавцы</option>
+      ${agents.filter(a=>a!=='all').map(a=>`<option value="${a}" ${calAgent===a?'selected':''}>${a}</option>`).join('')}
+    </select>
+    <div style="display:flex;gap:8px;align-items:center;font-size:12px;flex-wrap:wrap">
+      ${Object.entries(CAT_RULES).map(([k,v])=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:${v.color};display:inline-block"></span>Кат. ${k}: ${v.desc}</span>`).join('')}
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
+    ${months.map((mname,mi)=>{
+      const tasks=byMonth[mi];
+      const now=new Date();
+      const isPast=calYear<now.getFullYear()||(calYear===now.getFullYear()&&mi<now.getMonth());
+      return`<div class="card" style="padding:14px;${isPast?'opacity:.6':''}">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
+          <span>${mname} ${calYear}</span>
+          <span style="font-size:11px;font-weight:400;color:var(--text-m)">${tasks.length} визитов</span>
+        </div>
+        ${tasks.length?tasks.sort((a,b)=>a.due>b.due?1:-1).map(t=>{
+          const co=db.companies.find(c=>c.id===t.company_id);
+          const cat=co?.category||'';
+          const catColor=catColors[cat]||'var(--text-m)';
+          return`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="openCompanyDetail('${t.company_id||''}')">
+            <div style="width:4px;height:36px;border-radius:2px;background:${catColor};flex-shrink:0"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.company}</div>
+              <div style="font-size:11px;color:var(--text-m)">${t.type} · ${t.agent||'—'} · ${t.due}</div>
+            </div>
+            <span style="font-size:10px;font-weight:700;color:${catColor};background:${cat&&CAT_RULES[cat]?CAT_RULES[cat].bg:'#f3f4f6'};padding:2px 6px;border-radius:4px">${cat||'?'}</span>
+          </div>`;
+        }).join(''):`<div style="text-align:center;padding:16px;color:var(--text-l);font-size:12px"><i class="ti ti-calendar-off" style="font-size:20px;display:block;margin-bottom:4px"></i>Нет визитов</div>`}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// ─── Auto-scheduler ────────────────────────────────────────────────────────
+async function autoSchedule(companyId, companyName, category, agent, deleteOld=false){
+  const cat=CO_CATEGORIES[category];
+  if(!cat||!agent||agent==='— не назначен —')return;
+  // Delete existing auto-scheduled tasks for this company
+  if(deleteOld){
+    const old=db.tasks.filter(t=>t.company_id===companyId&&t.auto_scheduled==='true'&&!t.done);
+    for(const t of old){await remove('tasks',t.id);db.tasks=db.tasks.filter(x=>x.id!==t.id);}
+  }
+  // Create tasks for next 12 months
+  const now=new Date();
+  const created=now.toISOString().slice(0,10);
+  const newTasks=[];
+  let d=new Date(now);
+  d.setMonth(d.getMonth()+cat.months);
+  while(d<=new Date(now.getFullYear()+1,now.getMonth(),now.getDate())){
+    const due=d.toISOString().slice(0,10);
+    const row={company_id:companyId,company:companyName,title:'Контакт с '+companyName+' (кат. '+category+')',type:'Звонок',priority:category==='A'?'high':category==='B'?'medium':'low',agent,due,done:false,auto_scheduled:'true',created};
+    const saved=await persist('tasks',row);
+    db.tasks.push(saved);
+    newTasks.push(saved);
+    d=new Date(d);
+    d.setMonth(d.getMonth()+cat.months);
+  }
+  updateCounts();
+  return newTasks;
+}
+
+async function scheduleAllCompanies(){
+  const withCat=db.companies.filter(c=>c.category&&c.assigned_agent&&c.assigned_agent!=='— не назначен —');
+  if(!withCat.length){alert('Нет компаний с категорией и ответственным менеджером');return;}
+  if(!confirm(`Пересоздать расписание для ${withCat.length} компаний?`))return;
+  for(const c of withCat)await autoSchedule(c.id,c.name,c.category,c.assigned_agent,true);
+  alert('Расписание обновлено!');
+  renderCalendar();
+}
+
+// ─── Calendar ──────────────────────────────────────────────────────────────
+function renderCalendar(){
+  const $tr=$('topbar-right');
+  $tr.innerHTML=`
+    <select class="btn" id="cal-agent-filter" onchange="renderCalendar()">
+      <option value="">Все менеджеры</option>
+      ${AGENTS().map(a=>`<option>${a}</option>`).join('')}
+    </select>
+    <button class="btn" onclick="scheduleAllCompanies()"><i class="ti ti-refresh"></i>Обновить расписание</button>`;
+
+  const agentFilter=document.getElementById('cal-agent-filter')?.value||'';
+  const now=new Date();
+  const months=[];
+  for(let i=0;i<12;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()+i,1);
+    months.push({year:d.getFullYear(),month:d.getMonth(),label:d.toLocaleString('ru',{month:'long',year:'numeric'})});
+  }
+
+  // Get scheduled tasks grouped by month
+  const scheduledTasks=db.tasks.filter(t=>t.auto_scheduled==='true'&&!t.done&&t.due&&(!agentFilter||t.agent===agentFilter));
+  // Also get manual tasks with due dates
+  const manualTasks=db.tasks.filter(t=>t.auto_scheduled!=='true'&&!t.done&&t.due&&(!agentFilter||t.agent===agentFilter));
+
+  // Summary stats
+  const totalSched=scheduledTasks.length;
+  const byAgent={};
+  scheduledTasks.forEach(t=>{byAgent[t.agent]=(byAgent[t.agent]||0)+1;});
+
+  $('content').innerHTML=`
+  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+    <div class="metric" style="padding:12px 16px;margin:0"><div class="metric-label">Запланировано контактов</div><div class="metric-value">${totalSched}</div><div class="metric-sub">на 12 месяцев вперёд</div></div>
+    <div class="metric" style="padding:12px 16px;margin:0;flex:1"><div class="metric-label">Как работает планировщик</div>
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+        ${Object.entries(CO_CATEGORIES).map(([k,v])=>`<span class="cat-badge cat-${k}" style="width:auto;padding:4px 10px;border-radius:20px;font-size:12px">${k} — ${v.desc}</span>`).join('')}
+      </div>
+    </div>
+  </div>
+  ${totalSched===0?`<div class="card" style="text-align:center;padding:40px">
+    <i class="ti ti-calendar" style="font-size:48px;color:var(--gray-300);display:block;margin-bottom:16px"></i>
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px">Расписание пустое</div>
+    <div style="font-size:14px;color:var(--text-m);margin-bottom:20px">Назначь компаниям категорию (A/B/C/D) и ответственного менеджера,<br>затем нажми «Обновить расписание»</div>
+    <button class="btn btn-primary" onclick="scheduleAllCompanies()"><i class="ti ti-refresh"></i>Создать расписание</button>
+  </div>`:`
+  <div class="cal-grid">
+    ${months.map(({year,month,label})=>{
+      const isPast=year<now.getFullYear()||(year===now.getFullYear()&&month<now.getMonth());
+      const isCurrent=year===now.getFullYear()&&month===now.getMonth();
+      const mTasks=[...scheduledTasks,...manualTasks].filter(t=>{
+        const td=new Date(t.due);return td.getFullYear()===year&&td.getMonth()===month;
+      }).sort((a,b)=>a.due.localeCompare(b.due));
+      return`<div class="cal-month">
+        <div class="cal-month-head ${isCurrent?'current':isPast?'past':''}">
+          <span>${label}</span>
+          ${mTasks.length?`<span style="font-size:11px;opacity:.8">${mTasks.length} конт.</span>`:''}
+        </div>
+        ${mTasks.length?mTasks.map(t=>{
+          const co=db.companies.find(c=>c.id===t.company_id);
+          const cat=co?.category||'';
+          return`<div class="cal-event" onclick="${co?`openCompanyDetail('${co.id}')`:''}">
+            ${cat?`<span class="cat-badge cat-${cat}" style="width:18px;height:18px;font-size:10px">${cat}</span>`:'<span style="width:18px"></span>'}
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.company}</div>
+              <div style="font-size:11px;color:var(--text-m)">${t.agent||''} · ${t.due.slice(5)}</div>
+            </div>
+            <div class="cb ${t.done?'done':''}" style="width:16px;height:16px;flex-shrink:0" onclick="event.stopPropagation();toggleTask('${t.id}',${!t.done})">
+              ${t.done?'<i class="ti ti-check" style="font-size:10px"></i>':''}
+            </div>
+          </div>`;
+        }).join(''):`<div class="cal-empty">Нет контактов</div>`}
+      </div>`;
+    }).join('')}
+  </div>`}`;
+}
+
+
+// ─── Parts forecast ────────────────────────────────────────────────────────
+function renderParts(){
+  $('topbar-right').innerHTML=`
+    <select class="btn" id="parts-co-filter" onchange="renderParts()">
+      <option value="">Все компании</option>
+      ${db.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
+    </select>
+    <button class="btn btn-primary" onclick="exportPartsExcel()"><i class="ti ti-download"></i>Экспорт в Excel</button>`;
+
+  const coFilter=document.getElementById('parts-co-filter')?.value||'';
+  const hitachiFleet=db.fleet.filter(u=>u.brand==='Hitachi'&&(!coFilter||u.company_id===coFilter));
+
+  if(!hitachiFleet.length){
+    $('content').innerHTML=`<div class="empty" style="padding:60px"><i class="ti ti-tool"></i><div class="empty-title">Нет техники Hitachi в парке</div><div style="color:var(--text-m)">Добавь технику в раздел "Парк техники" чтобы видеть прогноз по запчастям</div></div>`;
+    return;
+  }
+
+  // Calculate annual parts demand per unit
+  const rows=[];
+  hitachiFleet.forEach(unit=>{
+    const catalog=PARTS_CATALOG[unit.model];
+    if(!catalog)return;
+    const co=db.companies.find(c=>c.id===unit.company_id);
+    const ind=(co?.industry||'').toLowerCase();
+    const annualH=ind.includes('горн')||ind.includes('mining')?ANNUAL_HOURS.mining:
+                  ind.includes('карь')||ind.includes('quarr')?ANNUAL_HOURS.quarry:
+                  ind.includes('дорог')||ind.includes('road')?ANNUAL_HOURS.road:ANNUAL_HOURS.default;
+    catalog.forEach(p=>{
+      const timesPerYear=annualH/p.interval_h;
+      const qtyPerYear=Math.ceil(timesPerYear*p.qty);
+      const totalUSD=qtyPerYear*p.price_usd;
+      rows.push({
+        company:unit.company,company_id:unit.company_id,
+        model:unit.model,serial:unit.serial||'—',year:unit.year,
+        part:p.part,code:p.code,unit:p.unit,
+        interval_h:p.interval_h,annual_h:annualH,
+        qty_per_year:qtyPerYear,price_usd:p.price_usd,total_usd:totalUSD,
+        times_per_year:Math.round(timesPerYear*10)/10,
+      });
+    });
+  });
+
+  // Group by company then model
+  const byCompany={};
+  rows.forEach(r=>{
+    if(!byCompany[r.company_id])byCompany[r.company_id]={name:r.company,id:r.company_id,models:{},total:0};
+    if(!byCompany[r.company_id].models[r.model+r.serial])byCompany[r.company_id].models[r.model+r.serial]={model:r.model,serial:r.serial,year:r.year,parts:[],total:0};
+    byCompany[r.company_id].models[r.model+r.serial].parts.push(r);
+    byCompany[r.company_id].models[r.model+r.serial].total+=r.total_usd;
+    byCompany[r.company_id].total+=r.total_usd;
+  });
+
+  const grandTotal=rows.reduce((s,r)=>s+r.total_usd,0);
+
+  $('content').innerHTML=`
+  <div class="metrics" style="margin-bottom:20px">
+    <div class="metric"><div class="metric-label">Единиц Hitachi</div><div class="metric-value">${hitachiFleet.length}</div></div>
+    <div class="metric"><div class="metric-label">Прогноз запчастей/год</div><div class="metric-value">$${Math.round(grandTotal/1000)}K</div><div class="metric-sub">по всему парку</div></div>
+    <div class="metric"><div class="metric-label">Средний расход/ед.</div><div class="metric-value">$${hitachiFleet.length?Math.round(grandTotal/hitachiFleet.length/1000)+'K':'—'}</div><div class="metric-sub">в год</div></div>
+    <div class="metric"><div class="metric-label">Потенциал продаж</div><div class="metric-value" style="color:var(--green)">$${Math.round(grandTotal/1000)}K</div><div class="metric-sub">ежегодный</div></div>
+  </div>
+  ${Object.values(byCompany).sort((a,b)=>b.total-a.total).map(co=>`
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title" style="cursor:pointer" onclick="openCompanyDetail('${co.id}')">
+      <span style="color:var(--blue)">${co.name}</span>
+      <span style="font-size:14px;font-weight:800;color:var(--green)">$${Math.round(co.total).toLocaleString()}/год</span>
+    </div>
+    ${Object.values(co.models).map(m=>`
+    <div style="margin-bottom:16px">
+      <div style="font-size:13px;font-weight:700;color:var(--text);padding:8px 0;border-bottom:2px solid var(--blue-lt);margin-bottom:8px;display:flex;justify-content:space-between">
+        <span><i class="ti ti-tractor" style="color:var(--blue);margin-right:6px"></i>${m.model} · S/N ${m.serial} · ${m.year}г.</span>
+        <span style="color:var(--green)">$${Math.round(m.total).toLocaleString()}/год</span>
+      </div>
+      <div class="tbl-wrap">
+      <table class="tbl">
+        <thead><tr><th>Запчасть</th><th>Артикул</th><th>Интервал (м/ч)</th><th>Раз в год</th><th>Кол-во/год</th><th>Ед.</th><th>Цена</th><th>Итого/год</th></tr></thead>
+        <tbody>${m.parts.sort((a,b)=>b.total_usd-a.total_usd).map(p=>`<tr>
+          <td style="font-weight:500">${p.part}</td>
+          <td style="font-family:monospace;font-size:12px;color:var(--text-m)">${p.code}</td>
+          <td style="text-align:center">${p.interval_h.toLocaleString()}</td>
+          <td style="text-align:center">${p.times_per_year}×</td>
+          <td style="text-align:center;font-weight:600">${p.qty_per_year}</td>
+          <td style="color:var(--text-m)">${p.unit}</td>
+          <td>$${p.price_usd}</td>
+          <td style="font-weight:700;color:var(--green)">$${Math.round(p.total_usd).toLocaleString()}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`).join('')}
+  </div>`).join('')}`;
+}
+
+function exportPartsExcel(){
+  const coFilter=document.getElementById('parts-co-filter')?.value||'';
+  const hitachiFleet=db.fleet.filter(u=>u.brand==='Hitachi'&&(!coFilter||u.company_id===coFilter));
+  const csvRows=[['Компания','Модель','Серийный №','Год','Запчасть','Артикул','Интервал м/ч','Раз в год','Кол-во/год','Ед.','Цена USD','Итого USD/год']];
+  hitachiFleet.forEach(unit=>{
+    const catalog=PARTS_CATALOG[unit.model];if(!catalog)return;
+    const co=db.companies.find(c=>c.id===unit.company_id);
+    const ind=(co?.industry||'').toLowerCase();
+    const annualH=ind.includes('горн')?ANNUAL_HOURS.mining:ind.includes('карь')?ANNUAL_HOURS.quarry:ANNUAL_HOURS.default;
+    catalog.forEach(p=>{
+      const tpy=annualH/p.interval_h;
+      const qty=Math.ceil(tpy*p.qty);
+      csvRows.push([unit.company,unit.model,unit.serial||'',unit.year,p.part,p.code,p.interval_h,Math.round(tpy*10)/10,qty,p.unit,p.price_usd,Math.round(qty*p.price_usd)]);
+    });
+  });
+  const csv=csvRows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='wayland_parts_forecast.csv';a.click();
+}
+
+// ─── Operations ────────────────────────────────────────────────────────────
+function renderOperations(){
+  $('topbar-right').innerHTML='';
+  $('content').innerHTML=`
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+    <div class="card">
+      <div class="card-title"><i class="ti ti-upload" style="color:var(--blue);margin-right:8px"></i>Импорт компаний из Excel/CSV</div>
+      <div style="font-size:13px;color:var(--text-m);margin-bottom:16px;line-height:1.6">
+        Загрузи файл Excel или CSV со списком компаний.<br>
+        Колонки: <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px">Название, Отрасль, Город, Телефон, Email, Статус</code>
+      </div>
+      <div style="border:2px dashed var(--bdr);border-radius:var(--r);padding:28px;text-align:center;margin-bottom:12px" id="drop-zone" ondragover="event.preventDefault()" ondrop="handleDrop(event,'companies')">
+        <i class="ti ti-file-spreadsheet" style="font-size:36px;color:var(--gray-300);display:block;margin-bottom:10px"></i>
+        <div style="font-size:13px;color:var(--text-m);margin-bottom:12px">Перетащи файл сюда или нажми кнопку</div>
+        <input type="file" id="import-co-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFile(this,'companies')">
+        <button class="btn btn-primary" onclick="document.getElementById('import-co-file').click()"><i class="ti ti-upload"></i>Выбрать файл</button>
+      </div>
+      <div style="font-size:12px;color:var(--text-m)">Поддерживаются: CSV (UTF-8), Excel (.xlsx, .xls)</div>
+      <div id="import-co-result" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><i class="ti ti-upload" style="color:var(--purple);margin-right:8px"></i>Импорт парка техники из Excel/CSV</div>
+      <div style="font-size:13px;color:var(--text-m);margin-bottom:16px;line-height:1.6">
+        Загрузи файл со списком техники клиентов.<br>
+        Колонки: <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px">Компания, Бренд, Модель, Тип, Год, Серийный №, Состояние</code>
+      </div>
+      <div style="border:2px dashed var(--bdr);border-radius:var(--r);padding:28px;text-align:center;margin-bottom:12px" ondragover="event.preventDefault()" ondrop="handleDrop(event,'fleet')">
+        <i class="ti ti-tractor" style="font-size:36px;color:var(--gray-300);display:block;margin-bottom:10px"></i>
+        <div style="font-size:13px;color:var(--text-m);margin-bottom:12px">Перетащи файл сюда или нажми кнопку</div>
+        <input type="file" id="import-fleet-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFile(this,'fleet')">
+        <button class="btn btn-primary" onclick="document.getElementById('import-fleet-file').click()"><i class="ti ti-upload"></i>Выбрать файл</button>
+      </div>
+      <div style="font-size:12px;color:var(--text-m)">Компании создаются автоматически если не существуют</div>
+      <div id="import-fleet-result" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-title"><i class="ti ti-download" style="color:var(--green);margin-right:8px"></i>Экспорт данных</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+      ${[
+        {label:'Компании',icon:'ti-building',fn:'exportCSV("companies")',color:'blue'},
+        {label:'Контакты',icon:'ti-users',fn:'exportCSV("contacts")',color:'purple'},
+        {label:'Сделки (Pipeline)',icon:'ti-versions',fn:'exportCSV("deals")',color:'amber'},
+        {label:'Парк техники',icon:'ti-tractor',fn:'exportCSV("fleet")',color:'teal'},
+        {label:'Задачи',icon:'ti-checkbox',fn:'exportCSV("tasks")',color:'gray'},
+        {label:'Прогноз запчастей',icon:'ti-tool',fn:'exportPartsExcel()',color:'green'},
+      ].map(b=>`<button class="btn" style="justify-content:flex-start;gap:10px;padding:12px 16px" onclick="${b.fn}">
+        <i class="ti ${b.icon}" style="font-size:18px;color:var(--${b.color})"></i>
+        <span>${b.label}</span>
+        <i class="ti ti-download" style="margin-left:auto;font-size:14px;color:var(--text-l)"></i>
+      </button>`).join('')}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title"><i class="ti ti-info-circle" style="color:var(--amber);margin-right:8px"></i>Шаблоны для импорта</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" onclick="downloadTemplate('companies')"><i class="ti ti-file-spreadsheet"></i>Шаблон компаний</button>
+      <button class="btn" onclick="downloadTemplate('fleet')"><i class="ti ti-file-spreadsheet"></i>Шаблон парка техники</button>
+    </div>
+  </div>`;
+}
+
+function handleDrop(e,type){e.preventDefault();const f=e.dataTransfer.files[0];if(f)processImportFile(f,type);}
+function importFile(input,type){if(input.files[0])processImportFile(input.files[0],type);}
+
+async function processImportFile(file,type){
+  const resultEl=$(type==='companies'?'import-co-result':'import-fleet-result');
+  resultEl.innerHTML=`<div style="color:var(--text-m);font-size:13px">⏳ Обработка файла...</div>`;
+  try{
+    const text=await readFileAsText(file);
+    const rows=parseCSV(text);
+    if(rows.length<2){resultEl.innerHTML=`<div style="color:var(--red)">Файл пустой или неверный формат</div>`;return;}
+    const headers=rows[0].map(h=>h.trim().toLowerCase());
+    const data=rows.slice(1).filter(r=>r.some(c=>c.trim()));
+    let imported=0,skipped=0;
+    for(const row of data){
+      const get=(...keys)=>{for(const k of keys){const i=headers.findIndex(h=>h.includes(k));if(i>=0&&row[i])return row[i].trim();}return '';};
+      if(type==='companies'){
+        const name=get('назван','name','company','компан');
+        if(!name){skipped++;continue;}
+        const exists=db.companies.find(c=>c.name.toLowerCase()===name.toLowerCase());
+        if(exists){skipped++;continue;}
+        const rec={name,industry:get('отрасл','industry'),city:get('город','city'),status:get('статус','status')||'Потенциальный',country:'Armenia',created:today()};
+        const s=await persist('companies',rec);db.companies.push(s);imported++;
+      }else if(type==='fleet'){
+        const coName=get('компан','company');const model=get('модел','model');
+        if(!coName||!model){skipped++;continue;}
+        let co=db.companies.find(c=>c.name.toLowerCase()===coName.toLowerCase());
+        if(!co){const s=await persist('companies',{name:coName,status:'Потенциальный',created:today()});db.companies.push(s);co=s;}
+        const rec={company_id:co.id,company:co.name,brand:get('бренд','brand')||'Hitachi',model,type:get('тип','type')||'Экскаватор',year:Number(get('год','year'))||0,serial:get('серийн','serial'),condition:get('состоян','condition')||'Good',notes:get('примеч','notes')};
+        const s=await persist('fleet',rec);db.fleet.push(s);imported++;
+      }
+    }
+    updateCounts();
+    resultEl.innerHTML=`<div style="color:var(--green);font-size:13px;font-weight:600">✓ Импортировано: ${imported} записей${skipped?` · Пропущено: ${skipped}`:''}</div>`;
+  }catch(e){resultEl.innerHTML=`<div style="color:var(--red);font-size:13px">Ошибка: ${e.message}</div>`;}
+}
+
+function readFileAsText(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=e=>res(e.target.result);
+    r.onerror=()=>rej(new Error('Ошибка чтения файла'));
+    r.readAsText(file,'UTF-8');
+  });
+}
+
+function parseCSV(text){
+  const rows=[];let row=[];let cell='';let inQ=false;
+  const NL=String.fromCharCode(10),CR=String.fromCharCode(13),TAB=String.fromCharCode(9);
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQ){
+      if(c==='"'&&text[i+1]==='"'){cell+='"';i++;}
+      else if(c==='"')inQ=false;
+      else cell+=c;
+    } else if(c==='"')inQ=true;
+    else if(c===','||c===';'||c===TAB){row.push(cell);cell='';}
+    else if(c===NL||c===CR){
+      if(c===CR&&text[i+1]===NL)i++;
+      row.push(cell);rows.push(row);row=[];cell='';
+    } else cell+=c;
+  }
+  if(cell||row.length)row.push(cell);
+  if(row.length>1)rows.push(row);
+  return rows;
+}
+
+function exportCSV(sheet){
+  const sheetMap={companies:db.companies,contacts:db.contacts,deals:db.deals,fleet:db.fleet,tasks:db.tasks};
+  const data=sheetMap[sheet];if(!data||!data.length){alert('Нет данных для экспорта');return;}
+  const headers=Object.keys(data[0]);
+  const csv=[headers.join(','),...data.map(r=>headers.map(h=>`"${String(r[h]||'').replace(/"/g,'""')}"`).join(','))].join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`wayland_${sheet}.csv`;a.click();
+}
+
+function downloadTemplate(type){
+  const templates={
+    companies:'Название,Отрасль,Город,Страна,Статус,Сайт\n"ООО Пример","Горнодобывающая","Yerevan","Armenia","Потенциальный",""',
+    fleet:'Компания,Бренд,Модель,Тип,Год,Серийный №,Состояние\n"ООО Пример","Hitachi","ZX470LC-6","Экскаватор","2022","H470-001","Good"',
+  };
+  const blob=new Blob(['\uFEFF'+templates[type]],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`template_${type}.csv`;a.click();
+}
+
+// ─── Auth ──────────────────────────────────────────────────────────────────
+function simpleHash(str){
+  let h=0;
+  for(let i=0;i<str.length;i++){h=(Math.imul(31,h)+str.charCodeAt(i))|0;}
+  return Math.abs(h).toString(36);
+}
+
+function showLogin(){
+  const sel=$('login-user');
+  if(!sel)return;
+  sel.innerHTML='<option value="">— выберите —</option>'+
+    db.users.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  $('login-screen').style.display='flex';
+  $('app').style.display='none';
+  $('setup').style.display='none';
+}
+
+async function doLogin(){
+  const userId=$('login-user').value;
+  const pass=$('login-pass').value;
+  const err=$('login-err');
+  err.style.display='none';
+  if(!userId){err.textContent='Выбери имя';err.style.display='block';return;}
+  if(!pass){err.textContent='Введи пароль';err.style.display='block';return;}
+  const user=db.users.find(u=>String(u.id)===String(userId));
+  if(!user){err.textContent='Пользователь не найден';err.style.display='block';return;}
+  if(String(user.active)==='false'){err.textContent='Аккаунт заблокирован. Обратись к руководителю.';err.style.display='block';return;}
+  if(user.password_hash!==simpleHash(pass)){err.textContent='Неверный пароль';err.style.display='block';return;}
+  // Update last login
+  user.last_login=new Date().toISOString().slice(0,10);
+  persist('users',{...user});
+  localStorage.setItem('wcrm_session',JSON.stringify({id:user.id,name:user.name,role:user.role}));
+  currentUser={id:user.id,name:user.name,role:user.role};
+  $('login-screen').style.display='none';
+  $('app').style.display='flex';
+  applyRoleUI();
+  render('dashboard');
+  initMobile();
+  initNotifications();
+}
+
+function logout(){
+  localStorage.removeItem('wcrm_session');
+  currentUser=null;
+  $('app').style.display='none';
+  $('login-screen').style.display='flex';
+  if($('login-pass'))$('login-pass').value='';
+}
+
+function applyRoleUI(){
+  if(!currentUser)return;
+  const isManager=currentUser.role==='manager';
+  document.querySelectorAll('.manager-only').forEach(el=>{el.style.display=isManager?'flex':'none';});
+  const av=$('user-av');if(av)av.textContent=ini(currentUser.name);
+  const footer=$('sidebar-user-name');if(footer)footer.textContent=currentUser.name;
+  const role=$('sidebar-user-role');if(role)role.textContent=isManager?'Sales Manager':'Sales Rep';
+}
+
+function myDeals(){
+  if(!currentUser||currentUser.role==='manager')return db.deals;
+  return db.deals.filter(d=>d.agent===currentUser.name);
+}
+function myTasks(){
+  if(!currentUser||currentUser.role==='manager')return db.tasks;
+  return db.tasks.filter(t=>t.agent===currentUser.name);
+}
+
+function renderUsers(){
+  if(currentUser?.role!=='manager'){$('content').innerHTML='<div class="empty" style="padding:60px"><i class="ti ti-lock"></i><div class="empty-title">Нет доступа</div></div>';return;}
+  $('topbar-right').innerHTML=`<button class="btn btn-primary" onclick="openM('user')"><i class="ti ti-plus"></i>Добавить пользователя</button>`;
+  $('content').innerHTML=`
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title">Пользователи CRM</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Имя</th><th>Роль</th><th>Последний вход</th><th>Статус</th><th></th></tr></thead>
+      <tbody>${db.users.length?db.users.map((u,i)=>`<tr>
+        <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:30px;height:30px;font-size:11px">${ini(u.name)}</div><strong>${u.name}</strong></div></td>
+        <td><span class="b ${u.role==='manager'?'b-blue':'b-gray'}">${u.role==='manager'?'Manager':'Sales Rep'}</span></td>
+        <td style="color:var(--text-m);font-size:12px">${u.last_login||'—'}</td>
+        <td><span class="b ${String(u.active)==='false'?'b-red':'b-green'}">${String(u.active)==='false'?'Заблокирован':'Активен'}</span></td>
+        <td><div class="actions">
+          <button class="btn btn-sm btn-ghost" onclick="openM('user','${u.id}')"><i class="ti ti-edit"></i></button>
+          <button class="btn btn-sm btn-ghost" title="Сбросить пароль" onclick="resetPassword('${u.id}')"><i class="ti ti-key"></i></button>
+          ${u.id!==currentUser?.id?`<button class="btn btn-sm btn-ghost" onclick="toggleUserActive('${u.id}','${u.active}')"><i class="ti ti-${String(u.active)==='false'?'lock-open':'lock'}"></i></button>`:''}
+        </div></td>
+      </tr>`).join(''):`<tr><td colspan="5"><div class="empty" style="padding:24px"><i class="ti ti-users"></i><div class="empty-title">Нет пользователей</div><button class="btn btn-primary btn-sm" onclick="openM('user')">Добавить первого</button></div></td></tr>`}
+      </tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Права доступа</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px">
+      <div><div style="font-weight:700;color:var(--blue);margin-bottom:8px;font-size:13px">Sales Representative</div>
+        ${['✓ Свои сделки и задачи','✓ Свой календарь','✓ Все компании и контакты','✓ Парк техники','✓ Прогноз запчастей','✗ Чужие сделки','✗ Отчёты по команде','✗ Операции и импорт','✗ Управление пользователями'].map(i=>`<div style="font-size:13px;padding:3px 0;color:${i.startsWith('✗')?'var(--text-l)':'var(--text)'}">${i}</div>`).join('')}
+      </div>
+      <div><div style="font-weight:700;color:var(--green);margin-bottom:8px;font-size:13px">Manager</div>
+        ${['✓ Все сделки всех менеджеров','✓ Все задачи команды','✓ Общий календарь','✓ Все компании и контакты','✓ Парк техники','✓ Отчёты по всей команде','✓ Операции и импорт','✓ Управление пользователями'].map(i=>`<div style="font-size:13px;padding:3px 0">${i}</div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+async function resetPassword(userId){
+  const newPass=prompt('Новый пароль:');
+  if(!newPass||newPass.length<4){if(newPass!==null)alert('Минимум 4 символа');return;}
+  const user=db.users.find(u=>u.id===userId);if(!user)return;
+  user.password_hash=simpleHash(newPass);
+  await persist('users',{...user});
+  alert('Пароль изменён');
+}
+
+async function toggleUserActive(userId,current){
+  const user=db.users.find(u=>u.id===userId);if(!user)return;
+  user.active=String(current)==='false'?'true':'false';
+  await persist('users',{...user});
+  renderUsers();
+}
+
+// ─── PHONE FORMATTING ──────────────────────────────────────────────────────
+function formatPhone(raw){
+  let digits=raw.replace(/[^\d]/g,'');
+  if(!digits)return'';
+
+  // Detect country by prefix
+  // Russian: starts with 7 or 8 (local), but not 374/00374
+  // Armenian: starts with 374, 0, or 2-digit local (44,55,77,91,93,94,95,96,98,99,10,11,12,13,14,16)
+  const AM_LOCAL=/^(0?)(44|55|77|91|93|94|95|96|98|99|10|11|12|13|14|16)/;
+  const isRussian=(
+    digits.startsWith('7')&&!digits.startsWith('374') ||
+    digits.startsWith('8')&&digits.length>=10 ||
+    digits.length===10&&/^9[0-9]{9}$/.test(digits) // 10-digit Russian mobile without prefix
+  );
+  const isArmenian=(
+    digits.startsWith('374') ||
+    digits.startsWith('0')&&!digits.startsWith('07')&&!digits.startsWith('08') ||
+    AM_LOCAL.test(digits)
+  );
+
+  if(isRussian){
+    // Normalize to 7XXXXXXXXXX
+    if(digits.startsWith('8'))digits='7'+digits.slice(1);
+    digits=digits.slice(0,11);
+    let out='+7';
+    if(digits.length>1)out+=' '+digits.slice(1,4);
+    if(digits.length>4)out+=' '+digits.slice(4,7);
+    if(digits.length>7)out+=' '+digits.slice(7,9);
+    if(digits.length>9)out+=' '+digits.slice(9,11);
+    return out;
+  }
+
+  // Default: Armenian +374 XX XXX XXX
+  if(digits.startsWith('00374'))digits=digits.slice(2);
+  if(digits.startsWith('0')&&!digits.startsWith('374'))digits='374'+digits.slice(1);
+  if(!digits.startsWith('374'))digits='374'+digits;
+  digits=digits.slice(0,12);
+  let out='+';
+  if(digits.length>=3)out+=digits.slice(0,3);
+  if(digits.length>3)out+=' '+digits.slice(3,5);
+  if(digits.length>5)out+=' '+digits.slice(5,8);
+  if(digits.length>8)out+=' '+digits.slice(8,12);
+  return out;
+}
+
+function phoneInput(el){
+  const pos=el.selectionStart;
+  const raw=el.value;
+  const formatted=formatPhone(raw);
+  el.value=formatted;
+  const diff=formatted.length-raw.length;
+  try{el.setSelectionRange(pos+diff,pos+diff);}catch(e){}
+  triggerDupCheck(el.dataset.excludeId||'');
+}
+
+// ─── EMAIL HANDLING ────────────────────────────────────────────────────────
+const EMAIL_DOMAINS=['gmail.com','mail.ru','yahoo.com','outlook.com','hotmail.com','yandex.ru','icloud.com','rambler.ru','bk.ru','list.ru','inbox.ru','protonmail.com'];
+
+function initEmailInputs(){
+  document.querySelectorAll('input[data-email]').forEach(el=>{
+    if(el.dataset.emailInit)return;
+    el.dataset.emailInit='1';
+
+    // Create suggestion dropdown
+    const wrap=el.parentNode;
+    wrap.style.position='relative';
+    const drop=document.createElement('div');
+    drop.style.cssText='position:absolute;top:100%;left:0;right:0;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);box-shadow:0 4px 16px rgba(0,0,0,.1);z-index:400;display:none;max-height:180px;overflow-y:auto';
+    wrap.appendChild(drop);
+
+    function hideDrop(){drop.style.display='none';}
+    function showSuggestions(val){
+      const v=val.toLowerCase();
+      const atIdx=v.indexOf('@');
+      drop.innerHTML='';
+      if(atIdx<1){hideDrop();return;}
+      const local=v.slice(0,atIdx);
+      const afterAt=v.slice(atIdx+1);
+      const matches=EMAIL_DOMAINS.filter(d=>d.startsWith(afterAt)&&d!==afterAt);
+      if(!matches.length){hideDrop();return;}
+      matches.forEach(domain=>{
+        const full=local+'@'+domain;
+        const item=document.createElement('div');
+        item.style.cssText='padding:9px 14px;font-size:13px;cursor:pointer;color:var(--text)';
+        item.textContent=full;
+        item.onmousedown=(e)=>{e.preventDefault();el.value=full;hideDrop();validateEmail(el);triggerDupCheck(el.dataset.excludeId||'');};
+        item.onmouseover=()=>{item.style.background='var(--gray-50)'};
+        item.onmouseout=()=>{item.style.background=''};
+        drop.appendChild(item);
+      });
+      drop.style.display='block';
+    }
+
+    el.addEventListener('input',function(){
+      this.value=this.value.toLowerCase().replace(/\s/g,'');
+      showSuggestions(this.value);
+      validateEmail(this);
+      triggerDupCheck(this.dataset.excludeId||'');
+    });
+    el.addEventListener('blur',function(){
+      setTimeout(hideDrop,150);
+      this.value=this.value.toLowerCase().trim();
+      validateEmail(this);
+      triggerDupCheck(this.dataset.excludeId||'');
+    });
+    el.addEventListener('focus',function(){
+      if(this.value.includes('@'))showSuggestions(this.value);
+    });
+    el.addEventListener('keydown',function(e){
+      if(e.key==='Escape')hideDrop();
+      if(e.key==='Tab'||e.key==='Enter'){
+        const first=drop.querySelector('div');
+        if(first&&drop.style.display!=='none'){e.preventDefault();first.onmousedown(e);return;}
+      }
+    });
+
+    // Format existing value on open
+    if(el.value){el.value=el.value.toLowerCase().trim();validateEmail(el);}
+  });
+}
+
+function validateEmail(el){
+  const v=el.value.trim();
+  if(!v){el.style.borderColor='';el.title='';return;}
+  const valid=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+  el.style.borderColor=valid?'var(--green)':'#f87171';
+  el.style.boxShadow=valid?'0 0 0 3px rgba(45,138,78,.1)':'0 0 0 3px rgba(239,68,68,.1)';
+  el.title=valid?'':'Неверный формат email';
+}
+
+function initInputs(){
+  // Phone
+  document.querySelectorAll('input[data-phone]').forEach(el=>{
+    if(el.dataset.phoneInit)return;
+    el.dataset.phoneInit='1';
+    if(el.value)el.value=formatPhone(el.value);
+    el.addEventListener('input',function(){phoneInput(this);});
+    el.addEventListener('blur',function(){if(this.value)this.value=formatPhone(this.value);});
+  });
+  // Email
+  initEmailInputs();
+}
+
+
+function normalizePhone(p){return String(p||'').replace(/[\s\-\(\)\+]/g,'');}
+
+function phoneDistance(a,b){
+  // Strip to digits only
+  const na=a.replace(/\D/g,'');const nb=b.replace(/\D/g,'');
+  if(!na||!nb)return 99;
+  // One contains the other (different prefixes)
+  if(na.endsWith(nb)||nb.endsWith(na)||na.includes(nb)||nb.includes(na))return 0;
+  // Levenshtein on last 9 digits (local part)
+  const sa=na.slice(-9);const sb=nb.slice(-9);
+  if(sa.length<5||sb.length<5)return 99;
+  const dp=Array.from({length:sa.length+1},(_,i)=>Array.from({length:sb.length+1},(_,j)=>i||j));
+  for(let i=1;i<=sa.length;i++)for(let j=1;j<=sb.length;j++)
+    dp[i][j]=sa[i-1]===sb[j-1]?dp[i-1][j-1]:1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+  return dp[sa.length][sb.length];
+}
+
+function checkDuplicates(phone, email, excludeId=null){
+  const results=[];
+  const normPhone=normalizePhone(phone);
+  const normEmail=(email||'').toLowerCase().trim();
+
+  // Search contacts
+  db.contacts.forEach(c=>{
+    if(c.id===excludeId)return;
+    const cp=normalizePhone(c.phone);
+    const ce=(c.email||'').toLowerCase().trim();
+    const name=`${c.first_name||''} ${c.last_name||''}`.trim()||'—';
+    const coName2=c.company||'';
+
+    if(normEmail&&ce&&normEmail===ce){
+      results.push({type:'exact',src:'Контакт',name,extra:coName2,field:'Email',value:c.email});
+    } else if(normPhone&&cp&&normPhone===cp){
+      results.push({type:'exact',src:'Контакт',name,extra:coName2,field:'Телефон',value:c.phone});
+    } else if(normPhone&&cp&&cp.length>=7){
+      const dist=phoneDistance(normPhone,cp);
+      if(dist===1||dist===2){
+        results.push({type:'similar',src:'Контакт',name,extra:coName2,field:'Телефон',value:c.phone,dist});
+      }
+    }
+  });
+
+  // Search leads
+  db.leads.forEach(l=>{
+    if(l.id===excludeId)return;
+    const lp=normalizePhone(l.phone);
+    const le=(l.email||'').toLowerCase().trim();
+    const name=l.contact||l.company||'—';
+
+    if(normEmail&&le&&normEmail===le){
+      results.push({type:'exact',src:'Лид',name,extra:l.company||'',field:'Email',value:l.email});
+    } else if(normPhone&&lp&&normPhone===lp){
+      results.push({type:'exact',src:'Лид',name,extra:l.company||'',field:'Телефон',value:l.phone});
+    } else if(normPhone&&lp&&lp.length>=7){
+      const dist=phoneDistance(normPhone,lp);
+      if(dist===1||dist===2){
+        results.push({type:'similar',src:'Лид',name,extra:l.company||'',field:'Телефон',value:l.phone,dist});
+      }
+    }
+  });
+
+  return results;
+}
+
+function renderDupWarning(results){
+  if(!results.length)return'';
+  const exact=results.filter(r=>r.type==='exact');
+  const similar=results.filter(r=>r.type==='similar');
+  let html='';
+  if(exact.length){
+    html+=`<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-top:10px">
+      <div style="font-weight:700;color:#b91c1c;font-size:13px;margin-bottom:6px"><i class="ti ti-alert-circle"></i> Найдено точное совпадение!</div>
+      ${exact.map(r=>`<div style="font-size:12px;color:#7f1d1d;margin-bottom:3px">
+        <strong>${r.src}:</strong> ${r.name}${r.extra?' ('+r.extra+')':''} — ${r.field}: <code>${r.value}</code>
+      </div>`).join('')}
+    </div>`;
+  }
+  if(similar.length){
+    html+=`<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-top:8px">
+      <div style="font-weight:700;color:#b45309;font-size:13px;margin-bottom:6px"><i class="ti ti-alert-triangle"></i> Возможно тот же клиент</div>
+      ${similar.map(r=>`<div style="font-size:12px;color:#78350f;margin-bottom:3px">
+        <strong>${r.src}:</strong> ${r.name}${r.extra?' ('+r.extra+')':''} — похожий номер: <code>${r.value}</code> (отличается на ${r.dist} цифр${r.dist===1?'у':'ы'})
+      </div>`).join('')}
+    </div>`;
+  }
+  return html;
+}
+
+function triggerDupCheck(excludeId=null){
+  const phone=$('f-phone')?.value||$('m-lead-phone')?.value||'';
+  const email=$('f-email')?.value||$('m-lead-email')?.value||'';
+  const wrap=$('dup-warn');
+  if(!wrap)return;
+  const results=checkDuplicates(phone,email,excludeId);
+  wrap.innerHTML=renderDupWarning(results);
+}
+
+
+const leadStatusBadge=s=>({New:'b-blue',Contacted:'b-purple',Qualified:'b-amber',Proposal:'b-teal',Converted:'b-green',Lost:'b-red'}[s]||'b-gray');
+const LEAD_STATUSES=['New','Contacted','Qualified','Proposal','Converted','Lost'];
+const LEAD_SOURCES=['Сайт','Instagram','Facebook','WhatsApp','Холодный звонок','Рекомендация','Выставка','Прямой контакт','Тендер','Другое'];
+
+function renderLeads(){
+  const active=db.leads.filter(l=>l.status!=='Converted'&&l.status!=='Lost');
+  const converted=db.leads.filter(l=>l.status==='Converted').length;
+  const lost=db.leads.filter(l=>l.status==='Lost').length;
+  const html=`
+  <div class="metrics">
+    <div class="metric"><div class="metric-label"><i class="ti ti-user-plus"></i> Активных лидов</div><div class="metric-value">${active.length}</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-check"></i> Конвертировано</div><div class="metric-value" style="color:var(--green)">${converted}</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-x"></i> Потеряно</div><div class="metric-value" style="color:var(--red)">${lost}</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-percent"></i> Конверсия</div><div class="metric-value">${db.leads.length?Math.round(converted/db.leads.length*100):0}%</div></div>
+  </div>
+  <div style="display:flex;gap:10px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch">
+    ${LEAD_STATUSES.map(s=>{
+      const cnt=db.leads.filter(l=>l.status===s).length;
+      return `<div style="background:var(--sur);border:1px solid var(--bdr);border-radius:var(--rlg);padding:10px 14px;min-width:100px;flex-shrink:0;box-shadow:var(--sh);cursor:pointer" onclick="filterLeads('${s}')">
+        <div style="font-size:10px;font-weight:700;color:var(--text-m);text-transform:uppercase;margin-bottom:4px">${s}</div>
+        <div style="font-size:20px;font-weight:800">${cnt}</div>
+      </div>`;
+    }).join('')}
+  </div>
+  <div class="toolbar">
+    <div class="search"><i class="ti ti-search"></i><input placeholder="Поиск лидов..." oninput="filterLeads('',this.value)" id="lead-search"></div>
+    <select class="fc" style="width:160px" onchange="filterLeads(this.value)" id="lead-status-filter">
+      <option value="">Все статусы</option>
+      ${LEAD_STATUSES.map(s=>`<option>${s}</option>`).join('')}
+    </select>
+    <select class="fc" style="width:160px" onchange="filterLeadsBySource(this.value)" id="lead-source-filter">
+      <option value="">Все источники</option>
+      ${LEAD_SOURCES.map(s=>`<option>${s}</option>`).join('')}
+    </select>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr><th>Компания / Контакт</th><th class="hide-xs">Источник</th><th class="hide-xs">Продукт</th><th>Бюджет</th><th>Статус</th><th class="hide-sm">Ответственный</th><th class="hide-sm">Создан</th><th></th></tr></thead>
+    <tbody id="leads-tbody">${renderLeadsRows(db.leads)}</tbody>
+  </table></div>`;
+  $('content').innerHTML=html;
+}
+
+function renderLeadsRows(leads){
+  if(!leads.length)return`<tr><td colspan="8"><div class="empty"><i class="ti ti-user-plus"></i><div class="empty-title">Нет лидов</div><button class="btn btn-primary btn-sm" onclick="openM('lead')">Добавить первый</button></div></td></tr>`;
+  return leads.map(l=>`<tr onclick="openLeadDetail('${l.id}')">
+    <td><strong>${l.company||l.contact||'—'}</strong>${l.contact&&l.company?`<div style="font-size:12px;color:var(--text-m)">${l.contact}</div>`:''}</td>
+    <td class="hide-xs"><span class="b b-gray">${l.source||'—'}</span></td>
+    <td class="hide-xs" style="color:var(--text-m);font-size:12px">${l.product||'—'}</td>
+    <td style="font-weight:700">${l.budget?'$'+fmt(l.budget):'—'}</td>
+    <td><span class="b ${leadStatusBadge(l.status)}">${l.status||'New'}</span></td>
+    <td class="hide-sm" style="font-size:12px;color:var(--text-m)">${l.agent||'—'}</td>
+    <td class="hide-sm" style="font-size:12px;color:var(--text-m)">${l.created||'—'}</td>
+    <td><div class="actions">
+      <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openM('lead','${l.id}')"><i class="ti ti-edit"></i></button>
+      ${l.status!=='Converted'?`<button class="btn btn-sm btn-ghost" title="Конвертировать в сделку" onclick="event.stopPropagation();convertLead('${l.id}')"><i class="ti ti-arrow-right-circle" style="color:var(--green)"></i></button>`:''}
+      <button class="btn btn-sm btn-ghost btn-danger" onclick="event.stopPropagation();delRecord('leads','${l.id}')"><i class="ti ti-trash"></i></button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function filterLeads(status='',search=''){
+  const sf=$('lead-status-filter');const src=$('lead-source-filter');
+  const st=status||(sf?sf.value:'');
+  const q=search||($('lead-search')?$('lead-search').value:'');
+  const source=src?src.value:'';
+  let leads=db.leads;
+  if(st)leads=leads.filter(l=>l.status===st);
+  if(source)leads=leads.filter(l=>l.source===source);
+  if(q){const lq=q.toLowerCase();leads=leads.filter(l=>(l.company+l.contact+l.product).toLowerCase().includes(lq));}
+  const tb=$('leads-tbody');if(tb)tb.innerHTML=renderLeadsRows(leads);
+  if(status&&sf)sf.value=status;
+}
+function filterLeadsBySource(source){filterLeads('','')}
+
+function openLeadDetail(id){
+  const l=db.leads.find(x=>x.id===id);if(!l)return;
+  openM('lead',id);
+}
+
+async function convertLead(id){
+  const l=db.leads.find(x=>x.id===id);if(!l)return;
+  if(!confirm(`Конвертировать лид "${l.company||l.contact}" в сделку?`))return;
+  // Create deal from lead
+  const deal={id:uid(),company:l.company_id||'',model:l.product||'',stage:'Qualified',amount:l.budget||0,agent:l.agent||'',days:0,prob:30,created:today(),notes:`Конвертирован из лида. ${l.notes||''}`};
+  db.deals.push(deal);
+  await persist('deals',deal);
+  // Mark lead converted
+  l.status='Converted';l.converted_deal=deal.id;
+  await persist('leads',{...l});
+  // Log activity
+  const act={id:uid(),company_id:l.company_id||'',type:'note',text:`Лид конвертирован в сделку (${l.product||'без продукта'})`,date:today(),agent:currentUser?.name||''};
+  db.activities.push(act);await persist('activities',act);
+  updateCounts();
+  renderLeads();
+  alert('Лид конвертирован! Сделка создана в стадии Qualified.');
+}
+
+// ─── SEGMENTS ──────────────────────────────────────────────────────────────
+function renderSegments(){
+  const industries=[...new Set(db.companies.map(c=>c.industry).filter(Boolean))];
+  const regions=[...new Set(db.companies.map(c=>c.city).filter(Boolean))];
+  const statuses=[...new Set(db.companies.map(c=>c.status).filter(Boolean))];
+  const cats=[...new Set(db.companies.map(c=>c.category).filter(Boolean))];
+
+  $('content').innerHTML=`
+  <div class="seg-layout" style="display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start">
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-title">Фильтры сегментации</div>
+        <div class="fg"><label class="fl">Отрасль</label>
+          <select class="fc" id="seg-industry" onchange="applySegment()">
+            <option value="">Все отрасли</option>
+            ${industries.map(i=>`<option>${i}</option>`).join('')}
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Регион / город</label>
+          <select class="fc" id="seg-region" onchange="applySegment()">
+            <option value="">Все регионы</option>
+            ${regions.map(r=>`<option>${r}</option>`).join('')}
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Статус клиента</label>
+          <select class="fc" id="seg-status" onchange="applySegment()">
+            <option value="">Все статусы</option>
+            ${statuses.map(s=>`<option>${s}</option>`).join('')}
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Категория (A/B/C/D)</label>
+          <select class="fc" id="seg-cat" onchange="applySegment()">
+            <option value="">Все категории</option>
+            ${['A','B','C','D'].map(c=>`<option>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Наличие техники</label>
+          <select class="fc" id="seg-fleet" onchange="applySegment()">
+            <option value="">Неважно</option>
+            <option value="yes">Есть в парке</option>
+            <option value="no">Нет техники</option>
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Активные сделки</label>
+          <select class="fc" id="seg-deals" onchange="applySegment()">
+            <option value="">Неважно</option>
+            <option value="yes">Есть сделки</option>
+            <option value="no">Нет сделок</option>
+          </select>
+        </div>
+        <button class="btn" style="width:100%;justify-content:center;margin-top:4px" onclick="resetSegment()"><i class="ti ti-x"></i>Сбросить фильтры</button>
+      </div>
+      <div class="card" id="seg-stats">
+        <div class="card-title">Статистика выборки</div>
+        <div id="seg-stats-body" style="font-size:13px;color:var(--text-m)">Нажмите фильтр</div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-title"><span id="seg-count-title">Все компании (${db.companies.length})</span>
+          <button class="btn btn-sm" onclick="exportSegment()"><i class="ti ti-download"></i>Экспорт CSV</button>
+        </div>
+        <div class="tbl-wrap"><table class="tbl">
+          <thead><tr><th>Компания</th><th>Отрасль</th><th>Регион</th><th>Статус</th><th>Кат.</th><th>Техника</th><th>Сделки</th></tr></thead>
+          <tbody id="seg-tbody">${renderSegRows(db.companies)}</tbody>
+        </table></div>
+      </div>
+    </div>
+  </div>`;
+  applySegment();
+}
+
+function getSegmentedCompanies(){
+  const industry=$('seg-industry')?.value||'';
+  const region=$('seg-region')?.value||'';
+  const status=$('seg-status')?.value||'';
+  const cat=$('seg-cat')?.value||'';
+  const fleetF=$('seg-fleet')?.value||'';
+  const dealsF=$('seg-deals')?.value||'';
+  let companies=db.companies;
+  if(industry)companies=companies.filter(c=>c.industry===industry);
+  if(region)companies=companies.filter(c=>c.city===region);
+  if(status)companies=companies.filter(c=>c.status===status);
+  if(cat)companies=companies.filter(c=>c.category===cat);
+  if(fleetF==='yes')companies=companies.filter(c=>db.fleet.some(f=>f.company_id===c.id));
+  if(fleetF==='no')companies=companies.filter(c=>!db.fleet.some(f=>f.company_id===c.id));
+  if(dealsF==='yes')companies=companies.filter(c=>db.deals.some(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost'));
+  if(dealsF==='no')companies=companies.filter(c=>!db.deals.some(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost'));
+  return companies;
+}
+
+function applySegment(){
+  const companies=getSegmentedCompanies();
+  const tb=$('seg-tbody');if(tb)tb.innerHTML=renderSegRows(companies);
+  const ct=$('seg-count-title');if(ct)ct.textContent=`Компании (${companies.length})`;
+  // Stats
+  const totalDeals=companies.reduce((s,c)=>s+db.deals.filter(d=>d.company===c.id).length,0);
+  const totalFleet=companies.reduce((s,c)=>s+db.fleet.filter(f=>f.company_id===c.id).length,0);
+  const sb=$('seg-stats-body');
+  if(sb)sb.innerHTML=`
+    <div class="info-row"><span class="info-label">Компаний</span><strong>${companies.length}</strong></div>
+    <div class="info-row"><span class="info-label">Единиц техники</span><strong>${totalFleet}</strong></div>
+    <div class="info-row"><span class="info-label">Сделок</span><strong>${totalDeals}</strong></div>
+    <div class="info-row"><span class="info-label">Контактов</span><strong>${companies.reduce((s,c)=>s+db.contacts.filter(x=>x.company_id===c.id).length,0)}</strong></div>
+  `;
+}
+
+function renderSegRows(companies){
+  if(!companies.length)return`<tr><td colspan="7"><div class="empty" style="padding:24px"><i class="ti ti-filter"></i><div class="empty-title">Нет компаний по фильтру</div></div></td></tr>`;
+  return companies.map(c=>{
+    const fleetCount=db.fleet.filter(f=>f.company_id===c.id).length;
+    const dealsCount=db.deals.filter(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost').length;
+    return`<tr onclick="openCompanyDetail('${c.id}');go('companies',null)">
+      <td><strong>${c.name}</strong></td>
+      <td style="font-size:12px;color:var(--text-m)">${c.industry||'—'}</td>
+      <td style="font-size:12px;color:var(--text-m)">${c.city||'—'}</td>
+      <td><span class="b ${statusBadge(c.status)}">${c.status||'—'}</span></td>
+      <td>${c.category?`<span class="cat-badge cat-${c.category}">${c.category}</span>`:'—'}</td>
+      <td style="text-align:center">${fleetCount?`<span class="b b-blue">${fleetCount}</span>`:'—'}</td>
+      <td style="text-align:center">${dealsCount?`<span class="b b-amber">${dealsCount}</span>`:'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function resetSegment(){
+  ['seg-industry','seg-region','seg-status','seg-cat','seg-fleet','seg-deals'].forEach(id=>{const el=$(id);if(el)el.value='';});
+  applySegment();
+}
+
+function exportSegment(){
+  const companies=getSegmentedCompanies();
+  const rows=[['Компания','Отрасль','Регион','Статус','Категория','Техника','Сделки','Телефон']];
+  companies.forEach(c=>{
+    rows.push([c.name,c.industry||'',c.city||'',c.status||'',c.category||'',
+      db.fleet.filter(f=>f.company_id===c.id).length,
+      db.deals.filter(d=>d.company===c.id).length,
+      c.phone||''
+    ]);
+  });
+  const csv=rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='segment_'+today()+'.csv';a.click();
+}
+
+// ─── AUTOMATION ────────────────────────────────────────────────────────────
+const AUTO_TRIGGERS={
+  'deal_stage_change':'Смена стадии сделки',
+  'lead_created':'Новый лид создан',
+  'task_overdue':'Задача просрочена',
+  'deal_amount':'Сумма сделки превышает',
+  'no_contact_days':'Нет контакта N дней'
+};
+const AUTO_ACTIONS={
+  'create_task':'Создать задачу',
+  'notify':'Уведомление в браузере',
+  'change_lead_status':'Изменить статус лида',
+  'change_deal_stage':'Изменить стадию сделки'
+};
+
+function renderAutomation(){
+  const autos=db.automations||[];
+  $('content').innerHTML=`
+  <div class="card" style="margin-bottom:16px;background:var(--blue-lt);border-color:#93c5fd">
+    <div style="display:flex;gap:12px;align-items:center">
+      <i class="ti ti-robot" style="font-size:28px;color:var(--blue)"></i>
+      <div><div style="font-weight:700;font-size:14px;color:var(--blue)">Автоматизация бизнес-процессов</div>
+      <div style="font-size:13px;color:var(--blue-dk)">Правила срабатывают автоматически при изменениях в CRM. Настрой триггер → условие → действие.</div></div>
+    </div>
+  </div>
+  ${autos.length?`<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">${autos.map(renderAutoCard).join('')}</div>`:`
+  <div class="card" style="text-align:center;padding:48px">
+    <i class="ti ti-robot" style="font-size:48px;color:var(--gray-300);display:block;margin-bottom:16px"></i>
+    <div style="font-size:15px;font-weight:600;margin-bottom:8px">Нет правил автоматизации</div>
+    <div style="font-size:13px;color:var(--text-m);margin-bottom:20px">Создай первое правило — и CRM начнёт работать за тебя</div>
+    <button class="btn btn-primary" onclick="openM('automation')"><i class="ti ti-plus"></i>Создать первое правило</button>
+  </div>`}
+  <div class="card" style="margin-top:16px">
+    <div class="card-title">Примеры готовых правил</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">
+      ${[
+        {icon:'ti-send',title:'КП отправлено → задача',desc:'При переводе в Proposal создать задачу "Follow-up через 3 дня"',t:'deal_stage_change',a:'create_task'},
+        {icon:'ti-user-plus',title:'Новый лид → уведомление',desc:'При создании лида отправить уведомление менеджеру',t:'lead_created',a:'notify'},
+        {icon:'ti-clock-exclamation',title:'Просрочена задача → сигнал',desc:'При просрочке задачи — уведомление руководителю',t:'task_overdue',a:'notify'},
+        {icon:'ti-currency-dollar',title:'Крупная сделка → эскалация',desc:'Сделка > $100,000 — создать задачу для директора',t:'deal_amount',a:'create_task'},
+      ].map(ex=>`<div style="border:1px dashed var(--bdr);border-radius:var(--r);padding:14px;cursor:pointer" onclick="openAutoTemplate('${ex.t}','${ex.a}')">
+        <i class="ti ${ex.icon}" style="font-size:20px;color:var(--blue);margin-bottom:8px;display:block"></i>
+        <div style="font-weight:700;font-size:13px;margin-bottom:4px">${ex.title}</div>
+        <div style="font-size:12px;color:var(--text-m)">${ex.desc}</div>
+        <div style="margin-top:10px"><span class="b b-blue" style="font-size:10px">Применить шаблон</span></div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+function renderAutoCard(a){
+  return`<div class="card" style="padding:14px 18px">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div style="display:flex;align-items:center;gap:12px;flex:1">
+        <div style="width:36px;height:36px;border-radius:8px;background:${a.active!=='false'?'var(--blue-lt)':'var(--gray-100)'};display:flex;align-items:center;justify-content:center">
+          <i class="ti ti-robot" style="color:${a.active!=='false'?'var(--blue)':'var(--gray-400)'}"></i>
+        </div>
+        <div>
+          <div style="font-weight:700;font-size:13px">${a.name||'Без названия'}</div>
+          <div style="font-size:12px;color:var(--text-m);margin-top:2px">
+            <span class="b b-purple" style="font-size:10px">${AUTO_TRIGGERS[a.trigger]||a.trigger}</span>
+            <i class="ti ti-arrow-right" style="margin:0 4px;font-size:10px"></i>
+            <span class="b b-teal" style="font-size:10px">${AUTO_ACTIONS[a.action]||a.action}</span>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+          <input type="checkbox" ${a.active!=='false'?'checked':''} onchange="toggleAuto('${a.id}',this.checked)" style="cursor:pointer">
+          ${a.active!=='false'?'Активно':'Выкл'}
+        </label>
+        <button class="btn btn-sm btn-ghost" onclick="openM('automation','${a.id}')"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-sm btn-ghost btn-danger" onclick="delRecord('automations','${a.id}')"><i class="ti ti-trash"></i></button>
+      </div>
+    </div>
+    ${a.condition?`<div style="margin-top:8px;font-size:12px;color:var(--text-m);padding-left:48px">Условие: ${a.condition}</div>`:''}
+    ${a.task_text?`<div style="margin-top:4px;font-size:12px;color:var(--text-m);padding-left:48px">Задача: "${a.task_text}"</div>`:''}
+    <div style="margin-top:4px;font-size:11px;color:var(--text-l);padding-left:48px">Сработало: ${a.fires||0} раз</div>
+  </div>`;
+}
+
+async function toggleAuto(id,active){
+  const a=db.automations.find(x=>x.id===id);if(!a)return;
+  a.active=active?'true':'false';
+  await persist('automations',{...a});
+}
+
+function openAutoTemplate(trigger,action){
+  openM('automation');
+  setTimeout(()=>{
+    const t=$('auto-trigger');const ac=$('auto-action');
+    if(t)t.value=trigger;if(ac)ac.value=action;
+    updateAutoFields();
+  },100);
+}
+
+function updateAutoFields(){
+  const trigger=$('auto-trigger')?.value;
+  const action=$('auto-action')?.value;
+  const cond=$('auto-cond-wrap');const task=$('auto-task-wrap');const stage=$('auto-stage-wrap');
+  if(cond){
+    if(trigger==='deal_stage_change'){cond.innerHTML=`<label class="fl">При смене на стадию</label><select class="fc" id="auto-cond-val"><option value="">Любую</option>${['Lead','Qualified','Proposal','Negotiation','Won','Lost'].map(s=>`<option>${s}</option>`).join('')}</select>`;}
+    else if(trigger==='deal_amount'){cond.innerHTML=`<label class="fl">Сумма больше ($)</label><input class="fc" id="auto-cond-val" type="number" placeholder="100000">`;}
+    else if(trigger==='no_contact_days'){cond.innerHTML=`<label class="fl">Дней без контакта</label><input class="fc" id="auto-cond-val" type="number" placeholder="30">`;}
+    else{cond.innerHTML='';}
+  }
+  if(task)task.style.display=action==='create_task'?'block':'none';
+  if(stage)stage.style.display=action==='change_deal_stage'?'block':'none';
+}
+
+// Run automation check after deal stage changes or lead creation
+async function runAutomations(eventType, context={}){
+  const active=(db.automations||[]).filter(a=>a.active!=='false'&&a.trigger===eventType);
+  for(const rule of active){
+    let triggered=false;
+    if(eventType==='deal_stage_change'&&context.newStage){
+      triggered=!rule.condition_val||rule.condition_val===context.newStage;
+    } else if(eventType==='lead_created'){triggered=true;}
+    else if(eventType==='deal_amount'&&context.amount){
+      triggered=Number(context.amount)>=(Number(rule.condition_val)||0);
+    }
+    if(!triggered)continue;
+    if(rule.action==='create_task'&&rule.task_text){
+      const due=new Date();due.setDate(due.getDate()+(Number(rule.task_days)||3));
+      const task={id:uid(),text:rule.task_text,company_id:context.company_id||'',deal_id:context.deal_id||'',agent:context.agent||currentUser?.name||'',due:due.toISOString().slice(0,10),done:false,created:today()};
+      db.tasks.push(task);await persist('tasks',task);
+      updateCounts();
+    }
+    if(rule.action==='notify'){
+      if(Notification.permission==='granted'){
+        new Notification('Wayland CRM — Автоматизация',{body:`${rule.name}: ${context.message||eventType}`,icon:''});
+      }
+    }
+    // Increment fires counter
+    rule.fires=(Number(rule.fires)||0)+1;
+    await persist('automations',{...rule});
+  }
+}
+
+// ─── MODAL for leads and automation ────────────────────────────────────────
+// Patch openM to handle new types
+const _origOpenM=openM;
+
+window.openM=function(type,id=null,coId=null,dealId=null){
+  if(type==='lead'){
+    const l=id?db.leads.find(x=>x.id===id):null;
+    mtype='lead';eid=id;
+    const agents=db.agents.map(a=>`<option ${l?.agent===a.name?'selected':''}>${a.name}</option>`).join('');
+    $('overlay').innerHTML=`<div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">${l?'Редактировать лид':'Новый лид'}<span class="modal-close" onclick="closeM()"><i class="ti ti-x"></i></span></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Компания</label><input class="fc" id="m-lead-company" value="${l?.company||''}" placeholder="Название компании"></div>
+        <div class="fg"><label class="fl">Контактное лицо</label><input class="fc" id="m-lead-contact" value="${l?.contact||''}" placeholder="ФИО"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Телефон</label><input class="fc" id="m-lead-phone" data-phone data-exclude-id="${id||''}" value="${l?.phone||''}" placeholder="+374 XX XXX XXX"></div>
+        <div class="fg"><label class="fl">Email</label><input class="fc" id="m-lead-email" data-email data-exclude-id="${id||''}" value="${l?.email||''}" placeholder="example@company.com"></div>
+      </div>
+      <div id="dup-warn"></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Источник</label><select class="fc" id="m-lead-source">${LEAD_SOURCES.map(s=>`<option ${l?.source===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Статус</label><select class="fc" id="m-lead-status">${LEAD_STATUSES.map(s=>`<option ${(l?.status||'New')===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Интересующий продукт</label><input class="fc" id="m-lead-product" value="${l?.product||''}" placeholder="Hitachi ZX330..."></div>
+        <div class="fg"><label class="fl">Бюджет ($)</label><input class="fc" id="m-lead-budget" type="number" value="${l?.budget||''}" placeholder="0"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Ответственный</label><select class="fc" id="m-lead-agent"><option value="">—</option>${agents}</select></div>
+        <div class="fg"><label class="fl">Дата создания</label><input class="fc" id="m-lead-created" type="date" value="${l?.created||today()}"></div>
+      </div>
+      <div class="fg"><label class="fl">Примечания</label><textarea class="fc" id="m-lead-notes" rows="3">${l?.notes||''}</textarea></div>
+      <div class="modal-footer">
+        ${l?`<button class="btn btn-danger" onclick="delRecord('leads','${l.id}')">Удалить</button>`:''}
+        <button class="btn" onclick="closeM()">Отмена</button>
+        <button class="btn btn-primary" id="save-btn" onclick="saveLead()"><i class="ti ti-check"></i>Сохранить</button>
+      </div>
+    </div>`;
+    $('overlay').classList.add('open');
+    setTimeout(initInputs,30);
+    return;
+  }
+  if(type==='automation'){
+    const a=id?db.automations.find(x=>x.id===id):null;
+    mtype='automation';eid=id;
+    $('overlay').innerHTML=`<div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-title">${a?'Редактировать правило':'Новое правило автоматизации'}<span class="modal-close" onclick="closeM()"><i class="ti ti-x"></i></span></div>
+      <div class="fg"><label class="fl">Название правила</label><input class="fc" id="auto-name" value="${a?.name||''}" placeholder="Например: Follow-up после КП"></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Триггер (когда)</label>
+          <select class="fc" id="auto-trigger" onchange="updateAutoFields()">
+            ${Object.entries(AUTO_TRIGGERS).map(([k,v])=>`<option value="${k}" ${a?.trigger===k?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+        <div class="fg"><label class="fl">Действие (что делать)</label>
+          <select class="fc" id="auto-action" onchange="updateAutoFields()">
+            ${Object.entries(AUTO_ACTIONS).map(([k,v])=>`<option value="${k}" ${a?.action===k?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="fg" id="auto-cond-wrap"></div>
+      <div class="fg" id="auto-task-wrap" style="display:none">
+        <label class="fl">Текст задачи</label><input class="fc" id="auto-task-text" value="${a?.task_text||''}" placeholder="Follow-up по сделке">
+        <div style="margin-top:8px"><label class="fl">Через сколько дней</label><input class="fc" id="auto-task-days" type="number" value="${a?.task_days||3}" style="width:100px"></div>
+      </div>
+      <div class="fg" id="auto-stage-wrap" style="display:none">
+        <label class="fl">Новая стадия сделки</label>
+        <select class="fc" id="auto-new-stage">
+          ${['Lead','Qualified','Proposal','Negotiation','Won','Lost'].map(s=>`<option ${a?.new_stage===s?'selected':''}>${s}</option>`).join('')}
+        </select>
+      </div>
+      <div class="modal-footer">
+        ${a?`<button class="btn btn-danger" onclick="delRecord('automations','${a.id}')">Удалить</button>`:''}
+        <button class="btn" onclick="closeM()">Отмена</button>
+        <button class="btn btn-primary" id="save-btn" onclick="saveAutomation()"><i class="ti ti-check"></i>Сохранить</button>
+      </div>
+    </div>`;
+    $('overlay').classList.add('open');
+    setTimeout(updateAutoFields,50);
+    return;
+  }
+  _origOpenM(type,id,coId,dealId);
+};
+
+async function saveLead(){
+  if(saving)return;saving=true;
+  const btn=$('save-btn');if(btn){btn.disabled=true;btn.textContent='Сохраняем...';}
+  try{
+    const company=$('m-lead-company')?.value.trim();
+    const isNew=!eid;
+    const row={
+      id:eid||uid(),
+      company,contact:$('m-lead-contact')?.value.trim()||'',
+      phone:$('m-lead-phone')?.value.trim()||'',email:$('m-lead-email')?.value.trim()||'',
+      source:$('m-lead-source')?.value||'',status:$('m-lead-status')?.value||'New',
+      product:$('m-lead-product')?.value.trim()||'',budget:$('m-lead-budget')?.value||'',
+      agent:$('m-lead-agent')?.value||'',created:$('m-lead-created')?.value||today(),
+      notes:$('m-lead-notes')?.value.trim()||''
+    };
+    if(eid){const i=db.leads.findIndex(x=>x.id===eid);if(i>=0)db.leads[i]={...db.leads[i],...row};}
+    else{db.leads.push(row);}
+    await persist('leads',row);
+    if(isNew)await runAutomations('lead_created',{message:`Новый лид: ${company}`,agent:row.agent});
+    updateCounts();closeM();renderLeads();
+  }finally{saving=false;}
+}
+
+async function saveAutomation(){
+  if(saving)return;saving=true;
+  const btn=$('save-btn');if(btn){btn.disabled=true;btn.textContent='Сохраняем...';}
+  try{
+    const condEl=$('auto-cond-wrap')?.querySelector('input,select');
+    const row={
+      id:eid||uid(),
+      name:$('auto-name')?.value.trim()||'Без названия',
+      trigger:$('auto-trigger')?.value||'',
+      action:$('auto-action')?.value||'',
+      condition_val:condEl?.value||'',
+      task_text:$('auto-task-text')?.value.trim()||'',
+      task_days:$('auto-task-days')?.value||3,
+      new_stage:$('auto-new-stage')?.value||'',
+      active:'true',fires:eid?(db.automations.find(x=>x.id===eid)?.fires||0):0
+    };
+    if(eid){const i=db.automations.findIndex(x=>x.id===eid);if(i>=0)db.automations[i]={...db.automations[i],...row};}
+    else{db.automations.push(row);}
+    await persist('automations',row);
+    closeM();renderAutomation();
+  }finally{saving=false;}
+}
+
+window.closeM=function(){$('overlay').classList.remove('open');}
+function overlayBg(e){if(e.target===$('overlay'))window.closeM();}
+
+// ─── Mobile & Init ─────────────────────────────────────────────────────────
 function isMobile(){return window.innerWidth<=960;}
 
 function toggleMobileSearch(){
-  const wrap=$('search-wrap');
-  const inp=$('global-search');
+  const wrap=$('search-wrap');const inp=$('global-search');
   if(!wrap)return;
   const visible=wrap.style.display!=='none'&&wrap.style.display!=='';
   if(isMobile()){
@@ -1197,121 +2780,48 @@ window.addEventListener('resize',initMobile);
 (function(){
   const saved=localStorage.getItem('wcrm_url');
   if(saved){
-    API=saved;$('su-url').value=saved;
-    $('setup').style.display='none';$('app').style.display='flex';
+    API=saved;
+    $('su-url').value=saved;
+    $('setup').style.display='none';
     $('content').innerHTML='<div style="text-align:center;padding:80px;color:var(--text-m)">Загрузка...</div>';
-    load().then(()=>{render('dashboard');initMobile();}).catch(()=>{
-      $('app').style.display='none';$('setup').style.display='flex';
-      showErr('Не удалось загрузить данные. Проверь URL.');
+    $('app').style.display='flex';
+    load().then(()=>{
+      // Check session
+      const session=localStorage.getItem('wcrm_session');
+      if(session&&db.users.length>0){
+        try{
+          const s=JSON.parse(session);
+          const user=db.users.find(u=>u.id===s.id&&String(u.active)!=='false');
+          if(user){
+            currentUser={id:user.id,name:user.name,role:user.role};
+            $('app').style.display='flex';
+            applyRoleUI();
+            render('dashboard');
+            initMobile();
+            initNotifications();
+            return;
+          }
+        }catch(e){}
+      }
+      // No valid session - show login if users exist, else show app (first run)
+      if(db.users.length>0){
+        $('app').style.display='none';
+        showLogin();
+      } else {
+        // First run - no users yet, go straight in as manager
+        currentUser={id:'admin',name:'М. Калашников',role:'manager'};
+        $('app').style.display='flex';
+        applyRoleUI();
+        render('dashboard');
+        initMobile();
+        initNotifications();
+      }
+    }).catch(()=>{
+      $('app').style.display='none';
+      $('setup').style.display='flex';
     });
   }
 })();
 </script>
-
-<datalist id="armenia-cities">
-  <option value="Yerevan">Ереван</option>
-  <option value="Gyumri">Гюмри</option>
-  <option value="Vanadzor">Ванадзор</option>
-  <option value="Vagharshapat (Etchmiadzin)">Вагаршапат (Эчмиадзин)</option>
-  <option value="Hrazdan">Раздан</option>
-  <option value="Abovyan">Абовян</option>
-  <option value="Kapan">Капан</option>
-  <option value="Gavar">Гавар</option>
-  <option value="Stepanavan">Степанаван</option>
-  <option value="Ijevan">Иджеван</option>
-  <option value="Charentsavan">Чаренцаван</option>
-  <option value="Sevan">Севан</option>
-  <option value="Artashat">Арташат</option>
-  <option value="Armavir">Армавир</option>
-  <option value="Ashtarak">Аштарак</option>
-  <option value="Ararat">Арарат</option>
-  <option value="Masis">Масис</option>
-  <option value="Vedi">Веди</option>
-  <option value="Noyemberyan">Ноемберян</option>
-  <option value="Berd">Берд</option>
-  <option value="Dilijan">Дилижан</option>
-  <option value="Tsakhkadzor">Цахкадзор</option>
-  <option value="Jermuk">Джермук</option>
-  <option value="Yeghegnadzor">Егегнадзор</option>
-  <option value="Vayk">Вайк</option>
-  <option value="Sisian">Сисиан</option>
-  <option value="Goris">Горис</option>
-  <option value="Meghri">Мегри</option>
-  <option value="Agarak">Агарак</option>
-  <option value="Alaverdi">Алаверди</option>
-  <option value="Spitak">Спитак</option>
-  <option value="Tashir">Ташир</option>
-  <option value="Akhtala">Ахтала</option>
-  <option value="Tumanyan">Туманян</option>
-  <option value="Martuni">Мартуни</option>
-  <option value="Vardenis">Варденис</option>
-  <option value="Gavarr">Гавар</option>
-  <option value="Nor Hachn">Нор Хачн</option>
-  <option value="Echmiadzin">Эчмиадзин</option>
-  <option value="Metsamor">Мецамор</option>
-  <option value="Talin">Талин</option>
-  <option value="Aparan">Апаран</option>
-  <option value="Ashotsk">Ашоцк</option>
-  <option value="Amasia">Амасия</option>
-  <option value="Artik">Артик</option>
-  <option value="Maralik">Маралик</option>
-  <option value="Ani">Ани</option>
-  <option value="Akhurik">Ахурик</option>
-  <option value="Aghin">Агин</option>
-  <option value="Aragats">Арагац</option>
-  <option value="Byurakan">Бюракан</option>
-  <option value="Oshakan">Ошакан</option>
-  <option value="Zvartnots">Звартноц</option>
-  <option value="Dashtavan">Даштаван</option>
-  <option value="Ptghni">Птгни</option>
-  <option value="Garni">Гарни</option>
-  <option value="Geghard">Гегард</option>
-  <option value="Yeghvard">Егвард</option>
-  <option value="Kotayk">Котайк</option>
-  <option value="Nubarashen">Нубарашен</option>
-  <option value="Shengavit">Шенгавит</option>
-  <option value="Arinj">Аринж</option>
-  <option value="Jrvezh">Джрвеж</option>
-  <option value="Dzoraghbyur">Дзорагбюр</option>
-  <option value="Argavand">Аргаванд</option>
-  <option value="Paraqar">Паракар</option>
-  <option value="Dalar">Далар</option>
-  <option value="Aghavnatun">Агавнатун</option>
-  <option value="Voskevaz">Воскеваз</option>
-  <option value="Agarak (Kotayk)">Агарак (Котайк)</option>
-  <option value="Nor Geghi">Нор Геги</option>
-  <option value="Antaramut">Антарамут</option>
-  <option value="Kaputan">Капутан</option>
-  <option value="Voghchaberd">Вогчаберд</option>
-  <option value="Sotk">Сотк</option>
-  <option value="Zod">Зод</option>
-  <option value="Lichk">Личк</option>
-  <option value="Vardahovit">Вардаовит</option>
-  <option value="Darbas">Дарбас</option>
-  <option value="Shinuhayr">Шинухайр</option>
-  <option value="Tatev">Татев</option>
-  <option value="Agarak (Syunik)">Агарак (Сюник)</option>
-  <option value="Kajaran">Каджаран</option>
-  <option value="Shvanidzor">Шванидзор</option>
-  <option value="Nerkin Hand">Неркин Ханд</option>
-  <option value="Akner">Акнер</option>
-  <option value="Dastakert">Дастакерт</option>
-  <option value="Lichq">Личк</option>
-  <option value="Khot">Хот</option>
-  <option value="Davit Bek">Давид-Бек</option>
-  <option value="Aghitu">Агиту</option>
-  <option value="Anipemza">Анипемза</option>
-  <option value="Lerrnapat">Лернапат</option>
-  <option value="Khndzoresk">Хндзореск</option>
-  <option value="Shaki">Шаки</option>
-  <option value="Yeghegnavan">Егегнаван</option>
-  <option value="Areni">Арени</option>
-  <option value="Getap">Гетап</option>
-  <option value="Malishka">Малишка</option>
-  <option value="Saravan">Сараван</option>
-  <option value="Sissian">Сисиан</option>
-  <option value="Hartashen">Хартшен</option>
-  <option value="Nor Artagers">Нор Артагерс</option>
-</datalist>
 </body>
 </html>
