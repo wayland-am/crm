@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -359,17 +359,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div style="width:44px;height:44px;background:#fff;border:1px solid var(--bdr);border-radius:12px;padding:4px"><img src="https://www.waylandholding.com/img/core-img/logo.png" style="width:100%;height:100%;object-fit:contain"></div>
       <div><div style="font-size:22px;font-weight:800">Wayland CRM</div><div style="font-size:13px;color:var(--text-m)">Armenia</div></div>
     </div>
-    <div class="fg"><label class="fl">Вы</label>
+    <div class="fg"><label class="fl">You</label>
       <select class="fc" id="login-user" style="font-size:14px">
-        <option value="">— выберите —</option>
+        <option value="">— select —</option>
       </select>
     </div>
-    <div class="fg"><label class="fl">Пароль</label>
-      <input class="fc" id="login-pass" type="password" placeholder="Введите пароль" style="font-size:14px" onkeydown="if(event.key==='Enter')doLogin()">
+    <div class="fg"><label class="fl">Password</label>
+      <input class="fc" id="login-pass" type="password" placeholder="Enter password" style="font-size:14px" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px;font-size:14px;margin-top:4px" onclick="doLogin()"><i class="ti ti-login"></i>Войти</button>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px;font-size:14px;margin-top:4px" onclick="doLogin()"><i class="ti ti-login"></i>Sign In</button>
     <div id="login-err" style="margin-top:12px;font-size:13px;color:var(--red);text-align:center;display:none"></div>
-    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--bdr);font-size:12px;color:var(--text-l);text-align:center">Забыл пароль — обратись к руководителю</div>
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--bdr);font-size:12px;color:var(--text-l);text-align:center">Forgot password — contact your manager</div>
   </div>
 </div>
 
@@ -380,13 +380,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div style="width:40px;height:40px;background:#fff;border:1px solid var(--bdr);border-radius:10px;padding:3px"><img src="https://www.waylandholding.com/img/core-img/logo.png" style="width:100%;height:100%;object-fit:contain"></div>
       <div style="font-size:22px;font-weight:800;color:var(--text)">Wayland CRM</div>
     </div>
-    <div style="font-size:14px;color:var(--text-m);margin-bottom:28px">Подключи Google Sheets как базу данных для всей команды.</div>
-    <div class="step"><div class="step-n">1</div><div class="step-t">Открой Google Sheets → создай новую таблицу → нажми <strong>Расширения → Apps Script</strong></div></div>
-    <div class="step"><div class="step-n">2</div><div class="step-t">Вставь содержимое <code>Code.gs</code> из архива → сохрани (Ctrl+S)</div></div>
-    <div class="step"><div class="step-n">3</div><div class="step-t"><strong>Развернуть → Новое развёртывание</strong> → Тип: <strong>Веб-приложение</strong> → Запускать как: <strong>Я</strong> → Доступ: <strong>Все</strong> → Развернуть → дай разрешения</div></div>
-    <div class="step"><div class="step-n">4</div><div class="step-t">Скопируй <strong>URL веб-приложения</strong> и вставь ниже</div></div>
+    <div style="font-size:14px;color:var(--text-m);margin-bottom:28px">Connect Google Sheets as the database for your whole team.</div>
+    <div class="step"><div class="step-n">1</div><div class="step-t">Open Google Sheets → create a new spreadsheet → click <strong>Extensions → Apps Script</strong></div></div>
+    <div class="step"><div class="step-n">2</div><div class="step-t">Paste the contents of <code>Code.gs</code> from the archive → save (Ctrl+S)</div></div>
+    <div class="step"><div class="step-n">3</div><div class="step-t"><strong>Deploy → New deployment</strong> → Type: <strong>Web app</strong> → Execute as: <strong>Me</strong> → Access: <strong>Anyone</strong> → Deploy → grant permissions</div></div>
+    <div class="step"><div class="step-n">4</div><div class="step-t">Copy the <strong>Web App URL</strong> and paste below</div></div>
     <div class="fg" style="margin-top:8px"><label class="fl">Web App URL</label><input class="fc" id="su-url" placeholder="https://script.google.com/macros/s/.../exec"></div>
-    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="connect()"><i class="ti ti-plug"></i> Подключить и инициализировать</button>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="connect()"><i class="ti ti-plug"></i> Connect and Initialize</button>
     <div id="su-err" style="margin-top:10px;font-size:12px;color:var(--red);display:none"></div>
   </div>
 </div>
@@ -399,31 +399,31 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div><div class="logo-text">Wayland CRM</div><div class="logo-sub">Armenia</div></div>
     </div>
     <nav class="nav">
-      <div class="nav-sec">Главное</div>
+      <div class="nav-sec">Main</div>
       <div class="ni active" onclick="go('dashboard',this)"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
       <div class="ni" onclick="go('pipeline',this)"><i class="ti ti-versions"></i>Pipeline<span class="count" id="nc-pipeline">0</span></div>
-      <div class="nav-sec">Клиенты</div>
-      <div class="ni" onclick="go('leads',this)"><i class="ti ti-user-plus"></i>Лиды<span class="count" id="nc-leads">0</span></div>
-      <div class="ni" onclick="go('companies',this)"><i class="ti ti-building"></i>Компании<span class="count" id="nc-companies">0</span></div>
-      <div class="ni" onclick="go('contacts',this)"><i class="ti ti-users"></i>Контакты<span class="count" id="nc-contacts">0</span></div>
-      <div class="ni" onclick="go('fleet',this)"><i class="ti ti-tractor"></i>Парк техники<span class="count" id="nc-fleet">0</span></div>
-      <div class="nav-sec">Работа</div>
-      <div class="ni" onclick="go('tasks',this)"><i class="ti ti-checkbox"></i>Задачи<span class="count" id="nc-tasks">0</span></div>
-      <div class="ni" onclick="go('reports',this)"><i class="ti ti-chart-bar"></i>Отчёты</div>
-      <div class="ni" onclick="go('segments',this)"><i class="ti ti-filter"></i>Сегментация</div>
-      <div class="ni" onclick="go('automation',this)"><i class="ti ti-robot"></i>Автоматизация</div>
-      <div class="ni" onclick="go('calendar',this)"><i class="ti ti-calendar"></i>Календарь</div>
-      <div class="ni" onclick="go('agents',this)"><i class="ti ti-users-group"></i>Продавцы</div>
-      <div class="nav-sec">Планирование</div>
-      <div class="ni" onclick="go('calendar',this)"><i class="ti ti-calendar"></i>Календарь</div>
-      <div class="nav-sec">Сервис</div>
-      <div class="ni" onclick="go('parts',this)"><i class="ti ti-tool"></i>Запчасти</div>
-      <div class="ni" onclick="go('operations',this)"><i class="ti ti-database-import"></i>Операции</div>
-      <div class="ni manager-only" onclick="go('users',this)"><i class="ti ti-shield-lock"></i>Пользователи</div>
+      <div class="nav-sec">Clients</div>
+      <div class="ni" onclick="go('leads',this)"><i class="ti ti-user-plus"></i>Leads<span class="count" id="nc-leads">0</span></div>
+      <div class="ni" onclick="go('companies',this)"><i class="ti ti-building"></i>Companies<span class="count" id="nc-companies">0</span></div>
+      <div class="ni" onclick="go('contacts',this)"><i class="ti ti-users"></i>Contacts<span class="count" id="nc-contacts">0</span></div>
+      <div class="ni" onclick="go('fleet',this)"><i class="ti ti-tractor"></i>Fleet<span class="count" id="nc-fleet">0</span></div>
+      <div class="nav-sec">Work</div>
+      <div class="ni" onclick="go('tasks',this)"><i class="ti ti-checkbox"></i>Tasks<span class="count" id="nc-tasks">0</span></div>
+      <div class="ni" onclick="go('reports',this)"><i class="ti ti-chart-bar"></i>Reports</div>
+      <div class="ni" onclick="go('segments',this)"><i class="ti ti-filter"></i>Segmentation</div>
+      <div class="ni" onclick="go('automation',this)"><i class="ti ti-robot"></i>Automation</div>
+      <div class="ni" onclick="go('calendar',this)"><i class="ti ti-calendar"></i>Calendar</div>
+      <div class="ni" onclick="go('agents',this)"><i class="ti ti-users-group"></i>Agents</div>
+      <div class="nav-sec">Planning</div>
+      <div class="ni" onclick="go('calendar',this)"><i class="ti ti-calendar"></i>Calendar</div>
+      <div class="nav-sec">Service</div>
+      <div class="ni" onclick="go('parts',this)"><i class="ti ti-tool"></i>Parts</div>
+      <div class="ni" onclick="go('operations',this)"><i class="ti ti-database-import"></i>Operations</div>
+      <div class="ni manager-only" onclick="go('users',this)"><i class="ti ti-shield-lock"></i>Users</div>
     </nav>
     <div class="sidebar-footer">
-      <div class="sync-row"><div class="dot" id="dot"></div><span id="sync-txt">Не подключено</span></div>
-      <div class="user"><div class="av av-0" id="user-av">МК</div><div><div style="font-size:13px;font-weight:600">М. Калашников</div><div style="font-size:11px;color:var(--text-m)">Sales Manager</div></div></div>
+      <div class="sync-row"><div class="dot" id="dot"></div><span id="sync-txt">Not connected</span></div>
+      <div class="user"><div class="av av-0" id="user-av">MK</div><div><div style="font-size:13px;font-weight:600">M. Kalashnikov</div><div style="font-size:11px;color:var(--text-m)">Sales Manager</div></div></div>
     </div>
   </div>
   <div class="main">
@@ -433,13 +433,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         <div class="breadcrumb" id="breadcrumb"></div>
       </div>
       <div style="display:flex;align-items:center;gap:10px;flex:1;max-width:400px;margin:0 16px" id="search-wrap">
-        <div class="search" style="flex:1"><i class="ti ti-search"></i><input id="global-search" placeholder="Поиск по всей CRM..." oninput="globalSearch(this.value)" style="width:100%"></div>
+        <div class="search" style="flex:1"><i class="ti ti-search"></i><input id="global-search" placeholder="Search entire CRM..." oninput="globalSearch(this.value)" style="width:100%"></div>
       </div>
       <button class="btn btn-ghost" id="mobile-search-btn" style="display:none" onclick="toggleMobileSearch()"><i class="ti ti-search" style="font-size:20px"></i></button>
       <button class="btn btn-ghost" id="notif-btn" onclick="showNotifPanel()" style="position:relative"><i class="ti ti-bell" style="font-size:20px"></i><span id="notif-badge" style="display:none;position:absolute;top:4px;right:4px;width:16px;height:16px;background:var(--red);color:#fff;border-radius:50%;font-size:9px;font-weight:700;align-items:center;justify-content:center">0</span></button>
       <div class="topbar-right" id="topbar-right"></div>
     </div>
-    <div class="content" id="content"><div style="text-align:center;padding:60px;color:var(--text-m)">Загрузка...</div></div>
+    <div class="content" id="content"><div style="text-align:center;padding:60px;color:var(--text-m)">Loading...</div></div>
   </div>
 </div>
 
@@ -449,8 +449,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     <div class="modal-title"><span id="mtitle"></span><span class="modal-close" onclick="closeM()"><i class="ti ti-x"></i></span></div>
     <div id="mbody"></div>
     <div class="modal-footer" id="mfoot">
-      <button class="btn" onclick="closeM()">Отмена</button>
-      <button class="btn btn-primary" id="msave" onclick="saveM()">Сохранить</button>
+      <button class="btn" onclick="closeM()">Cancel</button>
+      <button class="btn btn-primary" id="msave" onclick="saveM()">Save</button>
     </div>
   </div>
 </div>
@@ -460,29 +460,29 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 const STAGES=['Lead','Qualified','Proposal','Negotiation','Won','Lost'];
 const STAGE_P={Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0};
 const STAGE_COLOR={Lead:'#9ca3af',Qualified:'#8b5cf6',Proposal:'#f59e0b',Negotiation:'#3b82f6',Won:'#22c55e',Lost:'#ef4444'};
-const DEFAULT_AGENTS=['А. Мартиросян','Г. Петросян','Н. Арутюнян','С. Саргсян','В. Акопян','Л. Мкртчян','К. Давтян','А. Карапетян','Р. Овсепян','Т. Григорян'];
+const DEFAULT_AGENTS=['A. Martirosyan','G. Petrosyan','N. Harutyunyan','S. Sargsyan','V. Hakobyan','L. Mkrtchyan','K. Davtyan','A. Karapetyan','R. Hovsepyan','T. Grigoryan'];
 const AGENTS=()=>db.agents.length?db.agents.map(a=>a.name):DEFAULT_AGENTS;
-const INDUSTRIES=['Горнодобывающая','Строительство','Дорожное строительство','Карьеры','Инфраструктура','Промышленность','Другое'];
-const EQ_TYPES=['Экскаватор','Колёсный погрузчик','Бульдозер','Буровая установка','Самосвал','Компрессор','Кран','Грейдер'];
-const BRANDS=['Hitachi','Caterpillar','Komatsu','Volvo','Liebherr','Doosan','John Deere','Hyundai','Sany','XCMG','Другое'];
+const INDUSTRIES=['Mining','Construction','Road Construction','Quarrying','Infrastructure','Industry','Other'];
+const EQ_TYPES=['Excavator','Wheel Loader','Bulldozer','Drilling Rig','Dump Truck','Compressor','Crane','Grader'];
+const BRANDS=['Hitachi','Caterpillar','Komatsu','Volvo','Liebherr','Doosan','John Deere','Hyundai','Sany','XCMG','Other'];
 const BRAND_C={Hitachi:'#185FA5',Caterpillar:'#EF9F27',Komatsu:'#E24B4A',Volvo:'#1D9E75',Liebherr:'#7F77DD',Doosan:'#D4537E','John Deere':'#639922',Hyundai:'#D85A30',Sany:'#888780',XCMG:'#534AB7'};
 const HITACHI_M=['ZX85USB-6','ZX130-6','ZX135US-6','ZX175LC-6','ZX210LC-6','ZX250LC-6','ZX330LC-6','ZX350LCN-6','ZX470LC-6','ZX490LCH-6','ZX690LCH-6','ZX890LCH-6'];
-const TASK_TYPES=['Звонок','Встреча','Email','КП','Демонстрация','Документы','Другое'];
-const CO_STATUS=['Активный','Потенциальный','Переговоры','Партнёр','Неактивный'];
+const TASK_TYPES=['Call','Meeting','Email','Proposal','Demo','Documents','Other'];
+const CO_STATUS=['Active','Prospect','Negotiating','Partner','Inactive'];
 const CO_CATEGORIES={
-  A:{label:'A — Горячий',color:'#b91c1c',bg:'#fee2e2',desc:'Контакт раз в месяц',months:1},
-  B:{label:'B — Тёплый',color:'#b45309',bg:'#fef3c7',desc:'Контакт раз в квартал',months:3},
-  C:{label:'C — Холодный',color:'#1d4ed8',bg:'#dbeafe',desc:'Контакт раз в полгода',months:6},
-  D:{label:'D — Спящий',color:'#6b7280',bg:'#f3f4f6',desc:'Контакт раз в год',months:12},
+  A:{label:'A — Hot',color:'#b91c1c',bg:'#fee2e2',desc:'Contact monthly',months:1},
+  B:{label:'B — Warm',color:'#b45309',bg:'#fef3c7',desc:'Contact quarterly',months:3},
+  C:{label:'C — Cold',color:'#1d4ed8',bg:'#dbeafe',desc:'Contact bi-annually',months:6},
+  D:{label:'D — Dormant',color:'#6b7280',bg:'#f3f4f6',desc:'Contact annually',months:12},
 };
 const CURRENCIES=['USD','EUR','AMD','RUB'];
 
 // Account categories and visit frequency
 const CAT_RULES={
-  A:{label:'A — Горячий',color:'#b91c1c',bg:'#fee2e2',freq:1,unit:'month',desc:'Раз в месяц'},
-  B:{label:'B — Тёплый',color:'#b45309',bg:'#fef3c7',freq:1,unit:'quarter',desc:'Раз в квартал'},
-  C:{label:'C — Холодный',color:'#1d4ed8',bg:'#dbeafe',freq:2,unit:'halfyear',desc:'Раз в полгода'},
-  D:{label:'D — Спящий',color:'#6b7280',bg:'#f3f4f6',freq:1,unit:'year',desc:'Раз в год'},
+  A:{label:'A — Hot',color:'#b91c1c',bg:'#fee2e2',freq:1,unit:'month',desc:'Monthly'},
+  B:{label:'B — Warm',color:'#b45309',bg:'#fef3c7',freq:1,unit:'quarter',desc:'Quarterly'},
+  C:{label:'C — Cold',color:'#1d4ed8',bg:'#dbeafe',freq:2,unit:'halfyear',desc:'Bi-annually'},
+  D:{label:'D — Dormant',color:'#6b7280',bg:'#f3f4f6',freq:1,unit:'year',desc:'Annually'},
 };
 
 
@@ -490,75 +490,75 @@ const CAT_RULES={
 // ─── Parts catalog ─────────────────────────────────────────────────────────
 const PARTS_CATALOG = {
   'ZX135US-6': [
-    {part:'Масло гидравлическое',code:'4666116',unit:'л',qty:95,interval_h:2000,price_usd:580},
-    {part:'Фильтр гидравлический',code:'4659492',unit:'шт',qty:1,interval_h:500,price_usd:85},
-    {part:'Фильтр масляный двигатель',code:'4205772',unit:'шт',qty:1,interval_h:500,price_usd:45},
-    {part:'Масло моторное',code:'4666108',unit:'л',qty:13,interval_h:500,price_usd:130},
-    {part:'Фильтр топливный',code:'4259362',unit:'шт',qty:1,interval_h:1000,price_usd:55},
-    {part:'Масло трансмиссионное (поворот)',code:'4666124',unit:'л',qty:5.5,interval_h:2000,price_usd:65},
-    {part:'Фильтр воздушный (внешний)',code:'4634045',unit:'шт',qty:1,interval_h:1000,price_usd:95},
-    {part:'Фильтр воздушный (внутренний)',code:'4634046',unit:'шт',qty:1,interval_h:2000,price_usd:65},
-    {part:'Антифриз',code:'4666140',unit:'л',qty:14,interval_h:4000,price_usd:90},
-    {part:'Зубья ковша (BOT)',code:'0772211',unit:'компл',qty:5,interval_h:1000,price_usd:320},
-    {part:'Ремень приводной',code:'4255101',unit:'шт',qty:1,interval_h:2000,price_usd:145},
+    {part:'Hydraulic Oil',code:'4666116',unit:'L',qty:95,interval_h:2000,price_usd:580},
+    {part:'Hydraulic Filter',code:'4659492',unit:'pcs',qty:1,interval_h:500,price_usd:85},
+    {part:'Engine Oil Filter',code:'4205772',unit:'pcs',qty:1,interval_h:500,price_usd:45},
+    {part:'Engine Oil',code:'4666108',unit:'L',qty:13,interval_h:500,price_usd:130},
+    {part:'Fuel Filter',code:'4259362',unit:'pcs',qty:1,interval_h:1000,price_usd:55},
+    {part:'Swing Transmission Oil',code:'4666124',unit:'L',qty:5.5,interval_h:2000,price_usd:65},
+    {part:'Air Filter (Outer)',code:'4634045',unit:'pcs',qty:1,interval_h:1000,price_usd:95},
+    {part:'Air Filter (Inner)',code:'4634046',unit:'pcs',qty:1,interval_h:2000,price_usd:65},
+    {part:'Coolant',code:'4666140',unit:'L',qty:14,interval_h:4000,price_usd:90},
+    {part:'Bucket Teeth (BOT)',code:'0772211',unit:'set',qty:5,interval_h:1000,price_usd:320},
+    {part:'Drive Belt',code:'4255101',unit:'pcs',qty:1,interval_h:2000,price_usd:145},
   ],
   'ZX210LC-6': [
-    {part:'Масло гидравлическое',code:'4666116',unit:'л',qty:180,interval_h:2000,price_usd:1080},
-    {part:'Фильтр гидравлический',code:'4659490',unit:'шт',qty:1,interval_h:500,price_usd:95},
-    {part:'Фильтр масляный двигатель',code:'4205770',unit:'шт',qty:1,interval_h:500,price_usd:48},
-    {part:'Масло моторное',code:'4666108',unit:'л',qty:18,interval_h:500,price_usd:180},
-    {part:'Фильтр топливный',code:'4259360',unit:'шт',qty:1,interval_h:1000,price_usd:58},
-    {part:'Масло трансмиссионное (поворот)',code:'4666124',unit:'л',qty:6.5,interval_h:2000,price_usd:78},
-    {part:'Фильтр воздушный (внешний)',code:'4634043',unit:'шт',qty:1,interval_h:1000,price_usd:105},
-    {part:'Фильтр воздушный (внутренний)',code:'4634044',unit:'шт',qty:1,interval_h:2000,price_usd:72},
-    {part:'Антифриз',code:'4666140',unit:'л',qty:22,interval_h:4000,price_usd:140},
-    {part:'Зубья ковша (BOT)',code:'0772212',unit:'компл',qty:5,interval_h:800,price_usd:480},
-    {part:'Ремень приводной',code:'4255102',unit:'шт',qty:1,interval_h:2000,price_usd:165},
-    {part:'Цепь гусеничная (к-т)',code:'9195271',unit:'компл',qty:1,interval_h:3000,price_usd:4200},
+    {part:'Hydraulic Oil',code:'4666116',unit:'L',qty:180,interval_h:2000,price_usd:1080},
+    {part:'Hydraulic Filter',code:'4659490',unit:'pcs',qty:1,interval_h:500,price_usd:95},
+    {part:'Engine Oil Filter',code:'4205770',unit:'pcs',qty:1,interval_h:500,price_usd:48},
+    {part:'Engine Oil',code:'4666108',unit:'L',qty:18,interval_h:500,price_usd:180},
+    {part:'Fuel Filter',code:'4259360',unit:'pcs',qty:1,interval_h:1000,price_usd:58},
+    {part:'Swing Transmission Oil',code:'4666124',unit:'L',qty:6.5,interval_h:2000,price_usd:78},
+    {part:'Air Filter (Outer)',code:'4634043',unit:'pcs',qty:1,interval_h:1000,price_usd:105},
+    {part:'Air Filter (Inner)',code:'4634044',unit:'pcs',qty:1,interval_h:2000,price_usd:72},
+    {part:'Coolant',code:'4666140',unit:'L',qty:22,interval_h:4000,price_usd:140},
+    {part:'Bucket Teeth (BOT)',code:'0772212',unit:'set',qty:5,interval_h:800,price_usd:480},
+    {part:'Drive Belt',code:'4255102',unit:'pcs',qty:1,interval_h:2000,price_usd:165},
+    {part:'Track Chain (set)',code:'9195271',unit:'set',qty:1,interval_h:3000,price_usd:4200},
   ],
   'ZX330LC-6': [
-    {part:'Масло гидравлическое',code:'4666117',unit:'л',qty:270,interval_h:2000,price_usd:1620},
-    {part:'Фильтр гидравлический',code:'4659491',unit:'шт',qty:1,interval_h:500,price_usd:110},
-    {part:'Фильтр масляный двигатель',code:'4205771',unit:'шт',qty:1,interval_h:500,price_usd:52},
-    {part:'Масло моторное',code:'4666108',unit:'л',qty:26,interval_h:500,price_usd:260},
-    {part:'Фильтр топливный',code:'4259361',unit:'шт',qty:1,interval_h:1000,price_usd:62},
-    {part:'Масло трансмиссионное (поворот)',code:'4666124',unit:'л',qty:8,interval_h:2000,price_usd:96},
-    {part:'Фильтр воздушный (внешний)',code:'4634041',unit:'шт',qty:1,interval_h:1000,price_usd:120},
-    {part:'Фильтр воздушный (внутренний)',code:'4634042',unit:'шт',qty:1,interval_h:2000,price_usd:82},
-    {part:'Антифриз',code:'4666140',unit:'л',qty:30,interval_h:4000,price_usd:190},
-    {part:'Зубья ковша (BOT)',code:'0772213',unit:'компл',qty:6,interval_h:800,price_usd:680},
-    {part:'Цепь гусеничная (к-т)',code:'9195272',unit:'компл',qty:1,interval_h:3000,price_usd:6800},
-    {part:'Ремень приводной',code:'4255103',unit:'шт',qty:1,interval_h:2000,price_usd:185},
+    {part:'Hydraulic Oil',code:'4666117',unit:'L',qty:270,interval_h:2000,price_usd:1620},
+    {part:'Hydraulic Filter',code:'4659491',unit:'pcs',qty:1,interval_h:500,price_usd:110},
+    {part:'Engine Oil Filter',code:'4205771',unit:'pcs',qty:1,interval_h:500,price_usd:52},
+    {part:'Engine Oil',code:'4666108',unit:'L',qty:26,interval_h:500,price_usd:260},
+    {part:'Fuel Filter',code:'4259361',unit:'pcs',qty:1,interval_h:1000,price_usd:62},
+    {part:'Swing Transmission Oil',code:'4666124',unit:'L',qty:8,interval_h:2000,price_usd:96},
+    {part:'Air Filter (Outer)',code:'4634041',unit:'pcs',qty:1,interval_h:1000,price_usd:120},
+    {part:'Air Filter (Inner)',code:'4634042',unit:'pcs',qty:1,interval_h:2000,price_usd:82},
+    {part:'Coolant',code:'4666140',unit:'L',qty:30,interval_h:4000,price_usd:190},
+    {part:'Bucket Teeth (BOT)',code:'0772213',unit:'set',qty:6,interval_h:800,price_usd:680},
+    {part:'Track Chain (set)',code:'9195272',unit:'set',qty:1,interval_h:3000,price_usd:6800},
+    {part:'Drive Belt',code:'4255103',unit:'pcs',qty:1,interval_h:2000,price_usd:185},
   ],
   'ZX470LC-6': [
-    {part:'Масло гидравлическое',code:'4666118',unit:'л',qty:400,interval_h:2000,price_usd:2400},
-    {part:'Фильтр гидравлический',code:'4659489',unit:'шт',qty:1,interval_h:500,price_usd:135},
-    {part:'Фильтр масляный двигатель',code:'4205769',unit:'шт',qty:1,interval_h:500,price_usd:58},
-    {part:'Масло моторное',code:'4666108',unit:'л',qty:36,interval_h:500,price_usd:360},
-    {part:'Фильтр топливный',code:'4259359',unit:'шт',qty:2,interval_h:1000,price_usd:140},
-    {part:'Масло трансмиссионное (поворот)',code:'4666124',unit:'л',qty:11,interval_h:2000,price_usd:132},
-    {part:'Масло редуктора хода',code:'4666125',unit:'л',qty:7.2,interval_h:2000,price_usd:86},
-    {part:'Фильтр воздушный (внешний)',code:'4634039',unit:'шт',qty:1,interval_h:1000,price_usd:145},
-    {part:'Фильтр воздушный (внутренний)',code:'4634040',unit:'шт',qty:1,interval_h:2000,price_usd:98},
-    {part:'Антифриз',code:'4666140',unit:'л',qty:52,interval_h:4000,price_usd:330},
-    {part:'Зубья ковша (BOT)',code:'0772214',unit:'компл',qty:6,interval_h:600,price_usd:1100},
-    {part:'Цепь гусеничная (к-т)',code:'9195273',unit:'компл',qty:1,interval_h:3000,price_usd:11500},
-    {part:'Ремень приводной',code:'4255104',unit:'шт',qty:1,interval_h:2000,price_usd:220},
+    {part:'Hydraulic Oil',code:'4666118',unit:'L',qty:400,interval_h:2000,price_usd:2400},
+    {part:'Hydraulic Filter',code:'4659489',unit:'pcs',qty:1,interval_h:500,price_usd:135},
+    {part:'Engine Oil Filter',code:'4205769',unit:'pcs',qty:1,interval_h:500,price_usd:58},
+    {part:'Engine Oil',code:'4666108',unit:'L',qty:36,interval_h:500,price_usd:360},
+    {part:'Fuel Filter',code:'4259359',unit:'pcs',qty:2,interval_h:1000,price_usd:140},
+    {part:'Swing Transmission Oil',code:'4666124',unit:'L',qty:11,interval_h:2000,price_usd:132},
+    {part:'Travel Gearbox Oil',code:'4666125',unit:'L',qty:7.2,interval_h:2000,price_usd:86},
+    {part:'Air Filter (Outer)',code:'4634039',unit:'pcs',qty:1,interval_h:1000,price_usd:145},
+    {part:'Air Filter (Inner)',code:'4634040',unit:'pcs',qty:1,interval_h:2000,price_usd:98},
+    {part:'Coolant',code:'4666140',unit:'L',qty:52,interval_h:4000,price_usd:330},
+    {part:'Bucket Teeth (BOT)',code:'0772214',unit:'set',qty:6,interval_h:600,price_usd:1100},
+    {part:'Track Chain (set)',code:'9195273',unit:'set',qty:1,interval_h:3000,price_usd:11500},
+    {part:'Drive Belt',code:'4255104',unit:'pcs',qty:1,interval_h:2000,price_usd:220},
   ],
   'ZX890LCH-6': [
-    {part:'Масло гидравлическое',code:'4666119',unit:'л',qty:720,interval_h:2000,price_usd:4320},
-    {part:'Фильтр гидравлический',code:'4659488',unit:'шт',qty:2,interval_h:500,price_usd:290},
-    {part:'Фильтр масляный двигатель',code:'4205768',unit:'шт',qty:2,interval_h:500,price_usd:116},
-    {part:'Масло моторное',code:'4666108',unit:'л',qty:52,interval_h:500,price_usd:520},
-    {part:'Фильтр топливный',code:'4259358',unit:'шт',qty:2,interval_h:1000,price_usd:180},
-    {part:'Масло трансмиссионное (поворот)',code:'4666124',unit:'л',qty:18,interval_h:2000,price_usd:216},
-    {part:'Масло редуктора хода',code:'4666125',unit:'л',qty:12,interval_h:2000,price_usd:144},
-    {part:'Фильтр воздушный (внешний)',code:'4634037',unit:'шт',qty:1,interval_h:1000,price_usd:185},
-    {part:'Фильтр воздушный (внутренний)',code:'4634038',unit:'шт',qty:1,interval_h:2000,price_usd:125},
-    {part:'Антифриз',code:'4666140',unit:'л',qty:90,interval_h:4000,price_usd:570},
-    {part:'Зубья ковша (BOT)',code:'0772215',unit:'компл',qty:8,interval_h:500,price_usd:2200},
-    {part:'Цепь гусеничная (к-т)',code:'9195274',unit:'компл',qty:1,interval_h:2500,price_usd:22000},
-    {part:'Ремень приводной',code:'4255105',unit:'шт',qty:1,interval_h:2000,price_usd:310},
+    {part:'Hydraulic Oil',code:'4666119',unit:'L',qty:720,interval_h:2000,price_usd:4320},
+    {part:'Hydraulic Filter',code:'4659488',unit:'pcs',qty:2,interval_h:500,price_usd:290},
+    {part:'Engine Oil Filter',code:'4205768',unit:'pcs',qty:2,interval_h:500,price_usd:116},
+    {part:'Engine Oil',code:'4666108',unit:'L',qty:52,interval_h:500,price_usd:520},
+    {part:'Fuel Filter',code:'4259358',unit:'pcs',qty:2,interval_h:1000,price_usd:180},
+    {part:'Swing Transmission Oil',code:'4666124',unit:'L',qty:18,interval_h:2000,price_usd:216},
+    {part:'Travel Gearbox Oil',code:'4666125',unit:'L',qty:12,interval_h:2000,price_usd:144},
+    {part:'Air Filter (Outer)',code:'4634037',unit:'pcs',qty:1,interval_h:1000,price_usd:185},
+    {part:'Air Filter (Inner)',code:'4634038',unit:'pcs',qty:1,interval_h:2000,price_usd:125},
+    {part:'Coolant',code:'4666140',unit:'L',qty:90,interval_h:4000,price_usd:570},
+    {part:'Bucket Teeth (BOT)',code:'0772215',unit:'set',qty:8,interval_h:500,price_usd:2200},
+    {part:'Track Chain (set)',code:'9195274',unit:'set',qty:1,interval_h:2500,price_usd:22000},
+    {part:'Drive Belt',code:'4255105',unit:'pcs',qty:1,interval_h:2000,price_usd:310},
   ],
 };
 // Default annual hours by machine type / work intensity
@@ -582,19 +582,19 @@ const today=()=>new Date().toISOString().slice(0,10);
 const coName=id=>{const c=db.companies.find(x=>x.id==id);return c?c.name:id||''};
 const stageBadge=s=>({Lead:'b-gray',Qualified:'b-purple',Proposal:'b-amber',Negotiation:'b-blue',Won:'b-green',Lost:'b-red'}[s]||'b-gray');
 const condBadge=c=>({Excellent:'b-green',Good:'b-blue',Fair:'b-amber',Poor:'b-red'}[c]||'b-gray');
-const statusBadge=s=>({Активный:'b-green',Потенциальный:'b-blue',Переговоры:'b-amber',Партнёр:'b-teal',Неактивный:'b-gray'}[s]||'b-gray');
+const statusBadge=s=>({Active:'b-green',Prospect:'b-blue',Negotiating:'b-amber',Partner:'b-teal',Inactive:'b-gray'}[s]||'b-gray');
 const coOpts=()=>db.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
 const coDatalist=()=>db.companies.map(c=>`<option>${c.name}</option>`).join('');
 
 // ─── API ───────────────────────────────────────────────────────────────────
 async function apiCall(params){
-  setSS('spin','Синхронизация...');
+  setSS('spin','Syncing...');
   try{
     const url=API+'?payload='+encodeURIComponent(JSON.stringify(params));
     const res=await fetch(url,{redirect:'follow'});
     const text=await res.text();
     const data=JSON.parse(text);
-    if(!data.ok)throw new Error(data.error||'Ошибка');
+    if(!data.ok)throw new Error(data.error||'Error');
     setSS('ok','Synced '+new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}));
     return data.data;
   }catch(e){
@@ -628,7 +628,7 @@ function updateCounts(){
 // ─── Setup ─────────────────────────────────────────────────────────────────
 async function connect(){
   const url=$('su-url').value.trim();
-  if(!url.includes('script.google.com')){showErr('Вставь корректный URL от Google Apps Script');return;}
+  if(!url.includes('script.google.com')){showErr('Enter a valid Google Apps Script URL');return;}
   API=url;
   try{
     await apiCall({action:'init'});
@@ -637,7 +637,7 @@ async function connect(){
     $('setup').style.display='none';
     $('app').style.display='flex';
     render('dashboard');
-  }catch(e){showErr('Не удалось подключиться. Проверь URL и права доступа (Anyone).');}
+  }catch(e){showErr('Failed to connect. Check the URL and access rights (Anyone).');}
 }
 function showErr(m){const e=$('su-err');e.textContent=m;e.style.display='block';}
 
@@ -651,17 +651,17 @@ function go(sec,el){
 function render(sec){
   const tr=$('topbar-right');tr.innerHTML='';
   $('breadcrumb').innerHTML='';
-  const titles={dashboard:'Dashboard',pipeline:'Pipeline',leads:'Лиды',companies:'Компании',contacts:'Контакты',fleet:'Парк техники',tasks:'Задачи',reports:'Отчёты',segments:'Сегментация',automation:'Автоматизация'};
+  const titles={dashboard:'Dashboard',pipeline:'Pipeline',leads:'Leads',companies:'Companies',contacts:'Contacts',fleet:'Fleet',tasks:'Tasks',reports:'Reports',segments:'Segmentation',automation:'Automation',calendar:'Calendar',agents:'Agents',parts:'Parts',operations:'Operations',users:'Users'};
   $('ptitle').textContent=titles[sec]||sec;
-  if(sec==='pipeline')tr.innerHTML=mkBtn('deal','Добавить сделку');
-  if(sec==='leads')tr.innerHTML=mkBtn('lead','Добавить лид');
-  if(sec==='companies')tr.innerHTML=mkBtn('company','Добавить компанию');
-  if(sec==='contacts')tr.innerHTML=mkBtn('contact','Добавить контакт');
-  if(sec==='fleet')tr.innerHTML=mkBtn('fleet','Добавить технику');
-  if(sec==='tasks')tr.innerHTML=mkBtn('task','Добавить задачу');
-  if(sec==='agents')tr.innerHTML=mkBtn('agent','Добавить продавца');
-  if(sec==='automation')tr.innerHTML=mkBtn('automation','Новое правило');
-  if(sec==='calendar')tr.innerHTML=`<button class="btn" onclick="generateVisitPlan()"><i class="ti ti-refresh"></i>Обновить план</button>`;
+  if(sec==='pipeline')tr.innerHTML=mkBtn('deal','Add Deal');
+  if(sec==='leads')tr.innerHTML=mkBtn('lead','Add Lead');
+  if(sec==='companies')tr.innerHTML=mkBtn('company','Add Company');
+  if(sec==='contacts')tr.innerHTML=mkBtn('contact','Add Contact');
+  if(sec==='fleet')tr.innerHTML=mkBtn('fleet','Add Equipment');
+  if(sec==='tasks')tr.innerHTML=mkBtn('task','Add Task');
+  if(sec==='agents')tr.innerHTML=mkBtn('agent','Add Agent');
+  if(sec==='automation')tr.innerHTML=mkBtn('automation','New Rule');
+  if(sec==='calendar')tr.innerHTML=`<button class="btn" onclick="generateVisitPlan()"><i class="ti ti-refresh"></i>Refresh Plan</button>`;
   const fns={dashboard:renderDashboard,pipeline:renderPipeline,leads:renderLeads,companies:renderCompanies,contacts:renderContacts,fleet:renderFleet,tasks:renderTasks,reports:renderReports,agents:renderAgents,calendar:renderCalendar,parts:renderParts,operations:renderOperations,users:renderUsers,segments:renderSegments,automation:renderAutomation};
   if(fns[sec])fns[sec]();
 }
@@ -680,50 +680,50 @@ function renderDashboard(){
 
   $('content').innerHTML=`
   <div class="metrics">
-    <div class="metric"><div class="metric-label"><i class="ti ti-building" style="font-size:13px"></i>Компаний</div><div class="metric-value">${db.companies.length}</div><div class="metric-sub">${db.contacts.length} контактов</div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-versions" style="font-size:13px"></i>Активных сделок</div><div class="metric-value">${active.length}</div><div class="metric-sub">Pipeline: ${fmtUSD(pipeVal)}</div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-trophy" style="font-size:13px"></i>Закрыто (Won)</div><div class="metric-value">${fmtUSD(wonVal)}</div><div class="metric-sub up">${won.length} сделок</div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-tractor" style="font-size:13px"></i>Парк техники</div><div class="metric-value">${fleetTotal}</div><div class="metric-sub">${fleetTotal?Math.round(hitachi/fleetTotal*100):0}% Hitachi · <span class="dn">${replOpp} под замену</span></div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-checkbox" style="font-size:13px"></i>Задач открыто</div><div class="metric-value">${openTasks.length}</div><div class="metric-sub dn">${openTasks.filter(t=>t.priority==='high').length} срочных</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-building" style="font-size:13px"></i>Companies</div><div class="metric-value">${db.companies.length}</div><div class="metric-sub">${db.contacts.length} contacts</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-versions" style="font-size:13px"></i>Active Deals</div><div class="metric-value">${active.length}</div><div class="metric-sub">Pipeline: ${fmtUSD(pipeVal)}</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-trophy" style="font-size:13px"></i>Closed (Won)</div><div class="metric-value">${fmtUSD(wonVal)}</div><div class="metric-sub up">${won.length} deals</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-tractor" style="font-size:13px"></i>Fleet</div><div class="metric-value">${fleetTotal}</div><div class="metric-sub">${fleetTotal?Math.round(hitachi/fleetTotal*100):0}% Hitachi · <span class="dn">${replOpp} for replacement</span></div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-checkbox" style="font-size:13px"></i>Open Tasks</div><div class="metric-value">${openTasks.length}</div><div class="metric-sub dn">${openTasks.filter(t=>t.priority==='high').length} urgent</div></div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-bottom:18px">
     <div class="card">
-      <div class="card-title">Горячие сделки <span style="font-weight:400;font-size:12px;color:var(--text-m)">Negotiation + Proposal</span></div>
+      <div class="card-title">Hot Deals <span style="font-weight:400;font-size:12px;color:var(--text-m)">Negotiation + Proposal</span></div>
       ${active.filter(d=>d.stage==='Negotiation'||d.stage==='Proposal').slice(0,6).map(d=>`
         <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="openDealDetail('${d.id}')">
           <div><div style="font-weight:700;font-size:13px">${d.company}</div><div style="font-size:12px;color:var(--text-m)">${d.model||'—'} · ${d.agent||'—'}</div></div>
           <div style="text-align:right;flex-shrink:0;margin-left:12px"><div style="font-weight:800;font-size:14px">${fmtUSD(d.amount)}</div><span class="b ${stageBadge(d.stage)}">${d.stage}</span></div>
-        </div>`).join('') || '<div class="empty" style="padding:20px"><i class="ti ti-versions"></i>Нет горячих сделок</div>'}
+        </div>`).join('') || '<div class="empty" style="padding:20px"><i class="ti ti-versions"></i>No hot deals</div>'}
     </div>
     <div class="card">
-      <div class="card-title">Команда</div>
+      <div class="card-title">Team</div>
       ${AGENTS().slice(0,8).map((a,i)=>{
         const ad=db.deals.filter(d=>d.agent===a);
         const w=ad.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0);
         return`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)">
           <div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:28px;height:28px;font-size:10px">${ini(a)}</div><span style="font-size:13px;font-weight:500">${a}</span></div>
-          <div style="font-size:12px;color:var(--text-m)">${ad.length} сд${w?' · '+fmtUSD(w):''}</div>
+          <div style="font-size:12px;color:var(--text-m)">${ad.length} deals${w?' · '+fmtUSD(w):''}</div>
         </div>`;
       }).join('')}
     </div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px">
     <div class="card">
-      <div class="card-title">Срочные задачи</div>
+      <div class="card-title">Urgent Tasks</div>
       ${openTasks.filter(t=>t.priority==='high').slice(0,5).map(t=>`
         <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
           <div class="cb" onclick="quickDoneTask('${t.id}')"></div>
           <div style="flex:1"><div style="font-size:13px;font-weight:500">${t.title}</div><div style="font-size:11px;color:var(--text-m)">${t.company||''} · ${t.agent||''}</div></div>
           <span style="font-size:11px;color:var(--text-m)">${t.due||''}</span>
-        </div>`).join('') || '<div style="text-align:center;padding:16px;color:var(--text-m);font-size:13px">Нет срочных задач</div>'}
+        </div>`).join('') || '<div style="text-align:center;padding:16px;color:var(--text-m);font-size:13px">No urgent tasks</div>'}
     </div>
     <div class="card">
-      <div class="card-title">Последние компании</div>
+      <div class="card-title">Recent Companies</div>
       ${db.companies.slice(-5).reverse().map((c,i)=>`
         <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="openCompanyDetail('${c.id}')">
           <div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:28px;height:28px;font-size:10px">${ini(c.name)}</div><div><div style="font-size:13px;font-weight:600">${c.name}</div><div style="font-size:11px;color:var(--text-m)">${c.industry||'—'}</div></div></div>
           <span class="b ${statusBadge(c.status)}">${c.status||'—'}</span>
-        </div>`).join('') || '<div style="text-align:center;padding:16px;color:var(--text-m);font-size:13px">Нет компаний</div>'}
+        </div>`).join('') || '<div style="text-align:center;padding:16px;color:var(--text-m);font-size:13px">No companies</div>'}
     </div>
   </div>`;
 }
@@ -763,11 +763,11 @@ function renderCompanies(filter=''){
   const rows=db.companies.filter(c=>!f||c.name.toLowerCase().includes(f)||(c.industry||'').toLowerCase().includes(f));
   $('content').innerHTML=`
   <div class="toolbar">
-    <div class="search"><i class="ti ti-search"></i><input placeholder="Поиск по названию или отрасли..." oninput="renderCompanies(this.value)"></div>
-    <button class="btn btn-primary" onclick="openM('company')"><i class="ti ti-plus"></i>Добавить компанию</button>
+    <div class="search"><i class="ti ti-search"></i><input placeholder="Search by name or industry..." oninput="renderCompanies(this.value)"></div>
+    <button class="btn btn-primary" onclick="openM('company')"><i class="ti ti-plus"></i>Add Company</button>
   </div>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Компания</th><th>Отрасль</th><th>Кат.</th><th>Город</th><th>Контакты</th><th>Сделки</th><th>Парк</th><th>Статус</th><th></th></tr></thead>
+    <thead><tr><th>Company</th><th>Industry</th><th>Cat.</th><th>City</th><th>Contacts</th><th>Deals</th><th>Fleet</th><th>Status</th><th></th></tr></thead>
     <tbody>${rows.length?rows.map((c,i)=>{
       const ctcCount=db.contacts.filter(x=>x.company_id===c.id).length;
       const dealCount=db.deals.filter(x=>x.company_id===c.id&&x.stage!=='Lost').length;
@@ -776,15 +776,15 @@ function renderCompanies(filter=''){
       return`<tr onclick="openCompanyDetail('${c.id}')">
         <td><div style="display:flex;align-items:center;gap:9px"><div class="av ${avC(i)}" style="width:32px;height:32px;font-size:12px">${ini(c.name)}</div><div><div style="font-weight:700">${c.name}</div>${c.website?`<div style="font-size:11px;color:var(--blue)">${c.website}</div>`:''}</div></div></td>
         <td><div style="display:flex;align-items:center;gap:6px">${c.category?`<span class="cat-badge cat-${c.category}">${c.category}</span>`:''}<span style="font-size:12px;color:var(--text-m)">${c.industry||''}</span></div></td>
-        <td>${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Кат. ${c.category}</span>`:'-'}</td>
+        <td>${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Cat. ${c.category}</span>`:'-'}</td>
         <td style="color:var(--text-m)">${c.city||'—'}</td>
         <td style="text-align:center">${ctcCount}</td>
         <td style="text-align:center">${dealCount}</td>
-        <td style="font-size:12px;color:var(--text-m)">${fleetCount?hitachiCount+'H / '+(fleetCount-hitachiCount)+' др.':'—'}</td>
+        <td style="font-size:12px;color:var(--text-m)">${fleetCount?hitachiCount+'H / '+(fleetCount-hitachiCount)+' other':'—'}</td>
         <td>${c.status?`<span class="b ${statusBadge(c.status)}">${c.status}</span>`:''}</td>
         <td onclick="event.stopPropagation()"><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('company','${c.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost" onclick="delRecord('companies','${c.id}')"><i class="ti ti-trash"></i></button></div></td>
       </tr>`;
-    }).join(''):`<tr><td colspan="8"><div class="empty"><i class="ti ti-building"></i><div class="empty-title">Нет компаний</div>Добавь первую компанию</div></td></tr>`}
+    }).join(''):`<tr><td colspan="8"><div class="empty"><i class="ti ti-building"></i><div class="empty-title">No companies</div>Add first company</div></td></tr>`}
     </tbody>
   </table></div>`;
 }
@@ -793,12 +793,12 @@ function openCompanyDetail(id){
   const c=db.companies.find(x=>x.id===id);if(!c)return;
   cur.company=id;cur.section='company-detail';
   $('ptitle').textContent=c.name;
-  $('breadcrumb').innerHTML=`<span onclick="go('companies',document.querySelector('.ni:nth-child(2)'))">Компании</span><i class="ti ti-chevron-right" style="font-size:12px"></i>`;
+  $('breadcrumb').innerHTML=`<span onclick="go('companies',document.querySelector('.ni:nth-child(2)'))">Companies</span><i class="ti ti-chevron-right" style="font-size:12px"></i>`;
   $('topbar-right').innerHTML=`
-    <button class="btn" onclick="openM('fleet',null,'${id}')"><i class="ti ti-tractor"></i>+ Техника</button>
-    <button class="btn" onclick="openM('contact',null,'${id}')"><i class="ti ti-user"></i>+ Контакт</button>
-    <button class="btn" onclick="openM('task',null,'${id}')"><i class="ti ti-checkbox"></i>+ Задача</button>
-    <button class="btn btn-primary" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>+ Сделка</button>`;
+    <button class="btn" onclick="openM('fleet',null,'${id}')"><i class="ti ti-tractor"></i>+ Equipment</button>
+    <button class="btn" onclick="openM('contact',null,'${id}')"><i class="ti ti-user"></i>+ Contact</button>
+    <button class="btn" onclick="openM('task',null,'${id}')"><i class="ti ti-checkbox"></i>+ Task</button>
+    <button class="btn btn-primary" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>+ Deal</button>`;
 
   const contacts=db.contacts.filter(x=>x.company_id===id);
   const deals=db.deals.filter(x=>x.company_id===id);
@@ -819,24 +819,24 @@ function openCompanyDetail(id){
             <div style="font-size:16px;font-weight:800">${c.name}</div>
             <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap">
               <span class="b ${statusBadge(c.status)}">${c.status||'—'}</span>
-              ${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Кат. ${c.category} · ${CAT_RULES[c.category].desc}</span>`:''}
+              ${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Cat. ${c.category} · ${CAT_RULES[c.category].desc}</span>`:''}
             </div>
           </div>
         </div>
-        ${[['Отрасль',c.industry],['Город',c.city],['Страна',c.country],['Продавец',c.assigned_agent],['Сайт',c.website?`<a href="${c.website}" style="color:var(--blue)" target="_blank">${c.website}</a>`:null]].filter(r=>r[1]).map(([k,v])=>`<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')}
+        ${[['Industry',c.industry],['City',c.city],['Country',c.country],['Agent',c.assigned_agent],['Website',c.website?`<a href="${c.website}" style="color:var(--blue)" target="_blank">${c.website}</a>`:null]].filter(r=>r[1]).map(([k,v])=>`<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')}
         ${c.notes?`<div style="margin-top:12px;font-size:13px;color:var(--text-m);background:var(--gray-50);padding:10px;border-radius:var(--r)">${c.notes}</div>`:''}
-        <div style="margin-top:14px;display:flex;gap:8px"><button class="btn btn-sm" onclick="openM('company','${c.id}')"><i class="ti ti-edit"></i>Редактировать</button></div>
+        <div style="margin-top:14px;display:flex;gap:8px"><button class="btn btn-sm" onclick="openM('company','${c.id}')"><i class="ti ti-edit"></i>Edit</button></div>
       </div>
       <div class="card">
-        <div class="card-title">Показатели</div>
-        <div class="info-row"><span class="info-label">Сделок</span><span class="info-val">${deals.length}</span></div>
+        <div class="card-title">Stats</div>
+        <div class="info-row"><span class="info-label">Deals</span><span class="info-val">${deals.length}</span></div>
         <div class="info-row"><span class="info-label">Pipeline</span><span class="info-val">${fmtUSD(pipeVal)}</span></div>
-        <div class="info-row"><span class="info-label">Закрыто</span><span class="info-val" style="color:var(--green)">${fmtUSD(wonVal)}</span></div>
-        <div class="info-row"><span class="info-label">Единиц техники</span><span class="info-val">${fleet.length}</span></div>
-        <div class="info-row"><span class="info-label">Hitachi</span><span class="info-val" style="color:var(--blue)">${hitachi} из ${fleet.length}</span></div>
+        <div class="info-row"><span class="info-label">Closed</span><span class="info-val" style="color:var(--green)">${fmtUSD(wonVal)}</span></div>
+        <div class="info-row"><span class="info-label">Equipment Units</span><span class="info-val">${fleet.length}</span></div>
+        <div class="info-row"><span class="info-label">Hitachi</span><span class="info-val" style="color:var(--blue)">${hitachi} of ${fleet.length}</span></div>
       </div>
       ${fleet.length?`<div class="card">
-        <div class="card-title">Парк техники</div>
+        <div class="card-title">Fleet</div>
         ${fleet.length>1?`<div class="fleet-bar" style="margin-bottom:12px">
           ${hitachi?`<div class="fleet-seg" style="width:${Math.round(hitachi/fleet.length*100)}%;background:#185FA5">${Math.round(hitachi/fleet.length*100)}%</div>`:''}
           ${fleet.length-hitachi?`<div class="fleet-seg" style="width:${Math.round((fleet.length-hitachi)/fleet.length*100)}%;background:#ef4444">${Math.round((fleet.length-hitachi)/fleet.length*100)}%</div>`:''}
@@ -846,15 +846,15 @@ function openCompanyDetail(id){
           <div style="flex:1"><div style="font-size:13px;font-weight:600">${u.brand} ${u.model}</div><div style="font-size:11px;color:var(--text-m)">${u.type} · ${u.year}</div></div>
           <span class="b ${condBadge(u.condition)}">${u.condition}</span>
         </div>`).join('')}
-        <button class="btn btn-sm" style="margin-top:10px" onclick="openM('fleet',null,'${id}')"><i class="ti ti-plus"></i>Добавить</button>
+        <button class="btn btn-sm" style="margin-top:10px" onclick="openM('fleet',null,'${id}')"><i class="ti ti-plus"></i>Add</button>
       </div>`:''}
     </div>
     <div>
       <div class="tabs">
-        <div class="tab active" onclick="cdTab('deals','${id}',this)">Сделки (${deals.length})</div>
-        <div class="tab" onclick="cdTab('contacts','${id}',this)">Контакты (${contacts.length})</div>
-        <div class="tab" onclick="cdTab('tasks','${id}',this)">Задачи (${tasks.length})</div>
-        <div class="tab" onclick="cdTab('activity','${id}',this)">История</div>
+        <div class="tab active" onclick="cdTab('deals','${id}',this)">Deals (${deals.length})</div>
+        <div class="tab" onclick="cdTab('contacts','${id}',this)">Contacts (${contacts.length})</div>
+        <div class="tab" onclick="cdTab('tasks','${id}',this)">Tasks (${tasks.length})</div>
+        <div class="tab" onclick="cdTab('activity','${id}',this)">History</div>
       </div>
       <div id="cd-pane">${renderCdDeals(id)}</div>
     </div>
@@ -870,15 +870,15 @@ function cdTab(tab,id,el){
 
 function renderCdDeals(id){
   const deals=db.deals.filter(x=>x.company_id===id);
-  if(!deals.length)return`<div class="empty"><i class="ti ti-versions"></i><div class="empty-title">Нет сделок</div><button class="btn btn-primary btn-sm" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>Добавить сделку</button></div>`;
+  if(!deals.length)return`<div class="empty"><i class="ti ti-versions"></i><div class="empty-title">No deals</div><button class="btn btn-primary btn-sm" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>Add Deal</button></div>`;
   return`<div class="stage-strip">${STAGES.map(s=>`<div class="stage-step ${deals.find(d=>d.stage===s)?'active':''}">${s}</div>`).join('')}</div>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Модель</th><th>Сумма</th><th>Этап</th><th>Менеджер</th><th>Дней</th><th>Следующий шаг</th><th></th></tr></thead>
+    <thead><tr><th>Model</th><th>Amount</th><th>Stage</th><th>Manager</th><th>Days</th><th>Next Action</th><th></th></tr></thead>
     <tbody>${deals.map(d=>`<tr onclick="openDealDetail('${d.id}')">
       <td style="font-weight:700">${d.model||'—'}</td>
       <td style="font-weight:800">${fmtUSD(d.amount)}</td>
       <td><span class="b ${stageBadge(d.stage)}">${d.stage}</span></td>
-      <td>${d.agent||'—'}</td><td>${d.days||0}д</td>
+      <td>${d.agent||'—'}</td><td>${d.days||0} d</td>
       <td style="font-size:12px;color:var(--text-m)">${d.next_action||'—'}</td>
       <td onclick="event.stopPropagation()"><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('deal','${d.id}')"><i class="ti ti-edit"></i></button></div></td>
     </tr>`).join('')}</tbody>
@@ -887,7 +887,7 @@ function renderCdDeals(id){
 
 function renderCdContacts(id){
   const ctc=db.contacts.filter(x=>x.company_id===id);
-  if(!ctc.length)return`<div class="empty"><i class="ti ti-users"></i><div class="empty-title">Нет контактов</div><button class="btn btn-primary btn-sm" onclick="openM('contact',null,'${id}')"><i class="ti ti-plus"></i>Добавить контакт</button></div>`;
+  if(!ctc.length)return`<div class="empty"><i class="ti ti-users"></i><div class="empty-title">No contacts</div><button class="btn btn-primary btn-sm" onclick="openM('contact',null,'${id}')"><i class="ti ti-plus"></i>Add Contact</button></div>`;
   return`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
     ${ctc.map((c,i)=>`<div class="card" style="padding:14px">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
@@ -898,13 +898,13 @@ function renderCdContacts(id){
       ${c.email?`<div style="font-size:12px;color:var(--blue)">${c.email}</div>`:''}
       <div style="display:flex;gap:6px;margin-top:10px"><button class="btn btn-xs" onclick="openM('contact','${c.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-xs btn-danger" onclick="delRecord('contacts','${c.id}')"><i class="ti ti-trash"></i></button></div>
     </div>`).join('')}
-    <div class="card" style="padding:14px;border:2px dashed var(--bdr);box-shadow:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-m)" onclick="openM('contact',null,'${id}')"><i class="ti ti-plus" style="margin-right:6px"></i>Добавить</div>
+    <div class="card" style="padding:14px;border:2px dashed var(--bdr);box-shadow:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-m)" onclick="openM('contact',null,'${id}')"><i class="ti ti-plus" style="margin-right:6px"></i>Add</div>
   </div>`;
 }
 
 function renderCdTasks(id){
   const tasks=db.tasks.filter(x=>x.company_id===id);
-  if(!tasks.length)return`<div class="empty"><i class="ti ti-checkbox"></i><div class="empty-title">Нет задач</div><button class="btn btn-primary btn-sm" onclick="openM('task',null,'${id}')"><i class="ti ti-plus"></i>Добавить задачу</button></div>`;
+  if(!tasks.length)return`<div class="empty"><i class="ti ti-checkbox"></i><div class="empty-title">No tasks</div><button class="btn btn-primary btn-sm" onclick="openM('task',null,'${id}')"><i class="ti ti-plus"></i>Add Task</button></div>`;
   return tasks.map(t=>`<div class="task-row">
     <div class="cb ${t.done?'done':''}" onclick="toggleTask('${t.id}',${!t.done})">${t.done?'<i class="ti ti-check" style="font-size:12px"></i>':''}</div>
     <div style="flex:1"><div style="font-size:13px;font-weight:600;${t.done?'text-decoration:line-through;color:var(--text-m)':''}">${t.title}</div><div style="font-size:11px;color:var(--text-m);margin-top:2px">${t.type||''} · ${t.agent||''}</div></div>
@@ -917,9 +917,9 @@ function renderCdTasks(id){
 
 function renderCdActivity(id){
   const acts=db.activities.filter(x=>x.company_id===id).reverse();
-  if(!acts.length)return`<div class="empty"><i class="ti ti-clock"></i><div class="empty-title">Нет активности</div></div>`;
-  const icons={Звонок:'ti-phone',Встреча:'ti-calendar',Email:'ti-mail',КП:'ti-file-text',Демонстрация:'ti-eye',Документы:'ti-file',Другое:'ti-dots'};
-  const colors={Звонок:'b-blue',Встреча:'b-purple',Email:'b-teal',КП:'b-amber',Демонстрация:'b-green',Документы:'b-gray',Другое:'b-gray'};
+  if(!acts.length)return`<div class="empty"><i class="ti ti-clock"></i><div class="empty-title">No activity</div></div>`;
+  const icons={Call:'ti-phone',Meeting:'ti-calendar',Email:'ti-mail',Proposal:'ti-file-text',Demo:'ti-eye',Documents:'ti-file',Other:'ti-dots'};
+  const colors={Call:'b-blue',Meeting:'b-purple',Email:'b-teal',Proposal:'b-amber',Demo:'b-green',Documents:'b-gray',Other:'b-gray'};
   return acts.map(a=>`<div class="act-item">
     <div class="act-icon b ${colors[a.type]||'b-gray'}"><i class="ti ${icons[a.type]||'ti-dots'}" style="font-size:14px"></i></div>
     <div><div class="act-text"><strong>${a.type}</strong> — ${a.note||''}</div><div class="act-meta">${a.agent||''} · ${String(a.created||'').slice(0,10)}</div></div>
@@ -930,9 +930,9 @@ function renderCdActivity(id){
 function openDealDetail(id){
   const d=db.deals.find(x=>x.id===id);if(!d)return;
   cur.deal=id;
-  $('ptitle').textContent=d.company+' — '+(d.model||'Сделка');
+  $('ptitle').textContent=d.company+' — '+(d.model||'Deal');
   $('breadcrumb').innerHTML=`<span onclick="go('pipeline',document.querySelector('.ni:nth-child(2)'))">Pipeline</span><i class="ti ti-chevron-right" style="font-size:12px"></i>`;
-  $('topbar-right').innerHTML=`<button class="btn" onclick="openM('activity',null,null,'${id}')"><i class="ti ti-plus"></i>Активность</button><button class="btn" onclick="openM('deal','${id}')"><i class="ti ti-edit"></i>Редактировать</button>`;
+  $('topbar-right').innerHTML=`<button class="btn" onclick="openM('activity',null,null,'${id}')"><i class="ti ti-plus"></i>Activity</button><button class="btn" onclick="openM('deal','${id}')"><i class="ti ti-edit"></i>Edit</button>`;
   const tasks=db.tasks.filter(t=>t.deal_id===id);
   const acts=db.activities.filter(a=>a.deal_id===id).reverse();
   const stageIdx=STAGES.indexOf(d.stage);
@@ -946,26 +946,26 @@ function openDealDetail(id){
       <div class="card" style="margin-bottom:14px">
         <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px">${fmtUSD(d.amount)}</div>
         <span class="b ${stageBadge(d.stage)}" style="margin-bottom:14px;display:inline-block">${d.stage}</span>
-        ${[['Компания',`<span style="cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${d.company_id}')">${d.company}</span>`],['Модель',d.model],['Контакт',d.contact],['Менеджер',d.agent],['Валюта',d.currency],['Вероятность',d.probability?d.probability+'%':''],['Дней в работе',d.days+'д'],['Следующий шаг',d.next_action],['Дата след. шага',d.next_date]].filter(r=>r[1]).map(([k,v])=>`<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')}
+        ${[['Company',`<span style="cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${d.company_id}')">${d.company}</span>`],['Model',d.model],['Contact',d.contact],['Manager',d.agent],['Currency',d.currency],['Probability',d.probability?d.probability+'%':''],['Days in Pipeline',d.days+' d'],['Next Action',d.next_action],['Next Action Date',d.next_date]].filter(r=>r[1]).map(([k,v])=>`<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')}
       </div>
       <div class="card">
-        <div class="card-title">Задачи по сделке</div>
+        <div class="card-title">Deal Tasks</div>
         ${tasks.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-100)">
           <div class="cb ${t.done?'done':''}" onclick="toggleTask('${t.id}',${!t.done})">${t.done?'<i class="ti ti-check" style="font-size:11px"></i>':''}</div>
           <div style="flex:1;font-size:13px;${t.done?'text-decoration:line-through;color:var(--text-m)':''}">${t.title}</div>
           <span style="font-size:11px;color:var(--text-m)">${t.due||''}</span>
         </div>`).join('')}
-        <button class="btn btn-sm" style="margin-top:10px" onclick="openM('task',null,'${d.company_id}','${id}')"><i class="ti ti-plus"></i>Задача</button>
+        <button class="btn btn-sm" style="margin-top:10px" onclick="openM('task',null,'${d.company_id}','${id}')"><i class="ti ti-plus"></i>Task</button>
       </div>
     </div>
     <div class="card">
-      <div class="card-title">История активности
-        <button class="btn btn-sm" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-plus"></i>Запись</button>
+      <div class="card-title">Activity History
+        <button class="btn btn-sm" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-plus"></i>Log</button>
       </div>
-      ${acts.length?acts.map(a=>{const icons={Звонок:'ti-phone',Встреча:'ti-calendar',Email:'ti-mail',КП:'ti-file-text',Демонстрация:'ti-eye',Документы:'ti-file',Другое:'ti-dots'};const colors={Звонок:'b-blue',Встреча:'b-purple',Email:'b-teal',КП:'b-amber',Демонстрация:'b-green',Документы:'b-gray',Другое:'b-gray'};return`<div class="act-item">
+      ${acts.length?acts.map(a=>{const icons={Call:'ti-phone',Meeting:'ti-calendar',Email:'ti-mail',Proposal:'ti-file-text',Demo:'ti-eye',Documents:'ti-file',Other:'ti-dots'};const colors={Call:'b-blue',Meeting:'b-purple',Email:'b-teal',Proposal:'b-amber',Demo:'b-green',Documents:'b-gray',Other:'b-gray'};return`<div class="act-item">
         <div class="act-icon b ${colors[a.type]||'b-gray'}"><i class="ti ${icons[a.type]||'ti-dots'}" style="font-size:14px"></i></div>
         <div><div class="act-text"><strong>${a.type}</strong> — ${a.note||''}</div><div class="act-meta">${a.agent||''} · ${String(a.created||'').slice(0,10)}</div></div>
-      </div>`;}).join(''):`<div class="empty" style="padding:24px"><i class="ti ti-clock"></i>Нет активности</div>`}
+      </div>`;}).join(''):`<div class="empty" style="padding:24px"><i class="ti ti-clock"></i>No activity</div>`}
     </div>
   </div>`;
 }
@@ -976,11 +976,11 @@ async function moveDeal(id,stage){
   d.stage=stage;
   await persist('deals',{...d});
   // Log activity
-  const act={id:uid(),company_id:d.company||'',type:'stage',text:`Стадия сделки изменена: ${prevStage} → ${stage}`,date:today(),agent:currentUser?.name||''};
+  const act={id:uid(),company_id:d.company||'',type:'stage',text:`Deal stage changed: ${prevStage} → ${stage}`,date:today(),agent:currentUser?.name||''};
   db.activities.push(act);await persist('activities',act);
   // Run automations
-  await runAutomations('deal_stage_change',{newStage:stage,deal_id:id,company_id:d.company,agent:d.agent,amount:d.amount,message:`Сделка перешла в ${stage}`});
-  if(Number(d.amount)>0)await runAutomations('deal_amount',{amount:d.amount,deal_id:id,company_id:d.company,agent:d.agent,message:`Сделка на $${fmt(d.amount)}`});
+  await runAutomations('deal_stage_change',{newStage:stage,deal_id:id,company_id:d.company,agent:d.agent,amount:d.amount,message:`Deal moved to ${stage}`});
+  if(Number(d.amount)>0)await runAutomations('deal_amount',{amount:d.amount,deal_id:id,company_id:d.company,agent:d.agent,message:`Deal worth $${fmt(d.amount)}`});
   updateCounts();openDealDetail(id);
 }
 
@@ -991,19 +991,19 @@ function renderContacts(filter=''){
   const seen2=new Set(db.contacts.map(c=>c.first_name+'|'+c.last_name+'|'+c.company));const dupes=db.contacts.length-seen2.size;
   $('content').innerHTML=`
   <div class="toolbar">
-    <div class="search"><i class="ti ti-search"></i><input placeholder="Поиск по имени, компании, телефону..." oninput="renderContacts(this.value)"></div>
-    ${dupes>0?`<button class="btn btn-danger btn-sm" onclick="dedupContacts()"><i class="ti ti-copy-off"></i>Удалить дубли (${dupes})</button>`:''}
-    <button class="btn btn-primary" onclick="openM('contact')"><i class="ti ti-plus"></i>Добавить</button>
+    <div class="search"><i class="ti ti-search"></i><input placeholder="Search by name, company, phone..." oninput="renderContacts(this.value)"></div>
+    ${dupes>0?`<button class="btn btn-danger btn-sm" onclick="dedupContacts()"><i class="ti ti-copy-off"></i>Remove Duplicates (${dupes})</button>`:''}
+    <button class="btn btn-primary" onclick="openM('contact')"><i class="ti ti-plus"></i>Add</button>
   </div>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Имя</th><th>Должность</th><th>Компания</th><th>Телефон</th><th>Email</th><th></th></tr></thead>
+    <thead><tr><th>Name</th><th>Position</th><th>Company</th><th>Phone</th><th>Email</th><th></th></tr></thead>
     <tbody>${rows.length?rows.map((c,i)=>`<tr>
       <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:30px;height:30px;font-size:11px">${ini(c.first_name+' '+c.last_name)}</div><strong>${c.first_name} ${c.last_name}</strong></div></td>
       <td style="color:var(--text-m)">${c.position||'—'}</td>
       <td><span style="cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${c.company_id}')">${c.company||'—'}</span></td>
       <td>${c.phone||'—'}</td><td style="color:var(--blue)">${c.email||'—'}</td>
       <td><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('contact','${c.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost" onclick="delRecord('contacts','${c.id}')"><i class="ti ti-trash"></i></button></div></td>
-    </tr>`).join(''):`<tr><td colspan="6"><div class="empty"><i class="ti ti-users"></i><div class="empty-title">Нет контактов</div></div></td></tr>`}
+    </tr>`).join(''):`<tr><td colspan="6"><div class="empty"><i class="ti ti-users"></i><div class="empty-title">No contacts</div></div></td></tr>`}
     </tbody>
   </table></div>`;
 }
@@ -1017,15 +1017,15 @@ function renderFleet(){
   const opp=db.fleet.filter(u=>u.brand!=='Hitachi'&&(u.condition==='Poor'||u.condition==='Fair')).length;
   $('content').innerHTML=`
   <div class="metrics" style="margin-bottom:18px">
-    <div class="metric"><div class="metric-label">Всего единиц</div><div class="metric-value">${tot}</div></div>
-    <div class="metric"><div class="metric-label">Hitachi</div><div class="metric-value" style="color:var(--blue)">${h}</div><div class="metric-sub">${tot?Math.round(h/tot*100):0}% парка</div></div>
-    <div class="metric"><div class="metric-label">Конкуренты</div><div class="metric-value">${tot-h}</div></div>
-    <div class="metric"><div class="metric-label" style="color:var(--red)">Под замену</div><div class="metric-value" style="color:var(--red)">${opp}</div><div class="metric-sub">плохое/среднее состояние</div></div>
+    <div class="metric"><div class="metric-label">Total Units</div><div class="metric-value">${tot}</div></div>
+    <div class="metric"><div class="metric-label">Hitachi</div><div class="metric-value" style="color:var(--blue)">${h}</div><div class="metric-sub">${tot?Math.round(h/tot*100):0}% of fleet</div></div>
+    <div class="metric"><div class="metric-label">Competitors</div><div class="metric-value">${tot-h}</div></div>
+    <div class="metric"><div class="metric-label" style="color:var(--red)">For Replacement</div><div class="metric-value" style="color:var(--red)">${opp}</div><div class="metric-sub">poor/fair condition</div></div>
   </div>
   ${opp?`<div class="card" style="margin-bottom:18px;border-color:#fca5a5">
-    <div class="card-title" style="color:var(--red)"><i class="ti ti-alert-triangle"></i>Приоритетные замены (${opp})</div>
+    <div class="card-title" style="color:var(--red)"><i class="ti ti-alert-triangle"></i>Priority Replacements (${opp})</div>
     <div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Компания</th><th>Бренд</th><th>Модель</th><th>Год</th><th>Состояние</th><th>Примечания</th><th></th></tr></thead>
+      <thead><tr><th>Company</th><th>Brand</th><th>Model</th><th>Year</th><th>Condition</th><th>Notes</th><th></th></tr></thead>
       <tbody>${db.fleet.filter(u=>u.brand!=='Hitachi'&&(u.condition==='Poor'||u.condition==='Fair')).map(u=>`<tr>
         <td style="font-weight:700;cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${u.company_id}')">${u.company}</td>
         <td><span style="display:inline-flex;align-items:center;gap:5px"><span class="brand-dot" style="background:${BRAND_C[u.brand]||'#888'}"></span>${u.brand}</span></td>
@@ -1037,7 +1037,7 @@ function renderFleet(){
     </table></div>
   </div>`:''}
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Компания</th><th>Бренд</th><th>Модель</th><th>Тип</th><th>Год</th><th>Состояние</th><th>Серийный №</th><th></th></tr></thead>
+    <thead><tr><th>Company</th><th>Brand</th><th>Model</th><th>Type</th><th>Year</th><th>Condition</th><th>Serial No.</th><th></th></tr></thead>
     <tbody>${db.fleet.length?db.fleet.map(u=>`<tr>
       <td style="font-weight:700;cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${u.company_id}')">${u.company}</td>
       <td><span style="display:inline-flex;align-items:center;gap:5px"><span class="brand-dot" style="background:${BRAND_C[u.brand]||'#888'}"></span>${u.brand}</span></td>
@@ -1045,7 +1045,7 @@ function renderFleet(){
       <td><span class="b ${condBadge(u.condition)}">${u.condition}</span></td>
       <td style="color:var(--text-m);font-size:12px">${u.serial||'—'}</td>
       <td><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('fleet','${u.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost" onclick="delRecord('fleet','${u.id}')"><i class="ti ti-trash"></i></button></div></td>
-    </tr>`).join(''):`<tr><td colspan="8"><div class="empty"><i class="ti ti-tractor"></i><div class="empty-title">Нет данных о технике</div></div></td></tr>`}
+    </tr>`).join(''):`<tr><td colspan="8"><div class="empty"><i class="ti ti-tractor"></i><div class="empty-title">No equipment data</div></div></td></tr>`}
     </tbody>
   </table></div>`;
 }
@@ -1056,9 +1056,9 @@ function renderTasks(filter='all'){
   $('content').innerHTML=`
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
     <div style="display:flex;gap:6px">
-      ${[['all','Все'],['open','Открытые'],['urgent','Срочные']].map(([f,l])=>`<button class="btn btn-sm ${filter===f?'btn-primary':''}" onclick="renderTasks('${f}')">${l}</button>`).join('')}
+      ${[['all','All'],['open','Open'],['urgent','Urgent']].map(([f,l])=>`<button class="btn btn-sm ${filter===f?'btn-primary':''}" onclick="renderTasks('${f}')">${l}</button>`).join('')}
     </div>
-    <button class="btn btn-primary" onclick="openM('task')"><i class="ti ti-plus"></i>Добавить</button>
+    <button class="btn btn-primary" onclick="openM('task')"><i class="ti ti-plus"></i>Add</button>
   </div>
   ${list.length?list.map(t=>`<div class="task-row">
     <div class="cb ${t.done?'done':''}" onclick="toggleTask('${t.id}',${!t.done})">${t.done?'<i class="ti ti-check" style="font-size:12px"></i>':''}</div>
@@ -1071,7 +1071,7 @@ function renderTasks(filter='all'){
       <span style="font-size:11px;color:var(--text-m)">${t.due||''}</span>
     </div>
     <div style="display:flex;gap:4px;margin-left:8px"><button class="btn btn-sm btn-ghost" onclick="openM('task','${t.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost" onclick="delRecord('tasks','${t.id}')"><i class="ti ti-trash"></i></button></div>
-  </div>`).join(''):`<div class="empty"><i class="ti ti-checkbox"></i><div class="empty-title">Нет задач</div></div>`}`;
+  </div>`).join(''):`<div class="empty"><i class="ti ti-checkbox"></i><div class="empty-title">No tasks</div></div>`}`;
 }
 
 async function toggleTask(id,done){
@@ -1099,32 +1099,32 @@ function renderReports(){
 
   $('content').innerHTML=`
   <div class="metrics" style="margin-bottom:20px">
-    <div class="metric"><div class="metric-label">Всего сделок</div><div class="metric-value">${db.deals.length}</div></div>
-    <div class="metric"><div class="metric-label">Конверсия</div><div class="metric-value">${convRate}%</div></div>
-    <div class="metric"><div class="metric-label">Выручка Won</div><div class="metric-value">${fmtUSD(db.deals.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0))}</div></div>
-    <div class="metric"><div class="metric-label">Средняя сделка</div><div class="metric-value">${fmtUSD(db.deals.length?Math.round(db.deals.reduce((s,d)=>s+d.amount,0)/db.deals.length):0)}</div></div>
+    <div class="metric"><div class="metric-label">Total Deals</div><div class="metric-value">${db.deals.length}</div></div>
+    <div class="metric"><div class="metric-label">Conversion</div><div class="metric-value">${convRate}%</div></div>
+    <div class="metric"><div class="metric-label">Revenue Won</div><div class="metric-value">${fmtUSD(db.deals.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0))}</div></div>
+    <div class="metric"><div class="metric-label">Avg. Deal Size</div><div class="metric-value">${fmtUSD(db.deals.length?Math.round(db.deals.reduce((s,d)=>s+d.amount,0)/db.deals.length):0)}</div></div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-bottom:18px">
-    <div class="card"><div class="card-title">Закрытые продажи по менеджерам</div>
+    <div class="card"><div class="card-title">Closed Sales by Manager</div>
       ${agentSales.map(a=>`<div class="bar-row"><div class="bar-label">${a.n.split(' ').slice(0,2).join(' ')}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(a.v/maxA*100)}%;background:#185FA5"></div></div><div class="bar-val">${a.v?'$'+Math.round(a.v/1000)+'K':'—'}</div></div>`).join('')}
     </div>
-    <div class="card"><div class="card-title">Воронка продаж</div>
-      <div style="position:relative;width:100%;height:${Math.max(STAGES.length*44+60,200)}px"><canvas id="funnelChart" role="img" aria-label="Воронка продаж по этапам">Данные воронки.</canvas></div>
+    <div class="card"><div class="card-title">Sales Funnel</div>
+      <div style="position:relative;width:100%;height:${Math.max(STAGES.length*44+60,200)}px"><canvas id="funnelChart" role="img" aria-label="Sales Funnel by stage">Funnel data.</canvas></div>
     </div>
   </div>
   <div class="card">
-    <div class="card-title">Конкурентный парк — потенциал замены</div>
-    ${brands.length?`<div style="position:relative;width:100%;height:${Math.max(brands.length*44+80,160)}px"><canvas id="compChart" role="img" aria-label="Конкурентные бренды в парках клиентов">Данные.</canvas></div>`:`<div class="empty" style="padding:24px"><i class="ti ti-chart-bar"></i>Нет данных о конкурентах</div>`}
+    <div class="card-title">Competitor Fleet — Replacement Potential</div>
+    ${brands.length?`<div style="position:relative;width:100%;height:${Math.max(brands.length*44+80,160)}px"><canvas id="compChart" role="img" aria-label="Competitor brands in client fleets">Data.</canvas></div>`:`<div class="empty" style="padding:24px"><i class="ti ti-chart-bar"></i>No competitor data</div>`}
   </div>`;
 
   setTimeout(()=>{
     if(charts.funnel)charts.funnel.destroy();
     const fCtx=$('funnelChart');
-    if(fCtx)charts.funnel=new Chart(fCtx,{type:'bar',data:{labels:stageCounts.map(x=>x.s),datasets:[{label:'Сделок',data:stageCounts.map(x=>x.cnt),backgroundColor:STAGES.map(s=>STAGE_COLOR[s]),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,color:'#6b7280'},grid:{color:'rgba(0,0,0,0.05)'}},y:{grid:{display:false},ticks:{color:'#6b7280'}}}}});
+    if(fCtx)charts.funnel=new Chart(fCtx,{type:'bar',data:{labels:stageCounts.map(x=>x.s),datasets:[{label:'Deals',data:stageCounts.map(x=>x.cnt),backgroundColor:STAGES.map(s=>STAGE_COLOR[s]),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,color:'#6b7280'},grid:{color:'rgba(0,0,0,0.05)'}},y:{grid:{display:false},ticks:{color:'#6b7280'}}}}});
     if(brands.length){
       if(charts.comp)charts.comp.destroy();
       const cCtx=$('compChart');
-      if(cCtx)charts.comp=new Chart(cCtx,{type:'bar',data:{labels:brands,datasets:[{label:'Единиц',data:brands.map(b=>brandCount[b]),backgroundColor:brands.map(b=>BRAND_C[b]||'#888'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,color:'#6b7280'},grid:{color:'rgba(0,0,0,0.05)'}},y:{grid:{display:false},ticks:{color:'#6b7280'}}}}});
+      if(cCtx)charts.comp=new Chart(cCtx,{type:'bar',data:{labels:brands,datasets:[{label:'Units',data:brands.map(b=>brandCount[b]),backgroundColor:brands.map(b=>BRAND_C[b]||'#888'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,color:'#6b7280'},grid:{color:'rgba(0,0,0,0.05)'}},y:{grid:{display:false},ticks:{color:'#6b7280'}}}}});
     }
   },100);
 }
@@ -1136,102 +1136,102 @@ function openM(type,id=null,coId=null,dealId=null){
   const sheet={company:'companies',contact:'contacts',deal:'deals',fleet:'fleet',task:'tasks',activity:'activities'}[type];
   const ex=id&&sheet?(db[sheet]||[]).find(x=>x.id===id):null;
   const e=ex||{};
-  const labels={company:'Компания',contact:'Контакт',deal:'Сделка',fleet:'Единица техники',task:'Задача',activity:'Активность',agent:'Продавец',user:'Пользователь'};
-  $('mtitle').textContent=(id?'Редактировать ':'Добавить ')+labels[type];
+  const labels={company:'Company',contact:'Contact',deal:'Deal',fleet:'Equipment Unit',task:'Task',activity:'Activity',agent:'Agent',user:'User'};
+  $('mtitle').textContent=(id?'Edit ':'Add ')+labels[type];
   $('mfoot').style.display='flex';
 
-  const coSel=()=>`<select class="fc" id="f-co"><option value="">-- выбери --</option>${db.companies.map(c=>`<option value="${c.id}" ${(ex&&ex.company_id===c.id)?'selected':''}>${c.name}</option>`).join('')}</select>`;
-  const coDL=()=>`<input class="fc" id="f-co-name" list="co-dl" value="${co?co.name:(ex?ex.company:'')}" placeholder="Название компании"><datalist id="co-dl">${db.companies.map(c=>`<option>${c.name}</option>`).join('')}</datalist>`;
+  const coSel=()=>`<select class="fc" id="f-co"><option value="">-- select --</option>${db.companies.map(c=>`<option value="${c.id}" ${(ex&&ex.company_id===c.id)?'selected':''}>${c.name}</option>`).join('')}</select>`;
+  const coDL=()=>`<input class="fc" id="f-co-name" list="co-dl" value="${co?co.name:(ex?ex.company:'')}" placeholder="Company namecompany name"><datalist id="co-dl">${db.companies.map(c=>`<option>${c.name}</option>`).join('')}</datalist>`;
 
   const bodies={
     company:`
-      <div class="fg"><label class="fl">Название *</label><input class="fc" id="f-name" value="${e.name||''}"></div>
+      <div class="fg"><label class="fl">Name *</label><input class="fc" id="f-name" value="${e.name||''}"></div>
       <div class="fr">
-        <div class="fg"><label class="fl">Отрасль</label><select class="fc" id="f-industry">${['','Горнодобывающая','Строительство','Дорожное строительство','Карьеры','Инфраструктура','Промышленность','Другое'].map(x=>`<option ${e.industry===x?'selected':''}>${x}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Статус</label><select class="fc" id="f-status">${['Активный','Потенциальный','Переговоры','Партнёр','Неактивный'].map(x=>`<option ${e.status===x?'selected':''}>${x}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Industry</label><select class="fc" id="f-industry">${['','Mining','Construction','Road Construction','Quarrying','Infrastructure','Industry','Other'].map(x=>`<option ${e.industry===x?'selected':''}>${x}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Status</label><select class="fc" id="f-status">${['Active','Prospect','Negotiating','Partner','Inactive'].map(x=>`<option ${e.status===x?'selected':''}>${x}</option>`).join('')}</select></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Город</label><input class="fc" id="f-city" list="armenia-cities" value="${e.city||''}" placeholder="Напр. Yerevan, Gyumri..."></div>
-        <div class="fg"><label class="fl">Страна</label><input class="fc" id="f-country" value="${e.country||'Armenia'}"></div>
+        <div class="fg"><label class="fl">City</label><input class="fc" id="f-city" list="armenia-cities" value="${e.city||''}" placeholder="E.g. Yerevan, Gyumri..."></div>
+        <div class="fg"><label class="fl">Country</label><input class="fc" id="f-country" value="${e.country||'Armenia'}"></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Категория клиента</label><select class="fc" id="f-category"><option value="">— не задана —</option>${Object.entries(CAT_RULES).map(([k,v])=>`<option value="${k}" ${e.category===k?'selected':''}>${v.label} (${v.desc})</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Закреплённый продавец</label><select class="fc" id="f-assigned">${[{name:'— не закреплён —',id:''},...db.agents].map(a=>`<option value="${a.name||''}" ${(e.assigned_agent||'')===(a.name||'')?'selected':''}>${a.name||'— не закреплён —'}</option>`).join('')}${db.agents.length===0?AGENTS().map(a=>`<option value="${a}" ${(e.assigned_agent||'')===a?'selected':''}>${a}</option>`).join(''):''}</select></div>
+        <div class="fg"><label class="fl">Client Category</label><select class="fc" id="f-category"><option value="">— not set —</option>${Object.entries(CAT_RULES).map(([k,v])=>`<option value="${k}" ${e.category===k?'selected':''}>${v.label} (${v.desc})</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Assigned Agent</label><select class="fc" id="f-assigned">${[{name:'— not assigned —',id:''},...db.agents].map(a=>`<option value="${a.name||''}" ${(e.assigned_agent||'')===(a.name||'')?'selected':''}>${a.name||'— not assigned —'}</option>`).join('')}${db.agents.length===0?AGENTS().map(a=>`<option value="${a}" ${(e.assigned_agent||'')===a?'selected':''}>${a}</option>`).join(''):''}</select></div>
       </div>
-      <div class="fg"><label class="fl">Сайт</label><input class="fc" id="f-website" value="${e.website||''}" placeholder="https://"></div>
-      <div class="fg"><label class="fl">Примечания</label><textarea class="fc" id="f-notes" rows="2">${e.notes||''}</textarea></div>`,
+      <div class="fg"><label class="fl">Website</label><input class="fc" id="f-website" value="${e.website||''}" placeholder="https://"></div>
+      <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="f-notes" rows="2">${e.notes||''}</textarea></div>`,
     contact:`
-      <div class="fg"><label class="fl">Компания *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coSel()}</div>
+      <div class="fg"><label class="fl">Company *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coSel()}</div>
       <div class="fr">
-        <div class="fg"><label class="fl">Имя *</label><input class="fc" id="f-fname" value="${e.first_name||''}"></div>
-        <div class="fg"><label class="fl">Фамилия *</label><input class="fc" id="f-lname" value="${e.last_name||''}"></div>
+        <div class="fg"><label class="fl">First Name *</label><input class="fc" id="f-fname" value="${e.first_name||''}"></div>
+        <div class="fg"><label class="fl">Last Name *</label><input class="fc" id="f-lname" value="${e.last_name||''}"></div>
       </div>
-      <div class="fg"><label class="fl">Должность</label><input class="fc" id="f-pos" value="${e.position||''}"></div>
+      <div class="fg"><label class="fl">Position</label><input class="fc" id="f-pos" value="${e.position||''}"></div>
       <div class="fr">
-        <div class="fg"><label class="fl">Телефон</label><input class="fc" id="f-phone" data-phone data-exclude-id="${id||''}" value="${e.phone||''}" placeholder="+374 XX XXX XXX"></div>
+        <div class="fg"><label class="fl">Phone</label><input class="fc" id="f-phone" data-phone data-exclude-id="${id||''}" value="${e.phone||''}" placeholder="+374 XX XXX XXX"></div>
         <div class="fg"><label class="fl">Email</label><input class="fc" id="f-email" data-email data-exclude-id="${id||''}" value="${e.email||''}" placeholder="example@company.com" autocomplete="email"></div>
       </div>
       <div id="dup-warn"></div>`,
     deal:`
-      <div class="fg"><label class="fl">Компания *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
+      <div class="fg"><label class="fl">Company *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
       <div class="fr">
-        <div class="fg"><label class="fl">Модель техники</label><input class="fc" id="f-model" list="mdl" value="${e.model||''}" placeholder="ZX470LC-6..."><datalist id="mdl">${['ZX85USB-6','ZX135US-6','ZX175LC-6','ZX210LC-6','ZX330LC-6','ZX350LCN-6','ZX470LC-6','ZX490LCH-6','ZX890LCH-6'].map(m=>`<option>${m}</option>`).join('')}</datalist></div>
-        <div class="fg"><label class="fl">Сумма</label><input class="fc" id="f-amount" type="number" value="${e.amount||''}"></div>
+        <div class="fg"><label class="fl">Equipment Model</label><input class="fc" id="f-model" list="mdl" value="${e.model||''}" placeholder="ZX470LC-6..."><datalist id="mdl">${['ZX85USB-6','ZX135US-6','ZX175LC-6','ZX210LC-6','ZX330LC-6','ZX350LCN-6','ZX470LC-6','ZX490LCH-6','ZX890LCH-6'].map(m=>`<option>${m}</option>`).join('')}</datalist></div>
+        <div class="fg"><label class="fl">Amount</label><input class="fc" id="f-amount" type="number" value="${e.amount||''}"></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Валюта</label><select class="fc" id="f-currency">${['USD','EUR','AMD','RUB'].map(c=>`<option ${(e.currency||'USD')===c?'selected':''}>${c}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Этап</label><select class="fc" id="f-stage">${['Lead','Qualified','Proposal','Negotiation','Won','Lost'].map(s=>`<option ${(e.stage||'Lead')===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Currency</label><select class="fc" id="f-currency">${['USD','EUR','AMD','RUB'].map(c=>`<option ${(e.currency||'USD')===c?'selected':''}>${c}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Stage</label><select class="fc" id="f-stage">${['Lead','Qualified','Proposal','Negotiation','Won','Lost'].map(s=>`<option ${(e.stage||'Lead')===s?'selected':''}>${s}</option>`).join('')}</select></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Менеджер</label><select class="fc" id="f-agent">${['А. Мартиросян','Г. Петросян','Н. Арутюнян','С. Саргсян','В. Акопян','Л. Мкртчян','К. Давтян','А. Карапетян','Р. Овсепян','Т. Григорян'].map(a=>`<option ${e.agent===a?'selected':''}>${a}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Дней в работе</label><input class="fc" id="f-days" type="number" value="${e.days||0}"></div>
+        <div class="fg"><label class="fl">Manager</label><select class="fc" id="f-agent">${['A. Martirosyan','G. Petrosyan','N. Harutyunyan','S. Sargsyan','V. Hakobyan','L. Mkrtchyan','K. Davtyan','A. Karapetyan','R. Hovsepyan','T. Grigoryan'].map(a=>`<option ${e.agent===a?'selected':''}>${a}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Days in Pipeline</label><input class="fc" id="f-days" type="number" value="${e.days||0}"></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Следующий шаг</label><input class="fc" id="f-next" value="${e.next_action||''}" placeholder="Отправить КП..."></div>
-        <div class="fg"><label class="fl">Дата</label><input class="fc" id="f-ndate" type="date" value="${e.next_date||''}"></div>
+        <div class="fg"><label class="fl">Next Action</label><input class="fc" id="f-next" value="${e.next_action||''}" placeholder="Send Proposal..."></div>
+        <div class="fg"><label class="fl">Date</label><input class="fc" id="f-ndate" type="date" value="${e.next_date||''}"></div>
       </div>`,
     fleet:`
-      <div class="fg"><label class="fl">Компания *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
+      <div class="fg"><label class="fl">Company *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
       <div class="fr">
-        <div class="fg"><label class="fl">Бренд *</label><select class="fc" id="f-brand">${['Hitachi','Caterpillar','Komatsu','Volvo','Liebherr','Doosan','John Deere','Hyundai','Sany','XCMG','Другое'].map(b=>`<option ${(e.brand||'Hitachi')===b?'selected':''}>${b}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Модель *</label><input class="fc" id="f-model" list="mdl2" value="${e.model||''}"><datalist id="mdl2">${['ZX85USB-6','ZX135US-6','ZX210LC-6','ZX330LC-6','ZX470LC-6','ZX890LCH-6'].map(m=>`<option>${m}</option>`).join('')}</datalist></div>
+        <div class="fg"><label class="fl">Brand *</label><select class="fc" id="f-brand">${['Hitachi','Caterpillar','Komatsu','Volvo','Liebherr','Doosan','John Deere','Hyundai','Sany','XCMG','Other'].map(b=>`<option ${(e.brand||'Hitachi')===b?'selected':''}>${b}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Model *</label><input class="fc" id="f-model" list="mdl2" value="${e.model||''}"><datalist id="mdl2">${['ZX85USB-6','ZX135US-6','ZX210LC-6','ZX330LC-6','ZX470LC-6','ZX890LCH-6'].map(m=>`<option>${m}</option>`).join('')}</datalist></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Тип</label><select class="fc" id="f-type">${['Экскаватор','Погрузчик','Бульдозер','Буровая установка','Самосвал','Компрессор','Кран','Грейдер'].map(t=>`<option ${e.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Год</label><input class="fc" id="f-year" type="number" min="2000" max="2026" value="${e.year||''}"></div>
+        <div class="fg"><label class="fl">Type</label><select class="fc" id="f-type">${['Excavator','Loader','Bulldozer','Drilling Rig','Dump Truck','Compressor','Crane','Grader'].map(t=>`<option ${e.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Year</label><input class="fc" id="f-year" type="number" min="2000" max="2026" value="${e.year||''}"></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Серийный №</label><input class="fc" id="f-serial" value="${e.serial||''}"></div>
-        <div class="fg"><label class="fl">Состояние</label><select class="fc" id="f-cond">${['Excellent','Good','Fair','Poor'].map(c=>`<option ${(e.condition||'Good')===c?'selected':''}>${c}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Serial No.</label><input class="fc" id="f-serial" value="${e.serial||''}"></div>
+        <div class="fg"><label class="fl">Condition</label><select class="fc" id="f-cond">${['Excellent','Good','Fair','Poor'].map(c=>`<option ${(e.condition||'Good')===c?'selected':''}>${c}</option>`).join('')}</select></div>
       </div>
-      <div class="fg"><label class="fl">Примечания</label><input class="fc" id="f-notes" value="${e.notes||''}" placeholder="Устаревает, под замену..."></div>`,
+      <div class="fg"><label class="fl">Notes</label><input class="fc" id="f-notes" value="${e.notes||''}" placeholder="Aging, due for replacement..."aging, for replacement..."></div>`,
     task:`
-      <div class="fg"><label class="fl">Задача *</label><input class="fc" id="f-title" value="${e.title||''}"></div>
-      <div class="fg"><label class="fl">Компания</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
+      <div class="fg"><label class="fl">Task *</label><input class="fc" id="f-title" value="${e.title||''}"></div>
+      <div class="fg"><label class="fl">Company</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
       <div class="fr">
-        <div class="fg"><label class="fl">Тип</label><select class="fc" id="f-type">${['Звонок','Встреча','Email','КП','Демонстрация','Документы','Другое'].map(t=>`<option ${e.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Приоритет</label><select class="fc" id="f-priority"><option ${e.priority==='high'?'selected':''} value="high">Срочный</option><option ${e.priority==='medium'?'selected':''} value="medium">Средний</option><option ${e.priority==='low'?'selected':''} value="low">Низкий</option></select></div>
+        <div class="fg"><label class="fl">Type</label><select class="fc" id="f-type">${['Call','Meeting','Email','Proposal','Demo','Documents','Other'].map(t=>`<option ${e.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Priority</label><select class="fc" id="f-priority"><option ${e.priority==='high'?'selected':''} value="high">High</option><option ${e.priority==='medium'?'selected':''} value="medium">Medium</option><option ${e.priority==='low'?'selected':''} value="low">Low</option></select></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Менеджер</label><select class="fc" id="f-agent">${['А. Мартиросян','Г. Петросян','Н. Арутюнян','С. Саргсян','В. Акопян','Л. Мкртчян','К. Давтян','А. Карапетян','Р. Овсепян','Т. Григорян'].map(a=>`<option ${e.agent===a?'selected':''}>${a}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Срок</label><input class="fc" id="f-due" type="date" value="${e.due||''}"></div>
+        <div class="fg"><label class="fl">Manager</label><select class="fc" id="f-agent">${['A. Martirosyan','G. Petrosyan','N. Harutyunyan','S. Sargsyan','V. Hakobyan','L. Mkrtchyan','K. Davtyan','A. Karapetyan','R. Hovsepyan','T. Grigoryan'].map(a=>`<option ${e.agent===a?'selected':''}>${a}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Due Date</label><input class="fc" id="f-due" type="date" value="${e.due||''}"></div>
       </div>`,
     user:`
-      <div class="fg"><label class="fl">Имя и фамилия *</label><input class="fc" id="f-name" value="${e.name||''}" placeholder="А. Иванов"></div>
-      <div class="fg"><label class="fl">Роль</label><select class="fc" id="f-role"><option value="rep" ${(e.role||'rep')==='rep'?'selected':''}>Sales Representative</option><option value="manager" ${e.role==='manager'?'selected':''}>Manager</option></select></div>
-      <div class="fg"><label class="fl">Пароль ${e.id?'(оставь пустым чтобы не менять)':'*'}</label><input class="fc" id="f-pass" type="password" placeholder="${e.id?'Новый пароль...':'Минимум 4 символа'}"></div>
-      <div class="fg"><label class="fl">Статус</label><select class="fc" id="f-active"><option value="true" ${String(e.active)!=='false'?'selected':''}>Активен</option><option value="false" ${String(e.active)==='false'?'selected':''}>Заблокирован</option></select></div>`,
+      <div class="fg"><label class="fl">Full Name *</label><input class="fc" id="f-name" value="${e.name||''}" placeholder="J. Smith"></div>
+      <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option value="rep" ${(e.role||'rep')==='rep'?'selected':''}>Sales Representative</option><option value="manager" ${e.role==='manager'?'selected':''}>Manager</option></select></div>
+      <div class="fg"><label class="fl">Password ${e.id?'(leave blank to keep unchanged)':'*'}</label><input class="fc" id="f-pass" type="password" placeholder="${e.id?'New password...':'Minimum 4 characters'}"></div>
+      <div class="fg"><label class="fl">Status</label><select class="fc" id="f-active"><option value="true" ${String(e.active)!=='false'?'selected':''}>Active</option><option value="false" ${String(e.active)==='false'?'selected':''}>Blocked</option></select></div>`,
     agent:`
-      <div class="fg"><label class="fl">Имя и фамилия *</label><input class="fc" id="f-name" value="${e.name||''}" placeholder="А. Иванов"></div>
+      <div class="fg"><label class="fl">Full Name *</label><input class="fc" id="f-name" value="${e.name||''}" placeholder="J. Smith"></div>
       <div class="fr">
-        <div class="fg"><label class="fl">Телефон</label><input class="fc" id="f-phone" data-phone value="${e.phone||''}" placeholder="+374 XX XXX XXX"></div>
+        <div class="fg"><label class="fl">Phone</label><input class="fc" id="f-phone" data-phone value="${e.phone||''}" placeholder="+374 XX XXX XXX"></div>
         <div class="fg"><label class="fl">Email</label><input class="fc" id="f-email" data-email value="${e.email||''}"></div>
       </div>
-      <div class="fg"><label class="fl">Роль</label><select class="fc" id="f-role"><option>Менеджер по продажам</option><option ${e.role==='Senior менеджер'?'selected':''}>Senior менеджер</option><option ${e.role==='Руководитель'?'selected':''}>Руководитель</option></select></div>`,
+      <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option>Sales Manager</option><option ${e.role==='Senior Manager'?'selected':''}>Senior Manager</option><option ${e.role==='Manager'?'selected':''}>Manager</option></select></div>`,
     activity:`
-      <div class="fg"><label class="fl">Тип</label><select class="fc" id="f-type">${['Звонок','Встреча','Email','КП','Демонстрация','Документы','Другое'].map(t=>`<option>${t}</option>`).join('')}</select></div>
-      <div class="fg"><label class="fl">Заметка</label><textarea class="fc" id="f-note" rows="3" placeholder="Что обсуждали, что решили..."></textarea></div>
-      <div class="fg"><label class="fl">Менеджер</label><select class="fc" id="f-agent">${['А. Мартиросян','Г. Петросян','Н. Арутюнян','С. Саргсян','В. Акопян','Л. Мкртчян','К. Давтян','А. Карапетян','Р. Овсепян','Т. Григорян'].map(a=>`<option>${a}</option>`).join('')}</select></div>`
+      <div class="fg"><label class="fl">Type</label><select class="fc" id="f-type">${['Call','Meeting','Email','Proposal','Demo','Documents','Other'].map(t=>`<option>${t}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">Note</label><textarea class="fc" id="f-note" rows="3" placeholder="What was discussed,what was discussed..."></textarea></div>
+      <div class="fg"><label class="fl">Manager</label><select class="fc" id="f-agent">${['A. Martirosyan','G. Petrosyan','N. Harutyunyan','S. Sargsyan','V. Hakobyan','L. Mkrtchyan','K. Davtyan','A. Karapetyan','R. Hovsepyan','T. Grigoryan'].map(a=>`<option>${a}</option>`).join('')}</select></div>`
   };
   $('mbody').innerHTML=bodies[type]||'';
   $('overlay').classList.add('open');
@@ -1258,10 +1258,10 @@ async function saveM(){
   if(saving)return;
   saving=true;
   const saveBtn=$('msave');
-  if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='Сохранение...';}
+  if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='Saving...';}
   try{ await _saveM(); }finally{
     saving=false;
-    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='Сохранить';}
+    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='Save';}
   }
 }
 async function _saveM(){
@@ -1270,54 +1270,54 @@ async function _saveM(){
   let row=ex?{...ex}:{};
 
   if(mtype==='company'){
-    const name=(g('f-name')||'').trim();if(!name)return alert('Введи название');
+    const name=(g('f-name')||'').trim();if(!name)return alert('Enter a name');
     row={...row,name,industry:g('f-industry'),status:g('f-status'),city:g('f-city'),country:g('f-country'),website:g('f-website'),notes:g('f-notes'),category:g('f-category')||'',assigned_agent:g('f-assigned')||'',created:row.created||new Date().toISOString().slice(0,10)};
     const s=await persist('companies',row);
     if(!eid)db.companies.push(s);else Object.assign(db.companies.find(x=>x.id===eid),s);
     updateCounts();renderCompanies();
   }else if(mtype==='contact'){
     const {id:coId,name:coName}=getCompanyFromForm();
-    const fname=(g('f-fname')||'').trim();if(!fname)return alert('Введи имя');
+    const fname=(g('f-fname')||'').trim();if(!fname)return alert('Enter a name');
     row={...row,company_id:coId,company:coName,first_name:fname,last_name:g('f-lname')||'',position:g('f-pos')||'',phone:g('f-phone')||'',email:g('f-email')||'',notes:g('f-notes')||'',created:row.created||new Date().toISOString().slice(0,10)};
     const s=await persist('contacts',row);
     if(!eid)db.contacts.push(s);else Object.assign(db.contacts.find(x=>x.id===eid),s);
     updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderContacts();
   }else if(mtype==='deal'){
     let {id:coId,name:coName}=getCompanyFromForm();
-    if(!coName)return alert('Укажи компанию');
-    if(!coId){const s=await persist('companies',{name:coName,status:'Потенциальный',created:new Date().toISOString().slice(0,10)});db.companies.push(s);coId=s.id;updateCounts();}
+    if(!coName)return alert('Select a company');
+    if(!coId){const s=await persist('companies',{name:coName,status:'Prospect',created:new Date().toISOString().slice(0,10)});db.companies.push(s);coId=s.id;updateCounts();}
     row={...row,company_id:coId,company:coName,model:g('f-model')||'',amount:Number(g('f-amount'))||0,currency:g('f-currency')||'USD',stage:g('f-stage')||'Lead',agent:g('f-agent')||'',next_action:g('f-next')||'',next_date:g('f-ndate')||'',days:Number(g('f-days'))||0,probability:{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[g('f-stage')]||0,created:row.created||new Date().toISOString().slice(0,10)};
     const s=await persist('deals',row);
     if(!eid)db.deals.push(s);else Object.assign(db.deals.find(x=>x.id===eid),s);
     updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderPipeline();
   }else if(mtype==='fleet'){
     let {id:coId,name:coName}=getCompanyFromForm();
-    if(!coName||!g('f-model'))return alert('Заполни компанию и модель');
-    if(!coId&&coName){const s=await persist('companies',{name:coName,status:'Потенциальный',created:new Date().toISOString().slice(0,10)});db.companies.push(s);coId=s.id;updateCounts();}
+    if(!coName||!g('f-model'))return alert('Fill in company and model');
+    if(!coId&&coName){const s=await persist('companies',{name:coName,status:'Prospect',created:new Date().toISOString().slice(0,10)});db.companies.push(s);coId=s.id;updateCounts();}
     row={...row,company_id:coId,company:coName,brand:g('f-brand')||'Hitachi',model:g('f-model'),type:g('f-type')||'',year:Number(g('f-year'))||0,serial:g('f-serial')||'',condition:g('f-cond')||'Good',notes:g('f-notes')||''};
     const s=await persist('fleet',row);
     if(!eid)db.fleet.push(s);else Object.assign(db.fleet.find(x=>x.id===eid),s);
     updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderFleet();
   }else if(mtype==='task'){
-    if(!g('f-title'))return alert('Введи задачу');
+    if(!g('f-title'))return alert('Enter a task');
     let {id:coId,name:coName}=getCompanyFromForm();
     row={...row,company_id:coId,company:coName,title:g('f-title'),type:g('f-type')||'',priority:g('f-priority')||'medium',agent:g('f-agent')||'',due:g('f-due')||'',done:row.done||false,created:row.created||new Date().toISOString().slice(0,10)};
     const s=await persist('tasks',row);
     if(!eid)db.tasks.push(s);else Object.assign(db.tasks.find(x=>x.id===eid),s);
     updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderTasks();
   }else if(mtype==='user'){
-    const uname=(g('f-name')||'').trim();if(!uname)return alert('Введи имя');
+    const uname=(g('f-name')||'').trim();if(!uname)return alert('Enter a name');
     const pass=g('f-pass')||'';
-    if(!eid&&pass.length<4)return alert('Пароль минимум 4 символа');
+    if(!eid&&pass.length<4)return alert('Password must be at least 4 characters');
     row={...row,name:uname,role:g('f-role')||'rep',active:g('f-active')||'true'};
     if(pass.length>=4)row.password_hash=simpleHash(pass);
-    else if(!eid)return alert('Введи пароль');
+    else if(!eid)return alert('Enter a password');
     const s=await persist('users',row);
     if(!eid)db.users.push(s);else Object.assign(db.users.find(x=>x.id===eid),s);
     renderUsers();
   }else if(mtype==='agent'){
-    const aname=(g('f-name')||'').trim();if(!aname)return alert('Введи имя');
-    row={...row,name:aname,phone:g('f-phone')||'',email:g('f-email')||'',role:g('f-role')||'Менеджер по продажам'};
+    const aname=(g('f-name')||'').trim();if(!aname)return alert('Enter a name');
+    row={...row,name:aname,phone:g('f-phone')||'',email:g('f-email')||'',role:g('f-role')||'Sales Manager'};
     const s=await persist('agents',row);
     if(!eid)db.agents.push(s);else Object.assign(db.agents.find(x=>x.id===eid),s);
     renderAgents();
@@ -1332,7 +1332,7 @@ async function _saveM(){
 }
 
 async function delRecord(sheet,id){
-  if(!confirm('Удалить запись?'))return;
+  if(!confirm('Delete this record?'))return;
   await remove(sheet,id);
   db[sheet]=db[sheet].filter(x=>x.id!==id);
   closeM();updateCounts();
@@ -1344,8 +1344,8 @@ function renderAgents(){
   const list=db.agents;
   $("content").innerHTML=`
   <div class="toolbar">
-    <div style="font-size:13px;color:var(--text-m)">Продавцы доступны всей команде в выпадающих списках по всей CRM.</div>
-    <button class="btn btn-primary" onclick="openM('agent')"><i class="ti ti-plus"></i>Добавить продавца</button>
+    <div style="font-size:13px;color:var(--text-m)">Agents are available to the entire team across all CRM dropdowns.</div>
+    <button class="btn btn-primary" onclick="openM('agent')"><i class="ti ti-plus"></i>Add Agent</button>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">
     ${list.length?list.map((a,i)=>{
@@ -1354,35 +1354,35 @@ function renderAgents(){
       return`<div class="card" style="padding:16px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
           <div class="av ${avC(i)}" style="width:42px;height:42px;font-size:15px">${ini(a.name)}</div>
-          <div><div style="font-weight:700;font-size:14px">${a.name}</div><div style="font-size:12px;color:var(--text-m)">${a.role||"Менеджер по продажам"}</div></div>
+          <div><div style="font-weight:700;font-size:14px">${a.name}</div><div style="font-size:12px;color:var(--text-m)">${a.role||"Sales Manager"}</div></div>
         </div>
         ${a.phone?`<div style="font-size:12px;color:var(--text-m);margin-bottom:4px"><i class="ti ti-phone" style="font-size:13px"></i> ${a.phone}</div>`:""}
         ${a.email?`<div style="font-size:12px;color:var(--blue);margin-bottom:10px">${a.email}</div>`:""}
         <div style="display:flex;gap:12px;font-size:12px;color:var(--text-m);padding-top:10px;border-top:1px solid var(--gray-100)">
-          <span><strong style="color:var(--text)">${dc}</strong> сделок</span>
-          ${wv?`<span><strong style="color:var(--green)">${fmtUSD(wv)}</strong> закрыто</span>`:""}
+          <span><strong style="color:var(--text)">${dc}</strong> deals</span>
+          ${wv?`<span><strong style="color:var(--green)">${fmtUSD(wv)}</strong> closed</span>`:""}
         </div>
         <div style="display:flex;gap:6px;margin-top:10px">
-          <button class="btn btn-xs" onclick="openM('agent','${a.id}')"><i class="ti ti-edit"></i>Изменить</button>
-          <button class="btn btn-xs btn-danger" onclick="delRecord('agents','${a.id}')"><i class="ti ti-trash"></i>Удалить</button>
+          <button class="btn btn-xs" onclick="openM('agent','${a.id}')"><i class="ti ti-edit"></i>Edit</button>
+          <button class="btn btn-xs btn-danger" onclick="delRecord('agents','${a.id}')"><i class="ti ti-trash"></i>Delete</button>
         </div>
       </div>`;
-    }).join(""):`<div style="grid-column:1/-1"><div class="empty"><i class="ti ti-users-group"></i><div class="empty-title">Нет продавцов</div><p style="margin-bottom:12px;color:var(--text-m)">Пока список пуст — используются продавцы по умолчанию.<br>Добавь команду чтобы управлять ею из CRM.</p><button class="btn btn-primary" onclick="openM('agent')"><i class="ti ti-plus"></i>Добавить первого продавца</button></div></div>`}
+    }).join(""):`<div style="grid-column:1/-1"><div class="empty"><i class="ti ti-users-group"></i><div class="empty-title">No agents</div><p style="margin-bottom:12px;color:var(--text-m)">No agents yet. Add agents to manage them from CRM.</p><button class="btn btn-primary" onclick="openM('agent')"><i class="ti ti-plus"></i>Add Agent</button></div></div>`}
   </div>`;
 }
 function globalSearch(q){
   if(!q||q.length<2){$('search-results')&&$('search-results').remove();return;}
   const ql=q.toLowerCase();
   const results=[];
-  db.companies.filter(c=>(c.name||'').toLowerCase().includes(ql)||(c.industry||'').toLowerCase().includes(ql)||(c.city||'').toLowerCase().includes(ql)).forEach(c=>results.push({type:'Компания',icon:'ti-building',label:c.name,sub:c.industry||'',action:`openCompanyDetail('${c.id}')`}));
-  db.contacts.filter(c=>((c.first_name||'')+' '+(c.last_name||'')).toLowerCase().includes(ql)||(c.phone||'').includes(q)||(c.email||'').toLowerCase().includes(ql)||(c.position||'').toLowerCase().includes(ql)).forEach(c=>results.push({type:'Контакт',icon:'ti-user',label:c.first_name+' '+c.last_name,sub:c.company||'',action:`openCompanyDetail('${c.company_id}')`}));
-  db.deals.filter(d=>(d.company||'').toLowerCase().includes(ql)||(d.model||'').toLowerCase().includes(ql)||(d.agent||'').toLowerCase().includes(ql)).forEach(d=>results.push({type:'Сделка',icon:'ti-versions',label:d.company+(d.model?' — '+d.model:''),sub:d.stage+' · '+fmtUSD(d.amount),action:`openDealDetail('${d.id}')`}));
-  db.fleet.filter(f=>(f.company||'').toLowerCase().includes(ql)||(f.brand||'').toLowerCase().includes(ql)||(f.model||'').toLowerCase().includes(ql)||(f.serial||'').toLowerCase().includes(ql)).forEach(f=>results.push({type:'Техника',icon:'ti-tractor',label:f.brand+' '+f.model,sub:f.company||'',action:`openCompanyDetail('${f.company_id}')`}));
+  db.companies.filter(c=>(c.name||'').toLowerCase().includes(ql)||(c.industry||'').toLowerCase().includes(ql)||(c.city||'').toLowerCase().includes(ql)).forEach(c=>results.push({type:'Company',icon:'ti-building',label:c.name,sub:c.industry||'',action:`openCompanyDetail('${c.id}')`}));
+  db.contacts.filter(c=>((c.first_name||'')+' '+(c.last_name||'')).toLowerCase().includes(ql)||(c.phone||'').includes(q)||(c.email||'').toLowerCase().includes(ql)||(c.position||'').toLowerCase().includes(ql)).forEach(c=>results.push({type:'Contact',icon:'ti-user',label:c.first_name+' '+c.last_name,sub:c.company||'',action:`openCompanyDetail('${c.company_id}')`}));
+  db.deals.filter(d=>(d.company||'').toLowerCase().includes(ql)||(d.model||'').toLowerCase().includes(ql)||(d.agent||'').toLowerCase().includes(ql)).forEach(d=>results.push({type:'Deal',icon:'ti-versions',label:d.company+(d.model?' — '+d.model:''),sub:d.stage+' · '+fmtUSD(d.amount),action:`openDealDetail('${d.id}')`}));
+  db.fleet.filter(f=>(f.company||'').toLowerCase().includes(ql)||(f.brand||'').toLowerCase().includes(ql)||(f.model||'').toLowerCase().includes(ql)||(f.serial||'').toLowerCase().includes(ql)).forEach(f=>results.push({type:'Equipment',icon:'ti-tractor',label:f.brand+' '+f.model,sub:f.company||'',action:`openCompanyDetail('${f.company_id}')`}));
 
   let el=$('search-results');
   if(!el){el=document.createElement('div');el.id='search-results';el.style.cssText='position:fixed;top:54px;left:224px;right:0;background:var(--sur);border-bottom:1px solid var(--bdr);box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:200;max-height:420px;overflow-y:auto';document.body.appendChild(el);}
-  if(!results.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text-m);font-size:13px">Ничего не найдено</div>';return;}
-  const typeColors={Компания:'b-blue',Контакт:'b-purple',Сделка:'b-amber',Техника:'b-teal'};
+  if(!results.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--text-m);font-size:13px">Nothing found</div>';return;}
+  const typeColors={Company:'b-blue',Contact:'b-purple',Deal:'b-amber',Equipment:'b-teal'};
   el.innerHTML=results.slice(0,12).map(r=>`<div style="display:flex;align-items:center;gap:12px;padding:11px 20px;border-bottom:1px solid var(--gray-100);cursor:pointer" onmousedown="${r.action};closeSearch()">
     <i class="ti ${r.icon}" style="font-size:18px;color:var(--text-m);width:20px;text-align:center"></i>
     <div style="flex:1"><div style="font-weight:600;font-size:13px">${r.label}</div><div style="font-size:12px;color:var(--text-m)">${r.sub}</div></div>
@@ -1390,7 +1390,7 @@ function globalSearch(q){
   </div>`).join('');
 }
 async function dedupContacts(){
-  if(!confirm('Удалить дублирующиеся контакты? Останется только первый экземпляр каждого.'))return;
+  if(!confirm('Delete duplicate contacts? Only the first instance will be kept.'))return;
   const seen=new Set();
   const toDelete=[];
   db.contacts.forEach(c=>{
@@ -1424,16 +1424,16 @@ function getVisitDates(category, year){
 
 async function generateVisitPlan(){
   const cats=db.companies.filter(c=>c.category&&CAT_RULES[c.category]);
-  if(!cats.length){alert('Нет компаний с категорией A/B/C/D. Сначала задай категории.');return;}
+  if(!cats.length){alert('No companies with A/B/C/D category. Set categories first.');return;}
   const year=new Date().getFullYear();
   let added=0;
   for(const co of cats){
     const dates=getVisitDates(co.category,year);
     for(const d of dates){
       const due=d.toISOString().slice(0,10);
-      const exists=db.tasks.find(t=>t.company_id===co.id&&t.due===due&&(t.type==='Звонок'||t.type==='Встреча'));
+      const exists=db.tasks.find(t=>t.company_id===co.id&&t.due===due&&(t.type==='Call'||t.type==='Meeting'));
       if(!exists){
-        const taskType=co.category==='A'?'Звонок':'Встреча';
+        const taskType=co.category==='A'?'Call':'Meeting';
         const row={company_id:co.id,company:co.name,title:`${CAT_RULES[co.category].desc}: ${co.name}`,type:taskType,priority:co.category==='A'?'high':co.category==='B'?'medium':'low',agent:co.assigned_agent||'',due,done:false,created:new Date().toISOString().slice(0,10)};
         const saved=await persist('tasks',row);
         db.tasks.push({...saved,done:false});
@@ -1442,77 +1442,18 @@ async function generateVisitPlan(){
     }
   }
   updateCounts();
-  alert(`Готово! Добавлено ${added} задач в план на ${year}.`);
+  alert(`Done! Added ${added} visits to the plan for ${year}.`);
   renderCalendar();
 }
 
 let calYear=new Date().getFullYear();
 let calAgent='all';
 
-function renderCalendar(){
-  const agents=['all',...new Set([...db.tasks.filter(t=>t.agent).map(t=>t.agent),...db.companies.filter(c=>c.assigned_agent).map(c=>c.assigned_agent)])].filter(Boolean);
-  const months=['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
-  const visitTasks=db.tasks.filter(t=>(t.type==='Звонок'||t.type==='Встреча')&&!t.done);
-  const filtered=calAgent==='all'?visitTasks:visitTasks.filter(t=>t.agent===calAgent);
-
-  // Group by month
-  const byMonth={};
-  for(let m=0;m<12;m++)byMonth[m]=[];
-  filtered.forEach(t=>{
-    if(!t.due)return;
-    const d=new Date(t.due);
-    if(d.getFullYear()===calYear)byMonth[d.getMonth()].push(t);
-  });
-
-  const catColors={A:'#b91c1c',B:'#b45309',C:'#1d4ed8',D:'#6b7280'};
-
-  $('content').innerHTML=`
-  <div style="display:flex;gap:12px;align-items:center;margin-bottom:18px;flex-wrap:wrap">
-    <div style="display:flex;gap:6px;align-items:center">
-      <button class="btn btn-sm" onclick="calYear--;renderCalendar()"><i class="ti ti-chevron-left"></i></button>
-      <span style="font-size:16px;font-weight:700;min-width:60px;text-align:center">${calYear}</span>
-      <button class="btn btn-sm" onclick="calYear++;renderCalendar()"><i class="ti ti-chevron-right"></i></button>
-    </div>
-    <select class="fc" style="width:200px;padding:6px 10px" onchange="calAgent=this.value;renderCalendar()">
-      <option value="all" ${calAgent==='all'?'selected':''}>Все продавцы</option>
-      ${agents.filter(a=>a!=='all').map(a=>`<option value="${a}" ${calAgent===a?'selected':''}>${a}</option>`).join('')}
-    </select>
-    <div style="display:flex;gap:8px;align-items:center;font-size:12px;flex-wrap:wrap">
-      ${Object.entries(CAT_RULES).map(([k,v])=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:${v.color};display:inline-block"></span>Кат. ${k}: ${v.desc}</span>`).join('')}
-    </div>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px">
-    ${months.map((mname,mi)=>{
-      const tasks=byMonth[mi];
-      const now=new Date();
-      const isPast=calYear<now.getFullYear()||(calYear===now.getFullYear()&&mi<now.getMonth());
-      return`<div class="card" style="padding:14px;${isPast?'opacity:.6':''}">
-        <div style="font-weight:700;font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">
-          <span>${mname} ${calYear}</span>
-          <span style="font-size:11px;font-weight:400;color:var(--text-m)">${tasks.length} визитов</span>
-        </div>
-        ${tasks.length?tasks.sort((a,b)=>a.due>b.due?1:-1).map(t=>{
-          const co=db.companies.find(c=>c.id===t.company_id);
-          const cat=co?.category||'';
-          const catColor=catColors[cat]||'var(--text-m)';
-          return`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="openCompanyDetail('${t.company_id||''}')">
-            <div style="width:4px;height:36px;border-radius:2px;background:${catColor};flex-shrink:0"></div>
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.company}</div>
-              <div style="font-size:11px;color:var(--text-m)">${t.type} · ${t.agent||'—'} · ${t.due}</div>
-            </div>
-            <span style="font-size:10px;font-weight:700;color:${catColor};background:${cat&&CAT_RULES[cat]?CAT_RULES[cat].bg:'#f3f4f6'};padding:2px 6px;border-radius:4px">${cat||'?'}</span>
-          </div>`;
-        }).join(''):`<div style="text-align:center;padding:16px;color:var(--text-l);font-size:12px"><i class="ti ti-calendar-off" style="font-size:20px;display:block;margin-bottom:4px"></i>Нет визитов</div>`}
-      </div>`;
-    }).join('')}
-  </div>`;
-}
-
 // ─── Auto-scheduler ────────────────────────────────────────────────────────
 async function autoSchedule(companyId, companyName, category, agent, deleteOld=false){
   const cat=CO_CATEGORIES[category];
-  if(!cat||!agent||agent==='— не назначен —')return;
+  if(!cat)return;
+  const effectiveAgent=agent&&agent!=='— not assigned —'?agent:(currentUser?.name||'M. Kalashnikov');
   // Delete existing auto-scheduled tasks for this company
   if(deleteOld){
     const old=db.tasks.filter(t=>t.company_id===companyId&&t.auto_scheduled==='true'&&!t.done);
@@ -1526,7 +1467,7 @@ async function autoSchedule(companyId, companyName, category, agent, deleteOld=f
   d.setMonth(d.getMonth()+cat.months);
   while(d<=new Date(now.getFullYear()+1,now.getMonth(),now.getDate())){
     const due=d.toISOString().slice(0,10);
-    const row={company_id:companyId,company:companyName,title:'Контакт с '+companyName+' (кат. '+category+')',type:'Звонок',priority:category==='A'?'high':category==='B'?'medium':'low',agent,due,done:false,auto_scheduled:'true',created};
+    const row={company_id:companyId,company:companyName,title:'Contact with '+companyName+' (cat. '+category+')',type:'Call',priority:category==='A'?'high':category==='B'?'medium':'low',agent:effectiveAgent,due,done:false,auto_scheduled:'true',created};
     const saved=await persist('tasks',row);
     db.tasks.push(saved);
     newTasks.push(saved);
@@ -1538,11 +1479,14 @@ async function autoSchedule(companyId, companyName, category, agent, deleteOld=f
 }
 
 async function scheduleAllCompanies(){
-  const withCat=db.companies.filter(c=>c.category&&c.assigned_agent&&c.assigned_agent!=='— не назначен —');
-  if(!withCat.length){alert('Нет компаний с категорией и ответственным менеджером');return;}
-  if(!confirm(`Пересоздать расписание для ${withCat.length} компаний?`))return;
-  for(const c of withCat)await autoSchedule(c.id,c.name,c.category,c.assigned_agent,true);
-  alert('Расписание обновлено!');
+  const withCat=db.companies.filter(c=>c.category&&CO_CATEGORIES[c.category]);
+  if(!withCat.length){alert('No companies with A/B/C/D category. Set a category in the company card.');return;}
+  if(!confirm(`Create/update schedule for ${withCat.length} companies?`))return;
+  for(const c of withCat){
+    const agent=c.assigned_agent&&c.assigned_agent!=='— not assigned —'?c.assigned_agent:(currentUser?.name||'');
+    await autoSchedule(c.id,c.name,c.category,agent,true);
+  }
+  alert('Schedule updated!');
   renderCalendar();
 }
 
@@ -1551,10 +1495,10 @@ function renderCalendar(){
   const $tr=$('topbar-right');
   $tr.innerHTML=`
     <select class="btn" id="cal-agent-filter" onchange="renderCalendar()">
-      <option value="">Все менеджеры</option>
+      <option value="">All Managers</option>
       ${AGENTS().map(a=>`<option>${a}</option>`).join('')}
     </select>
-    <button class="btn" onclick="scheduleAllCompanies()"><i class="ti ti-refresh"></i>Обновить расписание</button>`;
+    <button class="btn" onclick="scheduleAllCompanies()"><i class="ti ti-refresh"></i>Update Schedule</button>`;
 
   const agentFilter=document.getElementById('cal-agent-filter')?.value||'';
   const now=new Date();
@@ -1576,8 +1520,8 @@ function renderCalendar(){
 
   $('content').innerHTML=`
   <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
-    <div class="metric" style="padding:12px 16px;margin:0"><div class="metric-label">Запланировано контактов</div><div class="metric-value">${totalSched}</div><div class="metric-sub">на 12 месяцев вперёд</div></div>
-    <div class="metric" style="padding:12px 16px;margin:0;flex:1"><div class="metric-label">Как работает планировщик</div>
+    <div class="metric" style="padding:12px 16px;margin:0"><div class="metric-label">Scheduled Contacts</div><div class="metric-value">${totalSched}</div><div class="metric-sub">for the next 12 months</div></div>
+    <div class="metric" style="padding:12px 16px;margin:0;flex:1"><div class="metric-label">How the scheduler works</div>
       <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
         ${Object.entries(CO_CATEGORIES).map(([k,v])=>`<span class="cat-badge cat-${k}" style="width:auto;padding:4px 10px;border-radius:20px;font-size:12px">${k} — ${v.desc}</span>`).join('')}
       </div>
@@ -1585,9 +1529,9 @@ function renderCalendar(){
   </div>
   ${totalSched===0?`<div class="card" style="text-align:center;padding:40px">
     <i class="ti ti-calendar" style="font-size:48px;color:var(--gray-300);display:block;margin-bottom:16px"></i>
-    <div style="font-size:16px;font-weight:700;margin-bottom:8px">Расписание пустое</div>
-    <div style="font-size:14px;color:var(--text-m);margin-bottom:20px">Назначь компаниям категорию (A/B/C/D) и ответственного менеджера,<br>затем нажми «Обновить расписание»</div>
-    <button class="btn btn-primary" onclick="scheduleAllCompanies()"><i class="ti ti-refresh"></i>Создать расписание</button>
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px">Schedule is empty</div>
+    <div style="font-size:14px;color:var(--text-m);margin-bottom:20px">Assign companies a category (A/B/C/D) and a responsible manager,<br>then click «Update Schedule»</div>
+    <button class="btn btn-primary" onclick="scheduleAllCompanies()"><i class="ti ti-refresh"></i>Create Schedule</button>
   </div>`:`
   <div class="cal-grid">
     ${months.map(({year,month,label})=>{
@@ -1599,7 +1543,7 @@ function renderCalendar(){
       return`<div class="cal-month">
         <div class="cal-month-head ${isCurrent?'current':isPast?'past':''}">
           <span>${label}</span>
-          ${mTasks.length?`<span style="font-size:11px;opacity:.8">${mTasks.length} конт.</span>`:''}
+          ${mTasks.length?`<span style="font-size:11px;opacity:.8">${mTasks.length} cont.</span>`:''}
         </div>
         ${mTasks.length?mTasks.map(t=>{
           const co=db.companies.find(c=>c.id===t.company_id);
@@ -1614,7 +1558,7 @@ function renderCalendar(){
               ${t.done?'<i class="ti ti-check" style="font-size:10px"></i>':''}
             </div>
           </div>`;
-        }).join(''):`<div class="cal-empty">Нет контактов</div>`}
+        }).join(''):`<div class="cal-empty">No contacts</div>`}
       </div>`;
     }).join('')}
   </div>`}`;
@@ -1625,16 +1569,16 @@ function renderCalendar(){
 function renderParts(){
   $('topbar-right').innerHTML=`
     <select class="btn" id="parts-co-filter" onchange="renderParts()">
-      <option value="">Все компании</option>
+      <option value="">All Companies</option>
       ${db.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
     </select>
-    <button class="btn btn-primary" onclick="exportPartsExcel()"><i class="ti ti-download"></i>Экспорт в Excel</button>`;
+    <button class="btn btn-primary" onclick="exportPartsExcel()"><i class="ti ti-download"></i>Export to Excel</button>`;
 
   const coFilter=document.getElementById('parts-co-filter')?.value||'';
   const hitachiFleet=db.fleet.filter(u=>u.brand==='Hitachi'&&(!coFilter||u.company_id===coFilter));
 
   if(!hitachiFleet.length){
-    $('content').innerHTML=`<div class="empty" style="padding:60px"><i class="ti ti-tool"></i><div class="empty-title">Нет техники Hitachi в парке</div><div style="color:var(--text-m)">Добавь технику в раздел "Парк техники" чтобы видеть прогноз по запчастям</div></div>`;
+    $('content').innerHTML=`<div class="empty" style="padding:60px"><i class="ti ti-tool"></i><div class="empty-title">No Hitachi equipment in fleet</div><div style="color:var(--text-m)">Add equipment in the "Fleet" section to see the parts forecast</div></div>`;
     return;
   }
 
@@ -1645,9 +1589,9 @@ function renderParts(){
     if(!catalog)return;
     const co=db.companies.find(c=>c.id===unit.company_id);
     const ind=(co?.industry||'').toLowerCase();
-    const annualH=ind.includes('горн')||ind.includes('mining')?ANNUAL_HOURS.mining:
-                  ind.includes('карь')||ind.includes('quarr')?ANNUAL_HOURS.quarry:
-                  ind.includes('дорог')||ind.includes('road')?ANNUAL_HOURS.road:ANNUAL_HOURS.default;
+    const annualH=ind.includes('mining')||ind.includes('горн')?ANNUAL_HOURS.mining:
+                  ind.includes('quarry')||ind.includes('карь')?ANNUAL_HOURS.quarry:
+                  ind.includes('road')||ind.includes('дорог')?ANNUAL_HOURS.road:ANNUAL_HOURS.default;
     catalog.forEach(p=>{
       const timesPerYear=annualH/p.interval_h;
       const qtyPerYear=Math.ceil(timesPerYear*p.qty);
@@ -1677,26 +1621,26 @@ function renderParts(){
 
   $('content').innerHTML=`
   <div class="metrics" style="margin-bottom:20px">
-    <div class="metric"><div class="metric-label">Единиц Hitachi</div><div class="metric-value">${hitachiFleet.length}</div></div>
-    <div class="metric"><div class="metric-label">Прогноз запчастей/год</div><div class="metric-value">$${Math.round(grandTotal/1000)}K</div><div class="metric-sub">по всему парку</div></div>
-    <div class="metric"><div class="metric-label">Средний расход/ед.</div><div class="metric-value">$${hitachiFleet.length?Math.round(grandTotal/hitachiFleet.length/1000)+'K':'—'}</div><div class="metric-sub">в год</div></div>
-    <div class="metric"><div class="metric-label">Потенциал продаж</div><div class="metric-value" style="color:var(--green)">$${Math.round(grandTotal/1000)}K</div><div class="metric-sub">ежегодный</div></div>
+    <div class="metric"><div class="metric-label">Hitachi Units</div><div class="metric-value">${hitachiFleet.length}</div></div>
+    <div class="metric"><div class="metric-label">Parts forecast/yr</div><div class="metric-value">$${Math.round(grandTotal/1000)}K</div><div class="metric-sub">across entire fleet</div></div>
+    <div class="metric"><div class="metric-label">Avg. cost/unit</div><div class="metric-value">$${hitachiFleet.length?Math.round(grandTotal/hitachiFleet.length/1000)+'K':'—'}</div><div class="metric-sub">per year</div></div>
+    <div class="metric"><div class="metric-label">Sales Potential</div><div class="metric-value" style="color:var(--green)">$${Math.round(grandTotal/1000)}K</div><div class="metric-sub">annual</div></div>
   </div>
   ${Object.values(byCompany).sort((a,b)=>b.total-a.total).map(co=>`
   <div class="card" style="margin-bottom:16px">
     <div class="card-title" style="cursor:pointer" onclick="openCompanyDetail('${co.id}')">
       <span style="color:var(--blue)">${co.name}</span>
-      <span style="font-size:14px;font-weight:800;color:var(--green)">$${Math.round(co.total).toLocaleString()}/год</span>
+      <span style="font-size:14px;font-weight:800;color:var(--green)">$${Math.round(co.total).toLocaleString()}/yr</span>
     </div>
     ${Object.values(co.models).map(m=>`
     <div style="margin-bottom:16px">
       <div style="font-size:13px;font-weight:700;color:var(--text);padding:8px 0;border-bottom:2px solid var(--blue-lt);margin-bottom:8px;display:flex;justify-content:space-between">
-        <span><i class="ti ti-tractor" style="color:var(--blue);margin-right:6px"></i>${m.model} · S/N ${m.serial} · ${m.year}г.</span>
-        <span style="color:var(--green)">$${Math.round(m.total).toLocaleString()}/год</span>
+        <span><i class="ti ti-tractor" style="color:var(--blue);margin-right:6px"></i>${m.model} · S/N ${m.serial} · ${m.year}yr.</span>
+        <span style="color:var(--green)">$${Math.round(m.total).toLocaleString()}/yr</span>
       </div>
       <div class="tbl-wrap">
       <table class="tbl">
-        <thead><tr><th>Запчасть</th><th>Артикул</th><th>Интервал (м/ч)</th><th>Раз в год</th><th>Кол-во/год</th><th>Ед.</th><th>Цена</th><th>Итого/год</th></tr></thead>
+        <thead><tr><th>Part</th><th>Part No.</th><th>Interval (h)</th><th>Annually</th><th>Qty/yr</th><th>Unit</th><th>Price</th><th>Total/yr</th></tr></thead>
         <tbody>${m.parts.sort((a,b)=>b.total_usd-a.total_usd).map(p=>`<tr>
           <td style="font-weight:500">${p.part}</td>
           <td style="font-family:monospace;font-size:12px;color:var(--text-m)">${p.code}</td>
@@ -1715,12 +1659,12 @@ function renderParts(){
 function exportPartsExcel(){
   const coFilter=document.getElementById('parts-co-filter')?.value||'';
   const hitachiFleet=db.fleet.filter(u=>u.brand==='Hitachi'&&(!coFilter||u.company_id===coFilter));
-  const csvRows=[['Компания','Модель','Серийный №','Год','Запчасть','Артикул','Интервал м/ч','Раз в год','Кол-во/год','Ед.','Цена USD','Итого USD/год']];
+  const csvRows=[['Company','Model','Serial No.','Year','Part','Part No.','Interval h','Annually','Qty/yr','Unit','Price USD','Total USD/yr']];
   hitachiFleet.forEach(unit=>{
     const catalog=PARTS_CATALOG[unit.model];if(!catalog)return;
     const co=db.companies.find(c=>c.id===unit.company_id);
     const ind=(co?.industry||'').toLowerCase();
-    const annualH=ind.includes('горн')?ANNUAL_HOURS.mining:ind.includes('карь')?ANNUAL_HOURS.quarry:ANNUAL_HOURS.default;
+    const annualH=ind.includes('mining')||ind.includes('горн')?ANNUAL_HOURS.mining:ind.includes('quarry')||ind.includes('карь')?ANNUAL_HOURS.quarry:ANNUAL_HOURS.default;
     catalog.forEach(p=>{
       const tpy=annualH/p.interval_h;
       const qty=Math.ceil(tpy*p.qty);
@@ -1738,48 +1682,48 @@ function renderOperations(){
   $('content').innerHTML=`
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
     <div class="card">
-      <div class="card-title"><i class="ti ti-upload" style="color:var(--blue);margin-right:8px"></i>Импорт компаний из Excel/CSV</div>
+      <div class="card-title"><i class="ti ti-upload" style="color:var(--blue);margin-right:8px"></i>Import Companies from Excel/CSV</div>
       <div style="font-size:13px;color:var(--text-m);margin-bottom:16px;line-height:1.6">
-        Загрузи файл Excel или CSV со списком компаний.<br>
-        Колонки: <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px">Название, Отрасль, Город, Телефон, Email, Статус</code>
+        Upload an Excel or CSV file with company list.<br>
+        Columns: <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px">Name, Industry, City, Phone, Email, Status</code>
       </div>
       <div style="border:2px dashed var(--bdr);border-radius:var(--r);padding:28px;text-align:center;margin-bottom:12px" id="drop-zone" ondragover="event.preventDefault()" ondrop="handleDrop(event,'companies')">
         <i class="ti ti-file-spreadsheet" style="font-size:36px;color:var(--gray-300);display:block;margin-bottom:10px"></i>
-        <div style="font-size:13px;color:var(--text-m);margin-bottom:12px">Перетащи файл сюда или нажми кнопку</div>
+        <div style="font-size:13px;color:var(--text-m);margin-bottom:12px">Drop file here or click</div>
         <input type="file" id="import-co-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFile(this,'companies')">
-        <button class="btn btn-primary" onclick="document.getElementById('import-co-file').click()"><i class="ti ti-upload"></i>Выбрать файл</button>
+        <button class="btn btn-primary" onclick="document.getElementById('import-co-file').click()"><i class="ti ti-upload"></i>Choose File</button>
       </div>
-      <div style="font-size:12px;color:var(--text-m)">Поддерживаются: CSV (UTF-8), Excel (.xlsx, .xls)</div>
+      <div style="font-size:12px;color:var(--text-m)">Supported: CSV (UTF-8), Excel (.xlsx, .xls)</div>
       <div id="import-co-result" style="margin-top:10px"></div>
     </div>
 
     <div class="card">
-      <div class="card-title"><i class="ti ti-upload" style="color:var(--purple);margin-right:8px"></i>Импорт парка техники из Excel/CSV</div>
+      <div class="card-title"><i class="ti ti-upload" style="color:var(--purple);margin-right:8px"></i>Import Fleet from Excel/CSV</div>
       <div style="font-size:13px;color:var(--text-m);margin-bottom:16px;line-height:1.6">
-        Загрузи файл со списком техники клиентов.<br>
-        Колонки: <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px">Компания, Бренд, Модель, Тип, Год, Серийный №, Состояние</code>
+        Upload a file with client equipment list.<br>
+        Columns: <code style="background:var(--gray-100);padding:2px 6px;border-radius:4px">Company, Brand, Model, Type, Year, Serial No., Condition</code>
       </div>
       <div style="border:2px dashed var(--bdr);border-radius:var(--r);padding:28px;text-align:center;margin-bottom:12px" ondragover="event.preventDefault()" ondrop="handleDrop(event,'fleet')">
         <i class="ti ti-tractor" style="font-size:36px;color:var(--gray-300);display:block;margin-bottom:10px"></i>
-        <div style="font-size:13px;color:var(--text-m);margin-bottom:12px">Перетащи файл сюда или нажми кнопку</div>
+        <div style="font-size:13px;color:var(--text-m);margin-bottom:12px">Drop file here or click</div>
         <input type="file" id="import-fleet-file" accept=".csv,.xlsx,.xls" style="display:none" onchange="importFile(this,'fleet')">
-        <button class="btn btn-primary" onclick="document.getElementById('import-fleet-file').click()"><i class="ti ti-upload"></i>Выбрать файл</button>
+        <button class="btn btn-primary" onclick="document.getElementById('import-fleet-file').click()"><i class="ti ti-upload"></i>Choose File</button>
       </div>
-      <div style="font-size:12px;color:var(--text-m)">Компании создаются автоматически если не существуют</div>
+      <div style="font-size:12px;color:var(--text-m)">Companies are created automatically if they do not exist</div>
       <div id="import-fleet-result" style="margin-top:10px"></div>
     </div>
   </div>
 
   <div class="card" style="margin-bottom:18px">
-    <div class="card-title"><i class="ti ti-download" style="color:var(--green);margin-right:8px"></i>Экспорт данных</div>
+    <div class="card-title"><i class="ti ti-download" style="color:var(--green);margin-right:8px"></i>Export Data</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
       ${[
-        {label:'Компании',icon:'ti-building',fn:'exportCSV("companies")',color:'blue'},
-        {label:'Контакты',icon:'ti-users',fn:'exportCSV("contacts")',color:'purple'},
-        {label:'Сделки (Pipeline)',icon:'ti-versions',fn:'exportCSV("deals")',color:'amber'},
-        {label:'Парк техники',icon:'ti-tractor',fn:'exportCSV("fleet")',color:'teal'},
-        {label:'Задачи',icon:'ti-checkbox',fn:'exportCSV("tasks")',color:'gray'},
-        {label:'Прогноз запчастей',icon:'ti-tool',fn:'exportPartsExcel()',color:'green'},
+        {label:'Companies',icon:'ti-building',fn:'exportCSV("companies")',color:'blue'},
+        {label:'Contacts',icon:'ti-users',fn:'exportCSV("contacts")',color:'purple'},
+        {label:'Deals (Pipeline)',icon:'ti-versions',fn:'exportCSV("deals")',color:'amber'},
+        {label:'Fleet',icon:'ti-tractor',fn:'exportCSV("fleet")',color:'teal'},
+        {label:'Tasks',icon:'ti-checkbox',fn:'exportCSV("tasks")',color:'gray'},
+        {label:'Parts forecast',icon:'ti-tool',fn:'exportPartsExcel()',color:'green'},
       ].map(b=>`<button class="btn" style="justify-content:flex-start;gap:10px;padding:12px 16px" onclick="${b.fn}">
         <i class="ti ${b.icon}" style="font-size:18px;color:var(--${b.color})"></i>
         <span>${b.label}</span>
@@ -1789,10 +1733,10 @@ function renderOperations(){
   </div>
 
   <div class="card">
-    <div class="card-title"><i class="ti ti-info-circle" style="color:var(--amber);margin-right:8px"></i>Шаблоны для импорта</div>
+    <div class="card-title"><i class="ti ti-info-circle" style="color:var(--amber);margin-right:8px"></i>Import Templates</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <button class="btn" onclick="downloadTemplate('companies')"><i class="ti ti-file-spreadsheet"></i>Шаблон компаний</button>
-      <button class="btn" onclick="downloadTemplate('fleet')"><i class="ti ti-file-spreadsheet"></i>Шаблон парка техники</button>
+      <button class="btn" onclick="downloadTemplate('companies')"><i class="ti ti-file-spreadsheet"></i>Company Template</button>
+      <button class="btn" onclick="downloadTemplate('fleet')"><i class="ti ti-file-spreadsheet"></i>Fleet Template</button>
     </div>
   </div>`;
 }
@@ -1802,11 +1746,11 @@ function importFile(input,type){if(input.files[0])processImportFile(input.files[
 
 async function processImportFile(file,type){
   const resultEl=$(type==='companies'?'import-co-result':'import-fleet-result');
-  resultEl.innerHTML=`<div style="color:var(--text-m);font-size:13px">⏳ Обработка файла...</div>`;
+  resultEl.innerHTML=`<div style="color:var(--text-m);font-size:13px">⏳ Processing file...</div>`;
   try{
     const text=await readFileAsText(file);
     const rows=parseCSV(text);
-    if(rows.length<2){resultEl.innerHTML=`<div style="color:var(--red)">Файл пустой или неверный формат</div>`;return;}
+    if(rows.length<2){resultEl.innerHTML=`<div style="color:var(--red)">File is empty or has an invalid format</div>`;return;}
     const headers=rows[0].map(h=>h.trim().toLowerCase());
     const data=rows.slice(1).filter(r=>r.some(c=>c.trim()));
     let imported=0,skipped=0;
@@ -1817,27 +1761,27 @@ async function processImportFile(file,type){
         if(!name){skipped++;continue;}
         const exists=db.companies.find(c=>c.name.toLowerCase()===name.toLowerCase());
         if(exists){skipped++;continue;}
-        const rec={name,industry:get('отрасл','industry'),city:get('город','city'),status:get('статус','status')||'Потенциальный',country:'Armenia',created:today()};
+        const rec={name,industry:get('отрасл','industry'),city:get('город','city'),status:get('статус','status')||'Prospect',country:'Armenia',created:today()};
         const s=await persist('companies',rec);db.companies.push(s);imported++;
       }else if(type==='fleet'){
         const coName=get('компан','company');const model=get('модел','model');
         if(!coName||!model){skipped++;continue;}
         let co=db.companies.find(c=>c.name.toLowerCase()===coName.toLowerCase());
-        if(!co){const s=await persist('companies',{name:coName,status:'Потенциальный',created:today()});db.companies.push(s);co=s;}
-        const rec={company_id:co.id,company:co.name,brand:get('бренд','brand')||'Hitachi',model,type:get('тип','type')||'Экскаватор',year:Number(get('год','year'))||0,serial:get('серийн','serial'),condition:get('состоян','condition')||'Good',notes:get('примеч','notes')};
+        if(!co){const s=await persist('companies',{name:coName,status:'Prospect',created:today()});db.companies.push(s);co=s;}
+        const rec={company_id:co.id,company:co.name,brand:get('бренд','brand')||'Hitachi',model,type:get('тип','type')||'Excavator',year:Number(get('год','year'))||0,serial:get('серийн','serial'),condition:get('состоян','condition')||'Good',notes:get('примеч','notes')};
         const s=await persist('fleet',rec);db.fleet.push(s);imported++;
       }
     }
     updateCounts();
-    resultEl.innerHTML=`<div style="color:var(--green);font-size:13px;font-weight:600">✓ Импортировано: ${imported} записей${skipped?` · Пропущено: ${skipped}`:''}</div>`;
-  }catch(e){resultEl.innerHTML=`<div style="color:var(--red);font-size:13px">Ошибка: ${e.message}</div>`;}
+    resultEl.innerHTML=`<div style="color:var(--green);font-size:13px;font-weight:600">✓ Imported: ${imported} records${skipped?` · Skipped: ${skipped}`:''}</div>`;
+  }catch(e){resultEl.innerHTML=`<div style="color:var(--red);font-size:13px">Error: ${e.message}</div>`;}
 }
 
 function readFileAsText(file){
   return new Promise((res,rej)=>{
     const r=new FileReader();
     r.onload=e=>res(e.target.result);
-    r.onerror=()=>rej(new Error('Ошибка чтения файла'));
+    r.onerror=()=>rej(new Error('File read error'));
     r.readAsText(file,'UTF-8');
   });
 }
@@ -1865,7 +1809,7 @@ function parseCSV(text){
 
 function exportCSV(sheet){
   const sheetMap={companies:db.companies,contacts:db.contacts,deals:db.deals,fleet:db.fleet,tasks:db.tasks};
-  const data=sheetMap[sheet];if(!data||!data.length){alert('Нет данных для экспорта');return;}
+  const data=sheetMap[sheet];if(!data||!data.length){alert('No data to export');return;}
   const headers=Object.keys(data[0]);
   const csv=[headers.join(','),...data.map(r=>headers.map(h=>`"${String(r[h]||'').replace(/"/g,'""')}"`).join(','))].join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
@@ -1874,8 +1818,8 @@ function exportCSV(sheet){
 
 function downloadTemplate(type){
   const templates={
-    companies:'Название,Отрасль,Город,Страна,Статус,Сайт\n"ООО Пример","Горнодобывающая","Yerevan","Armenia","Потенциальный",""',
-    fleet:'Компания,Бренд,Модель,Тип,Год,Серийный №,Состояние\n"ООО Пример","Hitachi","ZX470LC-6","Экскаватор","2022","H470-001","Good"',
+    companies:'Name,Industry,City,Country,Status,Website\n"Example LLC","Mining","Yerevan","Armenia","Prospect",""',
+    fleet:'Company,Brand,Model,Type,Year,Serial No.,Condition\n"Example LLC","Hitachi","ZX470LC-6","Excavator","2022","H470-001","Good"',
   };
   const blob=new Blob(['\uFEFF'+templates[type]],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`template_${type}.csv`;a.click();
@@ -1891,7 +1835,7 @@ function simpleHash(str){
 function showLogin(){
   const sel=$('login-user');
   if(!sel)return;
-  sel.innerHTML='<option value="">— выберите —</option>'+
+  sel.innerHTML='<option value="">— select —</option>'+
     db.users.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
   $('login-screen').style.display='flex';
   $('app').style.display='none';
@@ -1903,12 +1847,12 @@ async function doLogin(){
   const pass=$('login-pass').value;
   const err=$('login-err');
   err.style.display='none';
-  if(!userId){err.textContent='Выбери имя';err.style.display='block';return;}
-  if(!pass){err.textContent='Введи пароль';err.style.display='block';return;}
+  if(!userId){err.textContent='Select a name';err.style.display='block';return;}
+  if(!pass){err.textContent='Enter password';err.style.display='block';return;}
   const user=db.users.find(u=>String(u.id)===String(userId));
-  if(!user){err.textContent='Пользователь не найден';err.style.display='block';return;}
-  if(String(user.active)==='false'){err.textContent='Аккаунт заблокирован. Обратись к руководителю.';err.style.display='block';return;}
-  if(user.password_hash!==simpleHash(pass)){err.textContent='Неверный пароль';err.style.display='block';return;}
+  if(!user){err.textContent='User not found';err.style.display='block';return;}
+  if(String(user.active)==='false'){err.textContent='Account blocked. Contact your manager.';err.style.display='block';return;}
+  if(user.password_hash!==simpleHash(pass)){err.textContent='Incorrect password';err.style.display='block';return;}
   // Update last login
   user.last_login=new Date().toISOString().slice(0,10);
   persist('users',{...user});
@@ -1949,47 +1893,47 @@ function myTasks(){
 }
 
 function renderUsers(){
-  if(currentUser?.role!=='manager'){$('content').innerHTML='<div class="empty" style="padding:60px"><i class="ti ti-lock"></i><div class="empty-title">Нет доступа</div></div>';return;}
-  $('topbar-right').innerHTML=`<button class="btn btn-primary" onclick="openM('user')"><i class="ti ti-plus"></i>Добавить пользователя</button>`;
+  if(currentUser?.role!=='manager'){$('content').innerHTML='<div class="empty" style="padding:60px"><i class="ti ti-lock"></i><div class="empty-title">Access Denied</div></div>';return;}
+  $('topbar-right').innerHTML=`<button class="btn btn-primary" onclick="openM('user')"><i class="ti ti-plus"></i>Add User</button>`;
   $('content').innerHTML=`
   <div class="card" style="margin-bottom:16px">
-    <div class="card-title">Пользователи CRM</div>
+    <div class="card-title">Users CRM</div>
     <div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Имя</th><th>Роль</th><th>Последний вход</th><th>Статус</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th>Role</th><th>Last Login</th><th>Status</th><th></th></tr></thead>
       <tbody>${db.users.length?db.users.map((u,i)=>`<tr>
         <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:30px;height:30px;font-size:11px">${ini(u.name)}</div><strong>${u.name}</strong></div></td>
         <td><span class="b ${u.role==='manager'?'b-blue':'b-gray'}">${u.role==='manager'?'Manager':'Sales Rep'}</span></td>
         <td style="color:var(--text-m);font-size:12px">${u.last_login||'—'}</td>
-        <td><span class="b ${String(u.active)==='false'?'b-red':'b-green'}">${String(u.active)==='false'?'Заблокирован':'Активен'}</span></td>
+        <td><span class="b ${String(u.active)==='false'?'b-red':'b-green'}">${String(u.active)==='false'?'Blocked':'Active'}</span></td>
         <td><div class="actions">
           <button class="btn btn-sm btn-ghost" onclick="openM('user','${u.id}')"><i class="ti ti-edit"></i></button>
-          <button class="btn btn-sm btn-ghost" title="Сбросить пароль" onclick="resetPassword('${u.id}')"><i class="ti ti-key"></i></button>
+          <button class="btn btn-sm btn-ghost" title="Reset Password" onclick="resetPassword('${u.id}')"><i class="ti ti-key"></i></button>
           ${u.id!==currentUser?.id?`<button class="btn btn-sm btn-ghost" onclick="toggleUserActive('${u.id}','${u.active}')"><i class="ti ti-${String(u.active)==='false'?'lock-open':'lock'}"></i></button>`:''}
         </div></td>
-      </tr>`).join(''):`<tr><td colspan="5"><div class="empty" style="padding:24px"><i class="ti ti-users"></i><div class="empty-title">Нет пользователей</div><button class="btn btn-primary btn-sm" onclick="openM('user')">Добавить первого</button></div></td></tr>`}
+      </tr>`).join(''):`<tr><td colspan="5"><div class="empty" style="padding:24px"><i class="ti ti-users"></i><div class="empty-title">No users</div><button class="btn btn-primary btn-sm" onclick="openM('user')">Add first user</button></div></td></tr>`}
       </tbody>
     </table></div>
   </div>
   <div class="card">
-    <div class="card-title">Права доступа</div>
+    <div class="card-title">Access Rights</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px">
       <div><div style="font-weight:700;color:var(--blue);margin-bottom:8px;font-size:13px">Sales Representative</div>
-        ${['✓ Свои сделки и задачи','✓ Свой календарь','✓ Все компании и контакты','✓ Парк техники','✓ Прогноз запчастей','✗ Чужие сделки','✗ Отчёты по команде','✗ Операции и импорт','✗ Управление пользователями'].map(i=>`<div style="font-size:13px;padding:3px 0;color:${i.startsWith('✗')?'var(--text-l)':'var(--text)'}">${i}</div>`).join('')}
+        ${['✓ Own deals and tasks','✓ Own calendar','✓ All companies and contacts','✓ Fleet','✓ Parts forecast','✗ Others\' deals','✗ Team reports','✗ Operations & import','✗ User management'].map(i=>`<div style="font-size:13px;padding:3px 0;color:${i.startsWith('✗')?'var(--text-l)':'var(--text)'}">${i}</div>`).join('')}
       </div>
       <div><div style="font-weight:700;color:var(--green);margin-bottom:8px;font-size:13px">Manager</div>
-        ${['✓ Все сделки всех менеджеров','✓ Все задачи команды','✓ Общий календарь','✓ Все компании и контакты','✓ Парк техники','✓ Отчёты по всей команде','✓ Операции и импорт','✓ Управление пользователями'].map(i=>`<div style="font-size:13px;padding:3px 0">${i}</div>`).join('')}
+        ${['✓ All deals from all managers','✓ All team tasks','✓ Shared calendar','✓ All companies and contacts','✓ Fleet','✓ Reports across entire team','✓ Operations & import','✓ User management'].map(i=>`<div style="font-size:13px;padding:3px 0">${i}</div>`).join('')}
       </div>
     </div>
   </div>`;
 }
 
 async function resetPassword(userId){
-  const newPass=prompt('Новый пароль:');
-  if(!newPass||newPass.length<4){if(newPass!==null)alert('Минимум 4 символа');return;}
+  const newPass=prompt('New password:');
+  if(!newPass||newPass.length<4){if(newPass!==null)alert('Minimum 4 characters');return;}
   const user=db.users.find(u=>u.id===userId);if(!user)return;
   user.password_hash=simpleHash(newPass);
   await persist('users',{...user});
-  alert('Пароль изменён');
+  alert('Password changed');
 }
 
 async function toggleUserActive(userId,current){
@@ -2126,7 +2070,7 @@ function validateEmail(el){
   const valid=/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
   el.style.borderColor=valid?'var(--green)':'#f87171';
   el.style.boxShadow=valid?'0 0 0 3px rgba(45,138,78,.1)':'0 0 0 3px rgba(239,68,68,.1)';
-  el.title=valid?'':'Неверный формат email';
+  el.title=valid?'':'Invalid email format';
 }
 
 function initInputs(){
@@ -2174,13 +2118,13 @@ function checkDuplicates(phone, email, excludeId=null){
     const coName2=c.company||'';
 
     if(normEmail&&ce&&normEmail===ce){
-      results.push({type:'exact',src:'Контакт',name,extra:coName2,field:'Email',value:c.email});
+      results.push({type:'exact',src:'Contact',name,extra:coName2,field:'Email',value:c.email});
     } else if(normPhone&&cp&&normPhone===cp){
-      results.push({type:'exact',src:'Контакт',name,extra:coName2,field:'Телефон',value:c.phone});
+      results.push({type:'exact',src:'Contact',name,extra:coName2,field:'Phone',value:c.phone});
     } else if(normPhone&&cp&&cp.length>=7){
       const dist=phoneDistance(normPhone,cp);
       if(dist===1||dist===2){
-        results.push({type:'similar',src:'Контакт',name,extra:coName2,field:'Телефон',value:c.phone,dist});
+        results.push({type:'similar',src:'Contact',name,extra:coName2,field:'Phone',value:c.phone,dist});
       }
     }
   });
@@ -2193,13 +2137,13 @@ function checkDuplicates(phone, email, excludeId=null){
     const name=l.contact||l.company||'—';
 
     if(normEmail&&le&&normEmail===le){
-      results.push({type:'exact',src:'Лид',name,extra:l.company||'',field:'Email',value:l.email});
+      results.push({type:'exact',src:'Lead',name,extra:l.company||'',field:'Email',value:l.email});
     } else if(normPhone&&lp&&normPhone===lp){
-      results.push({type:'exact',src:'Лид',name,extra:l.company||'',field:'Телефон',value:l.phone});
+      results.push({type:'exact',src:'Lead',name,extra:l.company||'',field:'Phone',value:l.phone});
     } else if(normPhone&&lp&&lp.length>=7){
       const dist=phoneDistance(normPhone,lp);
       if(dist===1||dist===2){
-        results.push({type:'similar',src:'Лид',name,extra:l.company||'',field:'Телефон',value:l.phone,dist});
+        results.push({type:'similar',src:'Lead',name,extra:l.company||'',field:'Phone',value:l.phone,dist});
       }
     }
   });
@@ -2214,7 +2158,7 @@ function renderDupWarning(results){
   let html='';
   if(exact.length){
     html+=`<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:10px 14px;margin-top:10px">
-      <div style="font-weight:700;color:#b91c1c;font-size:13px;margin-bottom:6px"><i class="ti ti-alert-circle"></i> Найдено точное совпадение!</div>
+      <div style="font-weight:700;color:#b91c1c;font-size:13px;margin-bottom:6px"><i class="ti ti-alert-circle"></i> Exact match found!</div>
       ${exact.map(r=>`<div style="font-size:12px;color:#7f1d1d;margin-bottom:3px">
         <strong>${r.src}:</strong> ${r.name}${r.extra?' ('+r.extra+')':''} — ${r.field}: <code>${r.value}</code>
       </div>`).join('')}
@@ -2222,9 +2166,9 @@ function renderDupWarning(results){
   }
   if(similar.length){
     html+=`<div style="background:#fef3c7;border:1px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-top:8px">
-      <div style="font-weight:700;color:#b45309;font-size:13px;margin-bottom:6px"><i class="ti ti-alert-triangle"></i> Возможно тот же клиент</div>
+      <div style="font-weight:700;color:#b45309;font-size:13px;margin-bottom:6px"><i class="ti ti-alert-triangle"></i> Possibly the same client</div>
       ${similar.map(r=>`<div style="font-size:12px;color:#78350f;margin-bottom:3px">
-        <strong>${r.src}:</strong> ${r.name}${r.extra?' ('+r.extra+')':''} — похожий номер: <code>${r.value}</code> (отличается на ${r.dist} цифр${r.dist===1?'у':'ы'})
+        <strong>${r.src}:</strong> ${r.name}${r.extra?' ('+r.extra+')':''} — similar number: <code>${r.value}</code> (differs by ${r.dist} digit${r.dist===1?'':'s'})
       </div>`).join('')}
     </div>`;
   }
@@ -2243,7 +2187,7 @@ function triggerDupCheck(excludeId=null){
 
 const leadStatusBadge=s=>({New:'b-blue',Contacted:'b-purple',Qualified:'b-amber',Proposal:'b-teal',Converted:'b-green',Lost:'b-red'}[s]||'b-gray');
 const LEAD_STATUSES=['New','Contacted','Qualified','Proposal','Converted','Lost'];
-const LEAD_SOURCES=['Сайт','Instagram','Facebook','WhatsApp','Холодный звонок','Рекомендация','Выставка','Прямой контакт','Тендер','Другое'];
+const LEAD_SOURCES=['Website','Instagram','Facebook','WhatsApp','Cold Call','Referral','Exhibition','Direct Contact','Tender','Other'];
 
 function renderLeads(){
   const active=db.leads.filter(l=>l.status!=='Converted'&&l.status!=='Lost');
@@ -2251,10 +2195,10 @@ function renderLeads(){
   const lost=db.leads.filter(l=>l.status==='Lost').length;
   const html=`
   <div class="metrics">
-    <div class="metric"><div class="metric-label"><i class="ti ti-user-plus"></i> Активных лидов</div><div class="metric-value">${active.length}</div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-check"></i> Конвертировано</div><div class="metric-value" style="color:var(--green)">${converted}</div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-x"></i> Потеряно</div><div class="metric-value" style="color:var(--red)">${lost}</div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-percent"></i> Конверсия</div><div class="metric-value">${db.leads.length?Math.round(converted/db.leads.length*100):0}%</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-user-plus"></i> Active Leads</div><div class="metric-value">${active.length}</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-check"></i> Converted</div><div class="metric-value" style="color:var(--green)">${converted}</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-x"></i> Lost</div><div class="metric-value" style="color:var(--red)">${lost}</div></div>
+    <div class="metric"><div class="metric-label"><i class="ti ti-percent"></i> Conversion</div><div class="metric-value">${db.leads.length?Math.round(converted/db.leads.length*100):0}%</div></div>
   </div>
   <div style="display:flex;gap:10px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch">
     ${LEAD_STATUSES.map(s=>{
@@ -2266,25 +2210,25 @@ function renderLeads(){
     }).join('')}
   </div>
   <div class="toolbar">
-    <div class="search"><i class="ti ti-search"></i><input placeholder="Поиск лидов..." oninput="filterLeads('',this.value)" id="lead-search"></div>
+    <div class="search"><i class="ti ti-search"></i><input placeholder="Search leads..." oninput="filterLeads('',this.value)" id="lead-search"></div>
     <select class="fc" style="width:160px" onchange="filterLeads(this.value)" id="lead-status-filter">
-      <option value="">Все статусы</option>
+      <option value="">All Statuses</option>
       ${LEAD_STATUSES.map(s=>`<option>${s}</option>`).join('')}
     </select>
     <select class="fc" style="width:160px" onchange="filterLeadsBySource(this.value)" id="lead-source-filter">
-      <option value="">Все источники</option>
+      <option value="">All Sources</option>
       ${LEAD_SOURCES.map(s=>`<option>${s}</option>`).join('')}
     </select>
   </div>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Компания / Контакт</th><th class="hide-xs">Источник</th><th class="hide-xs">Продукт</th><th>Бюджет</th><th>Статус</th><th class="hide-sm">Ответственный</th><th class="hide-sm">Создан</th><th></th></tr></thead>
+    <thead><tr><th>Company / Contact</th><th class="hide-xs">Source</th><th class="hide-xs">Product</th><th>Budget</th><th>Status</th><th class="hide-sm">Assigned To</th><th class="hide-sm">Created</th><th></th></tr></thead>
     <tbody id="leads-tbody">${renderLeadsRows(db.leads)}</tbody>
   </table></div>`;
   $('content').innerHTML=html;
 }
 
 function renderLeadsRows(leads){
-  if(!leads.length)return`<tr><td colspan="8"><div class="empty"><i class="ti ti-user-plus"></i><div class="empty-title">Нет лидов</div><button class="btn btn-primary btn-sm" onclick="openM('lead')">Добавить первый</button></div></td></tr>`;
+  if(!leads.length)return`<tr><td colspan="8"><div class="empty"><i class="ti ti-user-plus"></i><div class="empty-title">No leads</div><button class="btn btn-primary btn-sm" onclick="openM('lead')">Add first</button></div></td></tr>`;
   return leads.map(l=>`<tr onclick="openLeadDetail('${l.id}')">
     <td><strong>${l.company||l.contact||'—'}</strong>${l.contact&&l.company?`<div style="font-size:12px;color:var(--text-m)">${l.contact}</div>`:''}</td>
     <td class="hide-xs"><span class="b b-gray">${l.source||'—'}</span></td>
@@ -2295,7 +2239,7 @@ function renderLeadsRows(leads){
     <td class="hide-sm" style="font-size:12px;color:var(--text-m)">${l.created||'—'}</td>
     <td><div class="actions">
       <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openM('lead','${l.id}')"><i class="ti ti-edit"></i></button>
-      ${l.status!=='Converted'?`<button class="btn btn-sm btn-ghost" title="Конвертировать в сделку" onclick="event.stopPropagation();convertLead('${l.id}')"><i class="ti ti-arrow-right-circle" style="color:var(--green)"></i></button>`:''}
+      ${l.status!=='Converted'?`<button class="btn btn-sm btn-ghost" title="Convert to Deal" onclick="event.stopPropagation();convertLead('${l.id}')"><i class="ti ti-arrow-right-circle" style="color:var(--green)"></i></button>`:''}
       <button class="btn btn-sm btn-ghost btn-danger" onclick="event.stopPropagation();delRecord('leads','${l.id}')"><i class="ti ti-trash"></i></button>
     </div></td>
   </tr>`).join('');
@@ -2322,20 +2266,20 @@ function openLeadDetail(id){
 
 async function convertLead(id){
   const l=db.leads.find(x=>x.id===id);if(!l)return;
-  if(!confirm(`Конвертировать лид "${l.company||l.contact}" в сделку?`))return;
+  if(!confirm(`Convert lead "${l.company||l.contact}" to a deal?`))return;
   // Create deal from lead
-  const deal={id:uid(),company:l.company_id||'',model:l.product||'',stage:'Qualified',amount:l.budget||0,agent:l.agent||'',days:0,prob:30,created:today(),notes:`Конвертирован из лида. ${l.notes||''}`};
+  const deal={id:uid(),company:l.company_id||'',model:l.product||'',stage:'Qualified',amount:l.budget||0,agent:l.agent||'',days:0,prob:30,created:today(),notes:`Converted from lead. ${l.notes||''}`};
   db.deals.push(deal);
   await persist('deals',deal);
   // Mark lead converted
   l.status='Converted';l.converted_deal=deal.id;
   await persist('leads',{...l});
   // Log activity
-  const act={id:uid(),company_id:l.company_id||'',type:'note',text:`Лид конвертирован в сделку (${l.product||'без продукта'})`,date:today(),agent:currentUser?.name||''};
+  const act={id:uid(),company_id:l.company_id||'',type:'note',text:`Lead converted to deal (${l.product||'no product'})`,date:today(),agent:currentUser?.name||''};
   db.activities.push(act);await persist('activities',act);
   updateCounts();
   renderLeads();
-  alert('Лид конвертирован! Сделка создана в стадии Qualified.');
+  alert('Lead converted! Deal created at Qualified stage.');
 }
 
 // ─── SEGMENTS ──────────────────────────────────────────────────────────────
@@ -2349,59 +2293,59 @@ function renderSegments(){
   <div class="seg-layout" style="display:grid;grid-template-columns:280px 1fr;gap:18px;align-items:start">
     <div>
       <div class="card" style="margin-bottom:14px">
-        <div class="card-title">Фильтры сегментации</div>
-        <div class="fg"><label class="fl">Отрасль</label>
+        <div class="card-title">Segmentation Filters</div>
+        <div class="fg"><label class="fl">Industry</label>
           <select class="fc" id="seg-industry" onchange="applySegment()">
-            <option value="">Все отрасли</option>
+            <option value="">All Industries</option>
             ${industries.map(i=>`<option>${i}</option>`).join('')}
           </select>
         </div>
-        <div class="fg"><label class="fl">Регион / город</label>
+        <div class="fg"><label class="fl">Region / City</label>
           <select class="fc" id="seg-region" onchange="applySegment()">
-            <option value="">Все регионы</option>
+            <option value="">All Regions</option>
             ${regions.map(r=>`<option>${r}</option>`).join('')}
           </select>
         </div>
-        <div class="fg"><label class="fl">Статус клиента</label>
+        <div class="fg"><label class="fl">Client Status</label>
           <select class="fc" id="seg-status" onchange="applySegment()">
-            <option value="">Все статусы</option>
+            <option value="">All Statuses</option>
             ${statuses.map(s=>`<option>${s}</option>`).join('')}
           </select>
         </div>
-        <div class="fg"><label class="fl">Категория (A/B/C/D)</label>
+        <div class="fg"><label class="fl">Category (A/B/C/D),</label>
           <select class="fc" id="seg-cat" onchange="applySegment()">
-            <option value="">Все категории</option>
+            <option value="">All Categories</option>
             ${['A','B','C','D'].map(c=>`<option>${c}</option>`).join('')}
           </select>
         </div>
-        <div class="fg"><label class="fl">Наличие техники</label>
+        <div class="fg"><label class="fl">Has Equipment</label>
           <select class="fc" id="seg-fleet" onchange="applySegment()">
-            <option value="">Неважно</option>
-            <option value="yes">Есть в парке</option>
-            <option value="no">Нет техники</option>
+            <option value="">Doesn't matter</option>
+            <option value="yes">In fleet</option>
+            <option value="no">No equipment</option>
           </select>
         </div>
-        <div class="fg"><label class="fl">Активные сделки</label>
+        <div class="fg"><label class="fl">Active Deals</label>
           <select class="fc" id="seg-deals" onchange="applySegment()">
-            <option value="">Неважно</option>
-            <option value="yes">Есть сделки</option>
-            <option value="no">Нет сделок</option>
+            <option value="">Doesn't matter</option>
+            <option value="yes">Has deals</option>
+            <option value="no">No deals</option>
           </select>
         </div>
-        <button class="btn" style="width:100%;justify-content:center;margin-top:4px" onclick="resetSegment()"><i class="ti ti-x"></i>Сбросить фильтры</button>
+        <button class="btn" style="width:100%;justify-content:center;margin-top:4px" onclick="resetSegment()"><i class="ti ti-x"></i>Reset Filters</button>
       </div>
       <div class="card" id="seg-stats">
-        <div class="card-title">Статистика выборки</div>
-        <div id="seg-stats-body" style="font-size:13px;color:var(--text-m)">Нажмите фильтр</div>
+        <div class="card-title">Selection Stats</div>
+        <div id="seg-stats-body" style="font-size:13px;color:var(--text-m)">Apply a filter</div>
       </div>
     </div>
     <div>
       <div class="card">
-        <div class="card-title"><span id="seg-count-title">Все компании (${db.companies.length})</span>
-          <button class="btn btn-sm" onclick="exportSegment()"><i class="ti ti-download"></i>Экспорт CSV</button>
+        <div class="card-title"><span id="seg-count-title">All Companies (${db.companies.length})</span>
+          <button class="btn btn-sm" onclick="exportSegment()"><i class="ti ti-download"></i>Export CSV</button>
         </div>
         <div class="tbl-wrap"><table class="tbl">
-          <thead><tr><th>Компания</th><th>Отрасль</th><th>Регион</th><th>Статус</th><th>Кат.</th><th>Техника</th><th>Сделки</th></tr></thead>
+          <thead><tr><th>Company</th><th>Industry</th><th>Region</th><th>Status</th><th>Cat.</th><th>Equipment</th><th>Deals</th></tr></thead>
           <tbody id="seg-tbody">${renderSegRows(db.companies)}</tbody>
         </table></div>
       </div>
@@ -2432,21 +2376,21 @@ function getSegmentedCompanies(){
 function applySegment(){
   const companies=getSegmentedCompanies();
   const tb=$('seg-tbody');if(tb)tb.innerHTML=renderSegRows(companies);
-  const ct=$('seg-count-title');if(ct)ct.textContent=`Компании (${companies.length})`;
+  const ct=$('seg-count-title');if(ct)ct.textContent=`Companies (${companies.length})`;
   // Stats
   const totalDeals=companies.reduce((s,c)=>s+db.deals.filter(d=>d.company===c.id).length,0);
   const totalFleet=companies.reduce((s,c)=>s+db.fleet.filter(f=>f.company_id===c.id).length,0);
   const sb=$('seg-stats-body');
   if(sb)sb.innerHTML=`
-    <div class="info-row"><span class="info-label">Компаний</span><strong>${companies.length}</strong></div>
-    <div class="info-row"><span class="info-label">Единиц техники</span><strong>${totalFleet}</strong></div>
-    <div class="info-row"><span class="info-label">Сделок</span><strong>${totalDeals}</strong></div>
-    <div class="info-row"><span class="info-label">Контактов</span><strong>${companies.reduce((s,c)=>s+db.contacts.filter(x=>x.company_id===c.id).length,0)}</strong></div>
+    <div class="info-row"><span class="info-label">Companies</span><strong>${companies.length}</strong></div>
+    <div class="info-row"><span class="info-label">Equipment Units</span><strong>${totalFleet}</strong></div>
+    <div class="info-row"><span class="info-label">Deals</span><strong>${totalDeals}</strong></div>
+    <div class="info-row"><span class="info-label">Contacts</span><strong>${companies.reduce((s,c)=>s+db.contacts.filter(x=>x.company_id===c.id).length,0)}</strong></div>
   `;
 }
 
 function renderSegRows(companies){
-  if(!companies.length)return`<tr><td colspan="7"><div class="empty" style="padding:24px"><i class="ti ti-filter"></i><div class="empty-title">Нет компаний по фильтру</div></div></td></tr>`;
+  if(!companies.length)return`<tr><td colspan="7"><div class="empty" style="padding:24px"><i class="ti ti-filter"></i><div class="empty-title">No companies matching filter</div></div></td></tr>`;
   return companies.map(c=>{
     const fleetCount=db.fleet.filter(f=>f.company_id===c.id).length;
     const dealsCount=db.deals.filter(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost').length;
@@ -2469,7 +2413,7 @@ function resetSegment(){
 
 function exportSegment(){
   const companies=getSegmentedCompanies();
-  const rows=[['Компания','Отрасль','Регион','Статус','Категория','Техника','Сделки','Телефон']];
+  const rows=[['Company','Industry','Region','Status','Category','Equipment','Deals','Phone']];
   companies.forEach(c=>{
     rows.push([c.name,c.industry||'',c.city||'',c.status||'',c.category||'',
       db.fleet.filter(f=>f.company_id===c.id).length,
@@ -2484,17 +2428,17 @@ function exportSegment(){
 
 // ─── AUTOMATION ────────────────────────────────────────────────────────────
 const AUTO_TRIGGERS={
-  'deal_stage_change':'Смена стадии сделки',
-  'lead_created':'Новый лид создан',
-  'task_overdue':'Задача просрочена',
-  'deal_amount':'Сумма сделки превышает',
-  'no_contact_days':'Нет контакта N дней'
+  'deal_stage_change':'Deal stage changed',
+  'lead_created':'New lead created',
+  'task_overdue':'Task overdue',
+  'deal_amount':'Deal amount exceeds',
+  'no_contact_days':'No contact for N days'
 };
 const AUTO_ACTIONS={
-  'create_task':'Создать задачу',
-  'notify':'Уведомление в браузере',
-  'change_lead_status':'Изменить статус лида',
-  'change_deal_stage':'Изменить стадию сделки'
+  'create_task':'Create Task',
+  'notify':'Browser Notification',
+  'change_lead_status':'Change Lead Status',
+  'change_deal_stage':'Change Deal Stage'
 };
 
 function renderAutomation(){
@@ -2503,30 +2447,30 @@ function renderAutomation(){
   <div class="card" style="margin-bottom:16px;background:var(--blue-lt);border-color:#93c5fd">
     <div style="display:flex;gap:12px;align-items:center">
       <i class="ti ti-robot" style="font-size:28px;color:var(--blue)"></i>
-      <div><div style="font-weight:700;font-size:14px;color:var(--blue)">Автоматизация бизнес-процессов</div>
-      <div style="font-size:13px;color:var(--blue-dk)">Правила срабатывают автоматически при изменениях в CRM. Настрой триггер → условие → действие.</div></div>
+      <div><div style="font-weight:700;font-size:14px;color:var(--blue)">Business Process Automation</div>
+      <div style="font-size:13px;color:var(--blue-dk)">Rules trigger automatically when changes occur in CRM. Set up trigger → condition → action.</div></div>
     </div>
   </div>
   ${autos.length?`<div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px">${autos.map(renderAutoCard).join('')}</div>`:`
   <div class="card" style="text-align:center;padding:48px">
     <i class="ti ti-robot" style="font-size:48px;color:var(--gray-300);display:block;margin-bottom:16px"></i>
-    <div style="font-size:15px;font-weight:600;margin-bottom:8px">Нет правил автоматизации</div>
-    <div style="font-size:13px;color:var(--text-m);margin-bottom:20px">Создай первое правило — и CRM начнёт работать за тебя</div>
-    <button class="btn btn-primary" onclick="openM('automation')"><i class="ti ti-plus"></i>Создать первое правило</button>
+    <div style="font-size:15px;font-weight:600;margin-bottom:8px">No automation rules</div>
+    <div style="font-size:13px;color:var(--text-m);margin-bottom:20px">Create your first rule and let the CRM work for you</div>
+    <button class="btn btn-primary" onclick="openM('automation')"><i class="ti ti-plus"></i>Create First Rule</button>
   </div>`}
   <div class="card" style="margin-top:16px">
-    <div class="card-title">Примеры готовых правил</div>
+    <div class="card-title">Ready-made Rule Templates</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px">
       ${[
-        {icon:'ti-send',title:'КП отправлено → задача',desc:'При переводе в Proposal создать задачу "Follow-up через 3 дня"',t:'deal_stage_change',a:'create_task'},
-        {icon:'ti-user-plus',title:'Новый лид → уведомление',desc:'При создании лида отправить уведомление менеджеру',t:'lead_created',a:'notify'},
-        {icon:'ti-clock-exclamation',title:'Просрочена задача → сигнал',desc:'При просрочке задачи — уведомление руководителю',t:'task_overdue',a:'notify'},
-        {icon:'ti-currency-dollar',title:'Крупная сделка → эскалация',desc:'Сделка > $100,000 — создать задачу для директора',t:'deal_amount',a:'create_task'},
+        {icon:'ti-send',title:'Proposal sent → task',desc:'When moved to Proposal, create a task "Follow-up in 3 days"',t:'deal_stage_change',a:'create_task'},
+        {icon:'ti-user-plus',title:'New Lead → notification',desc:'When a lead is created, notify the manager',t:'lead_created',a:'notify'},
+        {icon:'ti-clock-exclamation',title:'Overdue task → alert',desc:'When a task is overdue, notify the manager',t:'task_overdue',a:'notify'},
+        {icon:'ti-currency-dollar',title:'Large deal → escalation',desc:'Deal > $100,000 — create a task for the director',t:'deal_amount',a:'create_task'},
       ].map(ex=>`<div style="border:1px dashed var(--bdr);border-radius:var(--r);padding:14px;cursor:pointer" onclick="openAutoTemplate('${ex.t}','${ex.a}')">
         <i class="ti ${ex.icon}" style="font-size:20px;color:var(--blue);margin-bottom:8px;display:block"></i>
         <div style="font-weight:700;font-size:13px;margin-bottom:4px">${ex.title}</div>
         <div style="font-size:12px;color:var(--text-m)">${ex.desc}</div>
-        <div style="margin-top:10px"><span class="b b-blue" style="font-size:10px">Применить шаблон</span></div>
+        <div style="margin-top:10px"><span class="b b-blue" style="font-size:10px">Use Template</span></div>
       </div>`).join('')}
     </div>
   </div>`;
@@ -2540,7 +2484,7 @@ function renderAutoCard(a){
           <i class="ti ti-robot" style="color:${a.active!=='false'?'var(--blue)':'var(--gray-400)'}"></i>
         </div>
         <div>
-          <div style="font-weight:700;font-size:13px">${a.name||'Без названия'}</div>
+          <div style="font-weight:700;font-size:13px">${a.name||'Untitled'}</div>
           <div style="font-size:12px;color:var(--text-m);margin-top:2px">
             <span class="b b-purple" style="font-size:10px">${AUTO_TRIGGERS[a.trigger]||a.trigger}</span>
             <i class="ti ti-arrow-right" style="margin:0 4px;font-size:10px"></i>
@@ -2551,15 +2495,15 @@ function renderAutoCard(a){
       <div style="display:flex;gap:8px;align-items:center">
         <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
           <input type="checkbox" ${a.active!=='false'?'checked':''} onchange="toggleAuto('${a.id}',this.checked)" style="cursor:pointer">
-          ${a.active!=='false'?'Активно':'Выкл'}
+          ${a.active!=='false'?'Active':'Off'}
         </label>
         <button class="btn btn-sm btn-ghost" onclick="openM('automation','${a.id}')"><i class="ti ti-edit"></i></button>
         <button class="btn btn-sm btn-ghost btn-danger" onclick="delRecord('automations','${a.id}')"><i class="ti ti-trash"></i></button>
       </div>
     </div>
-    ${a.condition?`<div style="margin-top:8px;font-size:12px;color:var(--text-m);padding-left:48px">Условие: ${a.condition}</div>`:''}
-    ${a.task_text?`<div style="margin-top:4px;font-size:12px;color:var(--text-m);padding-left:48px">Задача: "${a.task_text}"</div>`:''}
-    <div style="margin-top:4px;font-size:11px;color:var(--text-l);padding-left:48px">Сработало: ${a.fires||0} раз</div>
+    ${a.condition?`<div style="margin-top:8px;font-size:12px;color:var(--text-m);padding-left:48px">Condition: ${a.condition}</div>`:''}
+    ${a.task_text?`<div style="margin-top:4px;font-size:12px;color:var(--text-m);padding-left:48px">Task: "${a.task_text}"</div>`:''}
+    <div style="margin-top:4px;font-size:11px;color:var(--text-l);padding-left:48px">Fired: ${a.fires||0} times</div>
   </div>`;
 }
 
@@ -2583,9 +2527,9 @@ function updateAutoFields(){
   const action=$('auto-action')?.value;
   const cond=$('auto-cond-wrap');const task=$('auto-task-wrap');const stage=$('auto-stage-wrap');
   if(cond){
-    if(trigger==='deal_stage_change'){cond.innerHTML=`<label class="fl">При смене на стадию</label><select class="fc" id="auto-cond-val"><option value="">Любую</option>${['Lead','Qualified','Proposal','Negotiation','Won','Lost'].map(s=>`<option>${s}</option>`).join('')}</select>`;}
-    else if(trigger==='deal_amount'){cond.innerHTML=`<label class="fl">Сумма больше ($)</label><input class="fc" id="auto-cond-val" type="number" placeholder="100000">`;}
-    else if(trigger==='no_contact_days'){cond.innerHTML=`<label class="fl">Дней без контакта</label><input class="fc" id="auto-cond-val" type="number" placeholder="30">`;}
+    if(trigger==='deal_stage_change'){cond.innerHTML=`<label class="fl">When stage changes to</label><select class="fc" id="auto-cond-val"><option value="">Any</option>${['Lead','Qualified','Proposal','Negotiation','Won','Lost'].map(s=>`<option>${s}</option>`).join('')}</select>`;}
+    else if(trigger==='deal_amount'){cond.innerHTML=`<label class="fl">Amount greater than ($)</label><input class="fc" id="auto-cond-val" type="number" placeholder="100000">`;}
+    else if(trigger==='no_contact_days'){cond.innerHTML=`<label class="fl">Days without contact</label><input class="fc" id="auto-cond-val" type="number" placeholder="30">`;}
     else{cond.innerHTML='';}
   }
   if(task)task.style.display=action==='create_task'?'block':'none';
@@ -2612,7 +2556,7 @@ async function runAutomations(eventType, context={}){
     }
     if(rule.action==='notify'){
       if(Notification.permission==='granted'){
-        new Notification('Wayland CRM — Автоматизация',{body:`${rule.name}: ${context.message||eventType}`,icon:''});
+        new Notification('Wayland CRM — Automation',{body:`${rule.name}: ${context.message||eventType}`,icon:''});
       }
     }
     // Increment fires counter
@@ -2631,33 +2575,33 @@ window.openM=function(type,id=null,coId=null,dealId=null){
     mtype='lead';eid=id;
     const agents=db.agents.map(a=>`<option ${l?.agent===a.name?'selected':''}>${a.name}</option>`).join('');
     $('overlay').innerHTML=`<div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-title">${l?'Редактировать лид':'Новый лид'}<span class="modal-close" onclick="closeM()"><i class="ti ti-x"></i></span></div>
+      <div class="modal-title">${l?'Edit Lead':'New Lead'}<span class="modal-close" onclick="closeM()"><i class="ti ti-x"></i></span></div>
       <div class="fr">
-        <div class="fg"><label class="fl">Компания</label><input class="fc" id="m-lead-company" value="${l?.company||''}" placeholder="Название компании"></div>
-        <div class="fg"><label class="fl">Контактное лицо</label><input class="fc" id="m-lead-contact" value="${l?.contact||''}" placeholder="ФИО"></div>
+        <div class="fg"><label class="fl">Company</label><input class="fc" id="m-lead-company" value="${l?.company||''}" placeholder="Company namecompany name"></div>
+        <div class="fg"><label class="fl">Contact Person</label><input class="fc" id="m-lead-contact" value="${l?.contact||''}" placeholder="Full name"></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Телефон</label><input class="fc" id="m-lead-phone" data-phone data-exclude-id="${id||''}" value="${l?.phone||''}" placeholder="+374 XX XXX XXX"></div>
+        <div class="fg"><label class="fl">Phone</label><input class="fc" id="m-lead-phone" data-phone data-exclude-id="${id||''}" value="${l?.phone||''}" placeholder="+374 XX XXX XXX"></div>
         <div class="fg"><label class="fl">Email</label><input class="fc" id="m-lead-email" data-email data-exclude-id="${id||''}" value="${l?.email||''}" placeholder="example@company.com"></div>
       </div>
       <div id="dup-warn"></div>
       <div class="fr">
-        <div class="fg"><label class="fl">Источник</label><select class="fc" id="m-lead-source">${LEAD_SOURCES.map(s=>`<option ${l?.source===s?'selected':''}>${s}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Статус</label><select class="fc" id="m-lead-status">${LEAD_STATUSES.map(s=>`<option ${(l?.status||'New')===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Source</label><select class="fc" id="m-lead-source">${LEAD_SOURCES.map(s=>`<option ${l?.source===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Status</label><select class="fc" id="m-lead-status">${LEAD_STATUSES.map(s=>`<option ${(l?.status||'New')===s?'selected':''}>${s}</option>`).join('')}</select></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Интересующий продукт</label><input class="fc" id="m-lead-product" value="${l?.product||''}" placeholder="Hitachi ZX330..."></div>
-        <div class="fg"><label class="fl">Бюджет ($)</label><input class="fc" id="m-lead-budget" type="number" value="${l?.budget||''}" placeholder="0"></div>
+        <div class="fg"><label class="fl">Product of Interest</label><input class="fc" id="m-lead-product" value="${l?.product||''}" placeholder="Hitachi ZX330..."></div>
+        <div class="fg"><label class="fl">Budget ($)</label><input class="fc" id="m-lead-budget" type="number" value="${l?.budget||''}" placeholder="0"></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Ответственный</label><select class="fc" id="m-lead-agent"><option value="">—</option>${agents}</select></div>
-        <div class="fg"><label class="fl">Дата создания</label><input class="fc" id="m-lead-created" type="date" value="${l?.created||today()}"></div>
+        <div class="fg"><label class="fl">Assigned To</label><select class="fc" id="m-lead-agent"><option value="">—</option>${agents}</select></div>
+        <div class="fg"><label class="fl">Date Created</label><input class="fc" id="m-lead-created" type="date" value="${l?.created||today()}"></div>
       </div>
-      <div class="fg"><label class="fl">Примечания</label><textarea class="fc" id="m-lead-notes" rows="3">${l?.notes||''}</textarea></div>
+      <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="m-lead-notes" rows="3">${l?.notes||''}</textarea></div>
       <div class="modal-footer">
-        ${l?`<button class="btn btn-danger" onclick="delRecord('leads','${l.id}')">Удалить</button>`:''}
-        <button class="btn" onclick="closeM()">Отмена</button>
-        <button class="btn btn-primary" id="save-btn" onclick="saveLead()"><i class="ti ti-check"></i>Сохранить</button>
+        ${l?`<button class="btn btn-danger" onclick="delRecord('leads','${l.id}')">Delete</button>`:''}
+        <button class="btn" onclick="closeM()">Cancel</button>
+        <button class="btn btn-primary" id="save-btn" onclick="saveLead()"><i class="ti ti-check"></i>Save</button>
       </div>
     </div>`;
     $('overlay').classList.add('open');
@@ -2668,15 +2612,15 @@ window.openM=function(type,id=null,coId=null,dealId=null){
     const a=id?db.automations.find(x=>x.id===id):null;
     mtype='automation';eid=id;
     $('overlay').innerHTML=`<div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-title">${a?'Редактировать правило':'Новое правило автоматизации'}<span class="modal-close" onclick="closeM()"><i class="ti ti-x"></i></span></div>
-      <div class="fg"><label class="fl">Название правила</label><input class="fc" id="auto-name" value="${a?.name||''}" placeholder="Например: Follow-up после КП"></div>
+      <div class="modal-title">${a?'Edit Rule':'New Automation Rule'}<span class="modal-close" onclick="closeM()"><i class="ti ti-x"></i></span></div>
+      <div class="fg"><label class="fl">Rule Name</label><input class="fc" id="auto-name" value="${a?.name||''}" placeholder="E.g.: Follow-up after Proposal"></div>
       <div class="fr">
-        <div class="fg"><label class="fl">Триггер (когда)</label>
+        <div class="fg"><label class="fl">Trigger (when)</label>
           <select class="fc" id="auto-trigger" onchange="updateAutoFields()">
             ${Object.entries(AUTO_TRIGGERS).map(([k,v])=>`<option value="${k}" ${a?.trigger===k?'selected':''}>${v}</option>`).join('')}
           </select>
         </div>
-        <div class="fg"><label class="fl">Действие (что делать)</label>
+        <div class="fg"><label class="fl">Action (what to do)</label>
           <select class="fc" id="auto-action" onchange="updateAutoFields()">
             ${Object.entries(AUTO_ACTIONS).map(([k,v])=>`<option value="${k}" ${a?.action===k?'selected':''}>${v}</option>`).join('')}
           </select>
@@ -2684,19 +2628,19 @@ window.openM=function(type,id=null,coId=null,dealId=null){
       </div>
       <div class="fg" id="auto-cond-wrap"></div>
       <div class="fg" id="auto-task-wrap" style="display:none">
-        <label class="fl">Текст задачи</label><input class="fc" id="auto-task-text" value="${a?.task_text||''}" placeholder="Follow-up по сделке">
-        <div style="margin-top:8px"><label class="fl">Через сколько дней</label><input class="fc" id="auto-task-days" type="number" value="${a?.task_days||3}" style="width:100px"></div>
+        <label class="fl">Task text</label><input class="fc" id="auto-task-text" value="${a?.task_text||''}" placeholder="Follow-up on deal">
+        <div style="margin-top:8px"><label class="fl">Days from now</label><input class="fc" id="auto-task-days" type="number" value="${a?.task_days||3}" style="width:100px"></div>
       </div>
       <div class="fg" id="auto-stage-wrap" style="display:none">
-        <label class="fl">Новая стадия сделки</label>
+        <label class="fl">New deal stage</label>
         <select class="fc" id="auto-new-stage">
           ${['Lead','Qualified','Proposal','Negotiation','Won','Lost'].map(s=>`<option ${a?.new_stage===s?'selected':''}>${s}</option>`).join('')}
         </select>
       </div>
       <div class="modal-footer">
-        ${a?`<button class="btn btn-danger" onclick="delRecord('automations','${a.id}')">Удалить</button>`:''}
-        <button class="btn" onclick="closeM()">Отмена</button>
-        <button class="btn btn-primary" id="save-btn" onclick="saveAutomation()"><i class="ti ti-check"></i>Сохранить</button>
+        ${a?`<button class="btn btn-danger" onclick="delRecord('automations','${a.id}')">Delete</button>`:''}
+        <button class="btn" onclick="closeM()">Cancel</button>
+        <button class="btn btn-primary" id="save-btn" onclick="saveAutomation()"><i class="ti ti-check"></i>Save</button>
       </div>
     </div>`;
     $('overlay').classList.add('open');
@@ -2708,7 +2652,7 @@ window.openM=function(type,id=null,coId=null,dealId=null){
 
 async function saveLead(){
   if(saving)return;saving=true;
-  const btn=$('save-btn');if(btn){btn.disabled=true;btn.textContent='Сохраняем...';}
+  const btn=$('save-btn');if(btn){btn.disabled=true;btn.textContent='Saving...';}
   try{
     const company=$('m-lead-company')?.value.trim();
     const isNew=!eid;
@@ -2724,19 +2668,19 @@ async function saveLead(){
     if(eid){const i=db.leads.findIndex(x=>x.id===eid);if(i>=0)db.leads[i]={...db.leads[i],...row};}
     else{db.leads.push(row);}
     await persist('leads',row);
-    if(isNew)await runAutomations('lead_created',{message:`Новый лид: ${company}`,agent:row.agent});
+    if(isNew)await runAutomations('lead_created',{message:`New Lead: ${company}`,agent:row.agent});
     updateCounts();closeM();renderLeads();
   }finally{saving=false;}
 }
 
 async function saveAutomation(){
   if(saving)return;saving=true;
-  const btn=$('save-btn');if(btn){btn.disabled=true;btn.textContent='Сохраняем...';}
+  const btn=$('save-btn');if(btn){btn.disabled=true;btn.textContent='Saving...';}
   try{
     const condEl=$('auto-cond-wrap')?.querySelector('input,select');
     const row={
       id:eid||uid(),
-      name:$('auto-name')?.value.trim()||'Без названия',
+      name:$('auto-name')?.value.trim()||'Untitled',
       trigger:$('auto-trigger')?.value||'',
       action:$('auto-action')?.value||'',
       condition_val:condEl?.value||'',
@@ -2783,7 +2727,7 @@ window.addEventListener('resize',initMobile);
     API=saved;
     $('su-url').value=saved;
     $('setup').style.display='none';
-    $('content').innerHTML='<div style="text-align:center;padding:80px;color:var(--text-m)">Загрузка...</div>';
+    $('content').innerHTML='<div style="text-align:center;padding:80px;color:var(--text-m)">Loading...</div>';
     $('app').style.display='flex';
     load().then(()=>{
       // Check session
@@ -2809,7 +2753,7 @@ window.addEventListener('resize',initMobile);
         showLogin();
       } else {
         // First run - no users yet, go straight in as manager
-        currentUser={id:'admin',name:'М. Калашников',role:'manager'};
+        currentUser={id:'admin',name:'M. Kalashnikov',role:'manager'};
         $('app').style.display='flex';
         applyRoleUI();
         render('dashboard');
