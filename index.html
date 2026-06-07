@@ -610,9 +610,9 @@ async function apiCall(params){
 }
 
 function normalizeDb(){
+  const clean=v=>(!v||String(v).startsWith('#')||String(v).startsWith('='))?'':String(v);
   db.deals.forEach(d=>{
     d.amount=Number(d.amount)||0;d.days=Number(d.days)||0;
-    // Normalize stage names from import
     const stageMap={'Proposal Sent':'Proposal','Prospecting':'Lead','prospecting':'Lead','proposal sent':'Proposal','proposal':'Proposal','negotiation':'Negotiation','won':'Won','lost':'Lost','qualified':'Qualified','lead':'Lead'};
     if(d.stage&&stageMap[d.stage])d.stage=stageMap[d.stage];
   });
@@ -622,7 +622,11 @@ function normalizeDb(){
     if(t.due&&t.due.includes('T'))t.due=t.due.slice(0,10);
     if(t.created&&t.created.includes('T'))t.created=t.created.slice(0,10);
   });
-  db.leads.forEach(l=>{l.created=l.created||today();});
+  db.leads.forEach(l=>{l.created=l.created||today();l.phone=clean(l.phone);l.email=clean(l.email);});
+  // Clean #ERROR! values caused by + prefix being treated as formula in Sheets
+  db.contacts.forEach(c=>{c.phone=clean(c.phone);c.email=clean(c.email);});
+  db.agents.forEach(a=>{a.phone=clean(a.phone);a.email=clean(a.email);});
+  db.companies.forEach(c=>{if(c.phone)c.phone=clean(c.phone);if(c.website)c.website=clean(c.website);});
 }
 
 function saveCache(){
