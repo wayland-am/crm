@@ -474,8 +474,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 const STAGES=['Lead','Qualified','Proposal','Negotiation','Won','Lost'];
 const STAGE_P={Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0};
 const STAGE_COLOR={Lead:'#9ca3af',Qualified:'#8b5cf6',Proposal:'#f59e0b',Negotiation:'#3b82f6',Won:'#22c55e',Lost:'#ef4444'};
-const DEFAULT_AGENTS=['A. Martirosyan','G. Petrosyan','N. Harutyunyan','S. Sargsyan','V. Hakobyan','L. Mkrtchyan','K. Davtyan','A. Karapetyan','R. Hovsepyan','T. Grigoryan'];
-const AGENTS=()=>db.agents.length?db.agents.map(a=>a.name):DEFAULT_AGENTS;
+const DEFAULT_AGENTS=[];
+const AGENTS=()=>db.agents.length?db.agents.map(a=>a.name):(currentUser?[currentUser.name]:[]);
 const INDUSTRIES=['Mining','Construction','Road Construction','Quarrying','Infrastructure','Industry','Other'];
 const EQ_TYPES=['Excavator','Wheel Loader','Bulldozer','Drilling Rig','Dump Truck','Compressor','Crane','Grader'];
 const BRANDS=['Hitachi','Caterpillar','Komatsu','Volvo','Liebherr','Doosan','John Deere','Hyundai','Sany','XCMG','Other'];
@@ -1576,7 +1576,7 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Stage</label><select class="fc" id="f-stage">${['Lead','Qualified','Proposal','Negotiation','Won','Lost'].map(s=>`<option ${(e.stage||'Lead')===s?'selected':''}>${s}</option>`).join('')}</select></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Manager</label><select class="fc" id="f-agent">${['A. Martirosyan','G. Petrosyan','N. Harutyunyan','S. Sargsyan','V. Hakobyan','L. Mkrtchyan','K. Davtyan','A. Karapetyan','R. Hovsepyan','T. Grigoryan'].map(a=>`<option ${e.agent===a?'selected':''}>${a}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Manager</label><select class="fc" id="f-agent">${AGENTS().map(a=>`<option ${(e.agent||currentUser?.name||'')=== a?'selected':''}>${a}</option>`).join('')}</select></div>
         <div class="fg"><label class="fl">Days in Pipeline</label><input class="fc" id="f-days" type="number" value="${e.days||0}"></div>
       </div>
       <div class="fr">
@@ -1606,7 +1606,7 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Priority</label><select class="fc" id="f-priority"><option ${e.priority==='high'?'selected':''} value="high">High</option><option ${e.priority==='medium'?'selected':''} value="medium">Medium</option><option ${e.priority==='low'?'selected':''} value="low">Low</option></select></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Manager</label><select class="fc" id="f-agent">${['A. Martirosyan','G. Petrosyan','N. Harutyunyan','S. Sargsyan','V. Hakobyan','L. Mkrtchyan','K. Davtyan','A. Karapetyan','R. Hovsepyan','T. Grigoryan'].map(a=>`<option ${e.agent===a?'selected':''}>${a}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Manager</label><select class="fc" id="f-agent">${AGENTS().map(a=>`<option ${(e.agent||currentUser?.name||'')=== a?'selected':''}>${a}</option>`).join('')}</select></div>
         <div class="fg"><label class="fl">Due Date</label><input class="fc" id="f-due" type="date" value="${e.due||''}"></div>
       </div>`,
     user:`
