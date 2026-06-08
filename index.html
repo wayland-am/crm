@@ -1131,12 +1131,12 @@ function openCompanyDetail(id){
   const c=db.companies.find(x=>x.id===id);if(!c)return;
   cur.company=id;cur.section='company-detail';
   $('ptitle').textContent=c.name;
-  $('breadcrumb').innerHTML=`<span style="cursor:pointer;color:var(--blue)" onclick="go('companies',document.querySelector('.ni:nth-child(2)'))">Companies</span><i class="ti ti-chevron-right" style="font-size:12px;margin:0 4px"></i>`;
+  $('breadcrumb').innerHTML=`<span style="cursor:pointer;color:var(--blue)" onclick="go('companies',document.querySelector('.ni'))">Companies</span><i class="ti ti-chevron-right" style="font-size:12px;margin:0 4px"></i>`;
   $('topbar-right').innerHTML=`
     <button class="btn" onclick="openM('activity',null,'${id}')"><i class="ti ti-message-circle"></i>Log Activity</button>
-    <button class="btn" onclick="openM('contact',null,'${id}')"><i class="ti ti-user"></i>+ Contact</button>
-    <button class="btn" onclick="openM('task',null,'${id}')"><i class="ti ti-checkbox"></i>+ Task</button>
-    <button class="btn btn-primary" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>+ Deal</button>`;
+    <button class="btn" onclick="openM('contact',null,'${id}')"><i class="ti ti-user-plus"></i>Contact</button>
+    <button class="btn" onclick="openM('task',null,'${id}')"><i class="ti ti-checkbox"></i>Task</button>
+    <button class="btn btn-primary" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>New Deal</button>`;
 
   const contacts=db.contacts.filter(x=>x.company_id===id);
   const deals=db.deals.filter(x=>x.company_id===id);
@@ -1147,227 +1147,285 @@ function openCompanyDetail(id){
   const pipeVal=deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').reduce((s,d)=>s+d.amount,0);
   const wonVal=deals.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0);
   const lastAct=acts[0];
+  const lastActDays=lastAct?(Math.floor((new Date()-new Date(lastAct.date||lastAct.created))/(1000*60*60*24))):null;
+  const nextTask=tasks.filter(t=>t.due).sort((a,b)=>a.due.localeCompare(b.due))[0];
+
+  const actIcons={Call:'ti-phone',Meeting:'ti-calendar-event',WhatsApp:'ti-brand-whatsapp',Email:'ti-mail',Proposal:'ti-file-text',Demo:'ti-eye',Documents:'ti-file',Other:'ti-dots',note:'ti-note',stage:'ti-arrow-right'};
+  const actColors={Call:'#3b82f6',Meeting:'#8b5cf6',WhatsApp:'#22c55e',Email:'#14b8a6',Proposal:'#f59e0b',Demo:'#22c55e',Documents:'#6b7280',Other:'#6b7280',note:'#6b7280',stage:'#d1d5db'};
+  const sentimentIcons={Positive:'😊',Neutral:'😐',Negative:'😟',Interested:'🔥',Hesitant:'🤔'};
 
   $('content').innerHTML=`
-  <!-- TOP HERO CARD -->
-  <div class="card" style="padding:20px 24px;margin-bottom:16px">
-    <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
-      <div class="av av-0" style="width:56px;height:56px;font-size:22px;border-radius:14px;flex-shrink:0;${c.category&&CAT_RULES[c.category]?'background:'+CAT_RULES[c.category].bg+';color:'+CAT_RULES[c.category].color:''}">${ini(c.name)}</div>
-      <div style="flex:1;min-width:200px">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
-          <span style="font-size:20px;font-weight:800">${c.name}</span>
-          <span class="b ${statusBadge(c.status)}">${c.status||'—'}</span>
-          ${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Cat. ${c.category} · ${CAT_RULES[c.category].desc}</span>`:''}
-        </div>
-        <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:13px;color:var(--text-m)">
-          ${c.industry?`<span><i class="ti ti-building" style="margin-right:4px"></i>${c.industry}</span>`:''}
-          ${c.city?`<span><i class="ti ti-map-pin" style="margin-right:4px"></i>${c.city}${c.country?', '+c.country:''}</span>`:''}
-          ${c.website?`<a href="${c.website}" target="_blank" style="color:var(--blue)"><i class="ti ti-world" style="margin-right:4px"></i>${c.website}</a>`:''}
-          ${c.assigned_agent?`<span><i class="ti ti-user" style="margin-right:4px"></i>${c.assigned_agent}</span>`:''}
-        </div>
-        ${c.notes?`<div style="margin-top:10px;font-size:13px;color:var(--text-m);background:var(--gray-50);padding:8px 12px;border-radius:8px;border-left:3px solid var(--bdr)">${c.notes}</div>`:''}
+  <style>
+  .cd-wrap{display:grid;grid-template-columns:260px 1fr 260px;gap:0;background:var(--bg);min-height:calc(100vh - 100px)}
+  .cd-col{overflow-y:auto;border-right:1px solid var(--bdr)}
+  .cd-col:last-child{border-right:none}
+  .cd-sec{padding:14px 16px;border-bottom:1px solid var(--bdr)}
+  .cd-sec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-m);margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+  .cd-row{display:flex;justify-content:space-between;align-items:flex-start;padding:4px 0;font-size:12px;border-bottom:1px solid var(--gray-100)}
+  .cd-row:last-child{border-bottom:none}
+  .cd-lbl{color:var(--text-m);flex-shrink:0;width:90px}
+  .cd-val{color:var(--text);font-weight:500;text-align:right;flex:1}
+  .act-feed{display:flex;flex-direction:column}
+  .act-entry{display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid var(--bdr);cursor:default}
+  .act-entry:hover{background:var(--gray-50)}
+  .act-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px}
+  .act-body{flex:1;min-width:0}
+  .act-title{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+  .act-desc{font-size:12px;color:var(--text-m);line-height:1.4}
+  .act-meta{font-size:11px;color:var(--text-l);margin-top:4px}
+  .act-tabs{display:flex;gap:0;padding:0 16px;border-bottom:1px solid var(--bdr);background:var(--sur)}
+  .act-tab{padding:10px 14px;font-size:12px;font-weight:500;color:var(--text-m);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .act-tab.on{color:var(--blue);border-bottom-color:var(--blue)}
+  .deal-row{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--bdr);cursor:pointer;font-size:12px}
+  .deal-row:hover{background:var(--gray-50)}
+  .deal-row:last-child{border-bottom:none}
+  .ctc-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--bdr)}
+  .ctc-row:last-child{border-bottom:none}
+  .fleet-row{display:grid;grid-template-columns:90px 1fr 60px 60px;gap:4px;padding:6px 0;border-bottom:1px solid var(--gray-100);font-size:11px;align-items:center}
+  .fleet-row:last-child{border-bottom:none}
+  .prog-bar{height:4px;background:var(--gray-100);border-radius:2px;margin-top:4px;overflow:hidden}
+  .prog-fill{height:100%;border-radius:2px}
+  .kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);background:var(--sur);border-bottom:1px solid var(--bdr)}
+  .kpi-cell{padding:10px 14px;border-right:1px solid var(--bdr);text-align:center}
+  .kpi-cell:last-child{border-right:none}
+  .kpi-v{font-size:17px;font-weight:700;color:var(--text)}
+  .kpi-l{font-size:10px;color:var(--text-m);margin-top:2px;text-transform:uppercase;letter-spacing:.4px}
+  .hero{padding:14px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:12px;background:var(--sur)}
+  </style>
+
+  <!-- HERO HEADER -->
+  <div class="hero">
+    <div class="av av-0" style="width:48px;height:48px;font-size:18px;border-radius:10px;flex-shrink:0;${c.category&&CAT_RULES[c.category]?'background:'+CAT_RULES[c.category].bg+';color:'+CAT_RULES[c.category].color:''}">${ini(c.name)}</div>
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:18px;font-weight:700">${c.name}</span>
+        <span class="b ${statusBadge(c.status)}">${c.status||'—'}</span>
+        ${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Cat. ${c.category} · ${CAT_RULES[c.category].desc}</span>`:''}
       </div>
-      <div style="display:flex;gap:24px;flex-shrink:0;flex-wrap:wrap">
-        <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:var(--blue)">${deals.length}</div><div style="font-size:11px;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px">Deals</div></div>
-        <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:var(--amber)">${fmtUSD(pipeVal)}</div><div style="font-size:11px;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px">Pipeline</div></div>
-        <div style="text-align:center"><div style="font-size:22px;font-weight:800;color:var(--green)">${fmtUSD(wonVal)}</div><div style="font-size:11px;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px">Won</div></div>
-        <div style="text-align:center"><div style="font-size:22px;font-weight:800">${fleet.length}</div><div style="font-size:11px;color:var(--text-m);text-transform:uppercase;letter-spacing:.5px">Fleet</div></div>
+      <div style="font-size:12px;color:var(--text-m);margin-top:3px;display:flex;gap:14px;flex-wrap:wrap">
+        ${c.industry?`<span><i class="ti ti-pickaxe" style="font-size:11px"></i> ${c.industry}</span>`:''}
+        ${c.city?`<span><i class="ti ti-map-pin" style="font-size:11px"></i> ${c.city}${c.country?', '+c.country:''}</span>`:''}
+        ${c.website?`<a href="${c.website}" target="_blank" style="color:var(--blue)"><i class="ti ti-world" style="font-size:11px"></i> ${c.website}</a>`:''}
+        ${c.assigned_agent?`<span><i class="ti ti-user" style="font-size:11px"></i> ${c.assigned_agent}</span>`:''}
       </div>
-      <button class="btn btn-sm" onclick="openM('company','${c.id}')"><i class="ti ti-edit"></i>Edit</button>
     </div>
+    ${nextTask?`<div style="background:var(--blue-lt);border-radius:8px;padding:8px 12px;flex-shrink:0;max-width:200px">
+      <div style="font-size:10px;font-weight:700;color:var(--blue);text-transform:uppercase;letter-spacing:.4px">Next action</div>
+      <div style="font-size:12px;font-weight:600;margin-top:2px">${nextTask.title}</div>
+      <div style="font-size:11px;color:var(--text-m)">${dueFmt(nextTask.due)}</div>
+    </div>`:''}
+    <button class="btn btn-sm" onclick="openM('company','${c.id}')"><i class="ti ti-edit"></i>Edit</button>
   </div>
 
-  <!-- MAIN GRID -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+  <!-- KPI STRIP -->
+  <div class="kpi-strip">
+    <div class="kpi-cell"><div class="kpi-v" style="color:var(--blue)">${fmtUSD(pipeVal)}</div><div class="kpi-l">Pipeline</div></div>
+    <div class="kpi-cell"><div class="kpi-v">${fleet.length}</div><div class="kpi-l">Fleet units</div></div>
+    <div class="kpi-cell"><div class="kpi-v">${deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').length}</div><div class="kpi-l">Open deals</div></div>
+    <div class="kpi-cell"><div class="kpi-v" style="color:${lastActDays!==null&&lastActDays>30?'var(--red)':'var(--green)'}">${lastActDays===null?'—':lastActDays===0?'Today':lastActDays+'d ago'}</div><div class="kpi-l">Last contact</div></div>
+    <div class="kpi-cell"><div class="kpi-v" style="color:var(--green)">${fmtUSD(wonVal)}</div><div class="kpi-l">Won revenue</div></div>
+  </div>
 
-    <!-- CONTACTS -->
-    <div class="card">
-      <div class="card-title">Contacts <span style="font-weight:400;font-size:12px;color:var(--text-m)">(${contacts.length})</span>
-        <button class="btn btn-sm" onclick="openM('contact',null,'${id}')"><i class="ti ti-plus"></i>Add</button>
+  <!-- 3-COLUMN LAYOUT -->
+  <div class="cd-wrap">
+
+    <!-- LEFT: Company info + Fleet + Sales potential -->
+    <div class="cd-col">
+
+      <!-- Company info -->
+      <div class="cd-sec">
+        <div class="cd-sec-title">Company information</div>
+        ${c.city?`<div class="cd-row"><span class="cd-lbl">City</span><span class="cd-val">${c.city}${c.country?', '+c.country:''}</span></div>`:''}
+        ${c.industry?`<div class="cd-row"><span class="cd-lbl">Industry</span><span class="cd-val">${c.industry}</span></div>`:''}
+        ${c.website?`<div class="cd-row"><span class="cd-lbl">Website</span><span class="cd-val" style="color:var(--blue)">${c.website}</span></div>`:''}
+        ${c.assigned_agent?`<div class="cd-row"><span class="cd-lbl">Owner</span><span class="cd-val">${c.assigned_agent}</span></div>`:''}
+        ${c.budget?`<div class="cd-row"><span class="cd-lbl">Budget/yr</span><span class="cd-val">${fmtUSD(c.budget)}</span></div>`:''}
+        ${c.seasonality?`<div class="cd-row"><span class="cd-lbl">Seasonality</span><span class="cd-val">${c.seasonality}</span></div>`:''}
+        ${c.notes?`<div style="margin-top:10px;font-size:12px;color:var(--text-m);background:var(--gray-50);padding:8px 10px;border-radius:6px;border-left:2px solid var(--bdr)">${c.notes}</div>`:''}
       </div>
-      ${contacts.length?`<div style="display:flex;flex-direction:column;gap:10px">
-        ${contacts.map((ct,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--gray-50);border-radius:8px">
-          <div class="av ${avC(i)}" style="width:36px;height:36px;font-size:13px;flex-shrink:0">${ini((ct.first_name||'')+' '+(ct.last_name||''))}</div>
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:13px">${ct.first_name||''} ${ct.last_name||''}</div>
-            <div style="font-size:12px;color:var(--text-m)">${ct.position||''}</div>
-            ${ct.phone?`<div style="font-size:12px;margin-top:2px"><i class="ti ti-phone" style="font-size:11px;color:var(--blue)"></i> <a href="tel:${ct.phone}" style="color:var(--text)">${ct.phone}</a></div>`:''}
-            ${ct.email?`<div style="font-size:12px;color:var(--blue);margin-top:1px"><i class="ti ti-mail" style="font-size:11px"></i> ${ct.email}</div>`:''}
+
+      <!-- Fleet -->
+      <div class="cd-sec">
+        <div class="cd-sec-title">Fleet <span style="font-weight:500;font-size:12px;color:var(--text)">${fleet.length} units</span>
+          <button class="btn btn-xs btn-ghost" onclick="openM('fleet',null,'${id}')"><i class="ti ti-plus"></i></button>
+        </div>
+        ${fleet.length?`
+        <div style="display:grid;grid-template-columns:1fr 50px 45px 50px;gap:4px;margin-bottom:6px;font-size:10px;color:var(--text-m);font-weight:600;text-transform:uppercase;letter-spacing:.4px">
+          <span>Model</span><span style="text-align:right">S/N</span><span style="text-align:right">Hours</span><span style="text-align:right">Status</span>
+        </div>
+        ${fleet.map(u=>`<div class="fleet-row">
+          <div style="font-weight:600;display:flex;align-items:center;gap:4px"><span class="brand-dot" style="background:${BRAND_C[u.brand]||'#888'}"></span>${u.brand} ${u.model}</div>
+          <div style="color:var(--text-m);font-size:10px;text-align:right">${u.serial||'—'}</div>
+          <div style="text-align:right;color:var(--text-m)">${u.year||'—'}</div>
+          <div style="text-align:right"><span class="b ${condBadge(u.condition)}" style="font-size:10px;padding:1px 5px">${u.condition||'?'}</span></div>
+        </div>`).join('')}`:
+        `<div class="empty" style="padding:16px"><i class="ti ti-tractor"></i><div class="empty-title" style="font-size:12px">No equipment</div><button class="btn btn-sm" onclick="openM('fleet',null,'${id}')"><i class="ti ti-plus"></i>Add</button></div>`}
+      </div>
+
+      <!-- Sales potential -->
+      ${c.budget||fleet.length?`<div class="cd-sec">
+        <div class="cd-sec-title">Sales potential</div>
+        ${[
+          ['New equipment',fleet.filter(f=>f.condition==='Poor').length*250000+fleet.filter(f=>f.condition==='Fair').length*150000,85,'#185FA5'],
+          ['Parts & consumables',Math.round(fleet.length*6500),52,'#1D9E75'],
+          ['Service contracts',Math.round(fleet.length*2200),38,'#f59e0b'],
+          ['Attachments & tools',Math.round(fleet.length*1800),28,'#7F77DD'],
+        ].filter(([,v])=>v>0).map(([lbl,val,pct,col])=>`<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">
+            <span style="color:var(--text-m)">${lbl}</span>
+            <span style="font-weight:600">${fmtUSD(val)}</span>
           </div>
-          <div style="display:flex;gap:4px">
+          <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div>
+        </div>`).join('')}
+      </div>`:''}
+
+    </div>
+
+    <!-- CENTER: Activity feed + tab filter -->
+    <div class="cd-col" style="border-right:1px solid var(--bdr)">
+
+      <!-- Activity tabs -->
+      <div class="act-tabs" id="act-tabs">
+        <div class="act-tab on" onclick="filterActFeed('all',this)">All activity</div>
+        <div class="act-tab" onclick="filterActFeed('Call,WhatsApp',this)">Calls</div>
+        <div class="act-tab" onclick="filterActFeed('Meeting',this)">Meetings</div>
+        <div class="act-tab" onclick="filterActFeed('Proposal,Email',this)">Emails & Proposals</div>
+        <div class="act-tab" onclick="filterActFeed('note',this)">Notes</div>
+      </div>
+
+      <!-- Quick note input -->
+      <div style="padding:10px 16px;border-bottom:1px solid var(--bdr);display:flex;gap:8px;align-items:center">
+        <i class="ti ti-pencil" style="font-size:16px;color:var(--text-l)"></i>
+        <input class="fc" style="flex:1;border-radius:20px;padding:6px 14px;font-size:13px" placeholder="Write a note..." onkeydown="if(event.key==='Enter'&&this.value.trim()){quickNote('${id}',this.value);this.value=''}">
+        <button class="btn btn-sm" onclick="openM('activity',null,'${id}')"><i class="ti ti-plus"></i>Log activity</button>
+      </div>
+
+      <!-- Activity feed -->
+      <div class="act-feed" id="act-feed-${id}">
+        ${renderActFeedItems(acts,id)}
+      </div>
+    </div>
+
+    <!-- RIGHT: Deals + Contacts -->
+    <div class="cd-col" style="border-right:none">
+
+      <!-- Deals -->
+      <div class="cd-sec" style="padding:0">
+        <div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-m)">Deals <span style="color:var(--text)">${deals.length}</span></span>
+          <button class="btn btn-xs" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>Add</button>
+        </div>
+        ${deals.length?deals.map(d=>{
+          const stale=dealStaleDays(d);
+          return`<div class="deal-row" onclick="openDealDetail('${d.id}')">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.model||'Deal'}</div>
+              <div style="font-size:11px;color:var(--text-m);margin-top:1px">${d.next_action||'—'}</div>
+              ${d.competitor?`<div style="font-size:10px;color:var(--red);margin-top:1px"><i class="ti ti-sword" style="font-size:10px"></i> ${d.competitor}</div>`:''}
+            </div>
+            <div style="text-align:right;flex-shrink:0;margin-left:8px">
+              <div style="font-weight:700;font-size:13px">${fmtUSD(d.amount)}</div>
+              <span class="b ${stageBadge(d.stage)}" style="font-size:10px;padding:1px 6px">${d.stage}</span>
+              ${stale>=30?`<div style="font-size:10px;color:var(--red);font-weight:600;margin-top:1px">${stale}d ⚠</div>`:stale>=14?`<div style="font-size:10px;color:var(--amber);margin-top:1px">${stale}d</div>`:''}
+            </div>
+          </div>`;
+        }).join(''):`<div class="empty" style="padding:20px"><i class="ti ti-versions"></i><div class="empty-title" style="font-size:12px">No deals yet</div><button class="btn btn-sm btn-primary" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>Add Deal</button></div>`}
+      </div>
+
+      <!-- Contacts -->
+      <div class="cd-sec" style="padding:0">
+        <div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-m)">Key contacts <span style="color:var(--text)">${contacts.length}</span></span>
+          <button class="btn btn-xs" onclick="openM('contact',null,'${id}')"><i class="ti ti-plus"></i>Add</button>
+        </div>
+        ${contacts.length?contacts.map((ct,i)=>`<div class="ctc-row">
+          <div class="av ${avC(i)}" style="width:34px;height:34px;font-size:12px;flex-shrink:0">${ini((ct.first_name||'')+' '+(ct.last_name||''))}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600">${ct.first_name||''} ${ct.last_name||''}</div>
+            <div style="font-size:11px;color:var(--text-m)">${ct.position||''}</div>
+            ${ct.phone?`<div style="font-size:11px;margin-top:2px"><i class="ti ti-phone" style="font-size:10px;color:var(--blue)"></i> <a href="tel:${ct.phone}" style="color:var(--text)">${ct.phone}</a></div>`:''}
+            ${ct.email?`<div style="font-size:11px;color:var(--blue)"><i class="ti ti-mail" style="font-size:10px"></i> ${ct.email}</div>`:''}
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            ${ct.phone?`<a href="tel:${ct.phone}" class="btn btn-xs btn-ghost" title="Call"><i class="ti ti-phone"></i></a>`:''}
+            ${ct.email?`<a href="mailto:${ct.email}" class="btn btn-xs btn-ghost" title="Email"><i class="ti ti-mail"></i></a>`:''}
             <button class="btn btn-xs btn-ghost" onclick="openM('contact','${ct.id}')"><i class="ti ti-edit"></i></button>
-            <button class="btn btn-xs btn-ghost btn-danger" onclick="delRecord('contacts','${ct.id}')"><i class="ti ti-trash"></i></button>
           </div>
-        </div>`).join('')}
-      </div>`:`<div class="empty" style="padding:20px"><i class="ti ti-users"></i><div class="empty-title" style="font-size:13px">No contacts</div><button class="btn btn-sm btn-primary" onclick="openM('contact',null,'${id}')"><i class="ti ti-plus"></i>Add Contact</button></div>`}
-    </div>
-
-    <!-- DEALS -->
-    <div class="card">
-      <div class="card-title">Deals <span style="font-weight:400;font-size:12px;color:var(--text-m)">(${deals.length})</span>
-        <button class="btn btn-sm" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>Add</button>
+        </div>`).join(''):`<div class="empty" style="padding:20px"><i class="ti ti-users"></i><div class="empty-title" style="font-size:12px">No contacts</div><button class="btn btn-sm btn-primary" onclick="openM('contact',null,'${id}')"><i class="ti ti-plus"></i>Add</button></div>`}
       </div>
-      ${deals.length?`<div style="display:flex;flex-direction:column;gap:8px">
-        ${deals.map(d=>`<div style="display:flex;align-items:center;gap:10px;padding:8px;background:var(--gray-50);border-radius:8px;cursor:pointer" onclick="openDealDetail('${d.id}')">
-          <div style="flex:1;min-width:0">
-            <div style="font-weight:700;font-size:13px">${d.model||'Deal'}</div>
-            <div style="font-size:12px;color:var(--text-m)">${d.next_action||''}</div>
-          </div>
-          <div style="text-align:right;flex-shrink:0">
-            <div style="font-weight:800;font-size:14px">${fmtUSD(d.amount)}</div>
-            <span class="b ${stageBadge(d.stage)}" style="font-size:10px">${d.stage}</span>
-          </div>
-        </div>`).join('')}
-      </div>`:`<div class="empty" style="padding:20px"><i class="ti ti-versions"></i><div class="empty-title" style="font-size:13px">No deals</div><button class="btn btn-sm btn-primary" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>Add Deal</button></div>`}
-    </div>
-  </div>
 
-  <!-- TASKS + FLEET -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
-
-    <!-- TASKS -->
-    <div class="card">
-      <div class="card-title">Tasks <span style="font-weight:400;font-size:12px;color:var(--text-m)">(${tasks.length})</span>
-        <button class="btn btn-sm" onclick="openM('task',null,'${id}')"><i class="ti ti-plus"></i>Add</button>
+      <!-- Tasks -->
+      <div class="cd-sec">
+        <div class="cd-sec-title">Open tasks <span style="color:var(--text)">${tasks.length}</span>
+          <button class="btn btn-xs btn-ghost" onclick="openM('task',null,'${id}')"><i class="ti ti-plus"></i></button>
+        </div>
+        ${tasks.length?tasks.slice(0,5).map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--gray-100);font-size:12px">
+          <div class="cb" onclick="toggleTask('${t.id}',true);openCompanyDetail('${id}')"></div>
+          <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</div>
+          <div style="flex-shrink:0;font-size:11px">${dueFmt(t.due)}</div>
+        </div>`).join(''):`<div style="font-size:12px;color:var(--text-m);text-align:center;padding:8px">All done ✓</div>`}
       </div>
-      ${tasks.length?tasks.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-100)">
-        <div class="cb ${t.done?'done':''}" onclick="toggleTask('${t.id}',${!t.done})">${t.done?'<i class="ti ti-check" style="font-size:11px"></i>':''}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:13px;font-weight:600;${t.done?'text-decoration:line-through;color:var(--text-m)':''}">${t.title}</div>
-          <div style="font-size:11px;color:var(--text-m)">${t.type||''} · ${t.agent||''}</div>
-        </div>
-        <div style="text-align:right;flex-shrink:0">
-          <span class="b ${t.priority==='high'?'b-red':t.priority==='medium'?'b-amber':'b-gray'}" style="font-size:10px">${t.priority||''}</span>
-          <div style="font-size:11px;margin-top:2px">${dueFmt(t.due)}</div>
-        </div>
-      </div>`).join(''):`<div class="empty" style="padding:20px"><i class="ti ti-checkbox"></i><div class="empty-title" style="font-size:13px">No tasks</div><button class="btn btn-sm btn-primary" onclick="openM('task',null,'${id}')"><i class="ti ti-plus"></i>Add Task</button></div>`}
-    </div>
 
-    <!-- FLEET -->
-    <div class="card">
-      <div class="card-title">Fleet <span style="font-weight:400;font-size:12px;color:var(--text-m)">(${fleet.length})</span>
-        <button class="btn btn-sm" onclick="openM('fleet',null,'${id}')"><i class="ti ti-plus"></i>Add</button>
-      </div>
-      ${fleet.length?fleet.map(u=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-100)">
-        <span class="brand-dot" style="background:${BRAND_C[u.brand]||'#888'};width:10px;height:10px;flex-shrink:0"></span>
-        <div style="flex:1">
-          <div style="font-size:13px;font-weight:600">${u.brand} ${u.model}</div>
-          <div style="font-size:11px;color:var(--text-m)">${u.type||''}${u.year?' · '+u.year:''}</div>
-        </div>
-        <span class="b ${condBadge(u.condition)}" style="font-size:10px">${u.condition||'—'}</span>
-        <button class="btn btn-xs btn-ghost" onclick="openM('fleet','${u.id}')"><i class="ti ti-edit"></i></button>
-      </div>`).join(''):`<div class="empty" style="padding:20px"><i class="ti ti-tractor"></i><div class="empty-title" style="font-size:13px">No equipment</div><button class="btn btn-sm" onclick="openM('fleet',null,'${id}')"><i class="ti ti-plus"></i>Add</button></div>`}
     </div>
-  </div>
-
-  <!-- ACTIVITY HISTORY -->
-  <div class="card">
-    <div class="card-title">Activity History
-      <button class="btn btn-sm" onclick="openM('activity',null,'${id}')"><i class="ti ti-plus"></i>Log Activity</button>
-    </div>
-    ${renderCdActivity(id)}
   </div>`;
+
+  // Store company acts for filter
+  window._curCoActs=acts;
+  window._curCoId=id;
 }
 
-function cdTab(tab,id,el){} // kept for compatibility
-
-function renderCdDeals(id){
-  const deals=db.deals.filter(x=>x.company_id===id);
-  if(!deals.length)return`<div class="empty"><i class="ti ti-versions"></i><div class="empty-title">No deals</div><button class="btn btn-primary btn-sm" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>Add Deal</button></div>`;
-  return`<div class="stage-strip">${STAGES.map(s=>`<div class="stage-step ${deals.find(d=>d.stage===s)?'active':''}">${s}</div>`).join('')}</div>
-  <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Model</th><th>Amount</th><th>Stage</th><th>Manager</th><th>Days</th><th>Next Action</th><th></th></tr></thead>
-    <tbody>${deals.map(d=>`<tr onclick="openDealDetail('${d.id}')">
-      <td style="font-weight:700">${d.model||'—'}</td>
-      <td style="font-weight:800">${fmtUSD(d.amount)}</td>
-      <td><span class="b ${stageBadge(d.stage)}">${d.stage}</span></td>
-      <td>${d.agent||'—'}</td><td>${d.days||0} d</td>
-      <td style="font-size:12px;color:var(--text-m)">${d.next_action||'—'}</td>
-      <td onclick="event.stopPropagation()"><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('deal','${d.id}')"><i class="ti ti-edit"></i></button></div></td>
-    </tr>`).join('')}</tbody>
-  </table></div>`;
-}
-
-function renderCdContacts(id){
-  const ctc=db.contacts.filter(x=>x.company_id===id);
-  if(!ctc.length)return`<div class="empty"><i class="ti ti-users"></i><div class="empty-title">No contacts</div><button class="btn btn-primary btn-sm" onclick="openM('contact',null,'${id}')"><i class="ti ti-plus"></i>Add Contact</button></div>`;
-  return`<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px">
-    ${ctc.map((c,i)=>`<div class="card" style="padding:14px">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-        <div class="av ${avC(i)}" style="width:38px;height:38px;font-size:14px">${ini(c.first_name+' '+c.last_name)}</div>
-        <div><div style="font-weight:700;font-size:13px">${c.first_name} ${c.last_name}</div><div style="font-size:12px;color:var(--text-m)">${c.position||'—'}</div></div>
-      </div>
-      ${c.phone?`<div style="font-size:12px;color:var(--text-m);margin-bottom:4px"><i class="ti ti-phone" style="font-size:13px"></i> ${c.phone}</div>`:''}
-      ${c.email?`<div style="font-size:12px;color:var(--blue)">${c.email}</div>`:''}
-      <div style="display:flex;gap:6px;margin-top:10px"><button class="btn btn-xs" onclick="openM('contact','${c.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-xs btn-danger" onclick="delRecord('contacts','${c.id}')"><i class="ti ti-trash"></i></button></div>
-    </div>`).join('')}
-    <div class="card" style="padding:14px;border:2px dashed var(--bdr);box-shadow:none;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-m)" onclick="openM('contact',null,'${id}')"><i class="ti ti-plus" style="margin-right:6px"></i>Add</div>
-  </div>`;
-}
-
-function renderCdTasks(id){
-  const tasks=db.tasks.filter(x=>x.company_id===id);
-  if(!tasks.length)return`<div class="empty"><i class="ti ti-checkbox"></i><div class="empty-title">No tasks</div><button class="btn btn-primary btn-sm" onclick="openM('task',null,'${id}')"><i class="ti ti-plus"></i>Add Task</button></div>`;
-  return tasks.map(t=>`<div class="task-row">
-    <div class="cb ${t.done?'done':''}" onclick="toggleTask('${t.id}',${!t.done})">${t.done?'<i class="ti ti-check" style="font-size:12px"></i>':''}</div>
-    <div style="flex:1"><div style="font-size:13px;font-weight:600;${t.done?'text-decoration:line-through;color:var(--text-m)':''}">${t.title}</div><div style="font-size:11px;color:var(--text-m);margin-top:2px">${t.type||''} · ${t.agent||''}</div></div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-      <span class="b ${t.priority==='high'?'b-red':t.priority==='medium'?'b-amber':'b-gray'}">${t.priority||''}</span>
-      <span style="font-size:11px">${dueFmt(t.due)}</span>
-    </div>
-  </div>`).join('');
-}
-
-function renderCdActivity(id){
-  const acts=db.activities.filter(x=>x.company_id===id).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
-  if(!acts.length)return`<div class="empty"><i class="ti ti-clock"></i><div class="empty-title">No activity yet</div><div style="font-size:13px;color:var(--text-m)">Log calls, meetings and WhatsApp conversations here</div></div>`;
-  const icons={Call:'ti-phone',Meeting:'ti-calendar-event',WhatsApp:'ti-brand-whatsapp',Email:'ti-mail',Proposal:'ti-file-text',Demo:'ti-eye',Documents:'ti-file',Other:'ti-dots',stage:'ti-arrow-right',note:'ti-note'};
-  const colors={Call:'b-blue',Meeting:'b-purple',WhatsApp:'b-green',Email:'b-teal',Proposal:'b-amber',Demo:'b-green',Documents:'b-gray',Other:'b-gray',stage:'b-gray',note:'b-gray'};
-  const typeColor={Call:'#3b82f6',Meeting:'#8b5cf6',WhatsApp:'#22c55e',Email:'#14b8a6',Proposal:'#f59e0b',Demo:'#22c55e',Documents:'#6b7280',Other:'#6b7280'};
-
-  return`<div style="display:flex;flex-direction:column;gap:10px">${acts.map(a=>{
+function renderActFeedItems(acts, coId){
+  const actIcons={Call:'ti-phone',Meeting:'ti-calendar-event',WhatsApp:'ti-brand-whatsapp',Email:'ti-mail',Proposal:'ti-file-text',Demo:'ti-eye',Documents:'ti-file',Other:'ti-dots',note:'ti-note',stage:'ti-arrow-right'};
+  const actColors={Call:'#3b82f6',Meeting:'#8b5cf6',WhatsApp:'#22c55e',Email:'#14b8a6',Proposal:'#f59e0b',Demo:'#22c55e',Documents:'#6b7280',Other:'#6b7280',note:'#6b7280',stage:'#d1d5db'};
+  if(!acts.length)return`<div class="empty" style="padding:40px"><i class="ti ti-clock"></i><div class="empty-title">No activity yet</div><div style="font-size:12px;color:var(--text-m);margin-bottom:12px">Log calls, meetings and conversations</div><button class="btn btn-sm btn-primary" onclick="openM('activity',null,'${coId}')"><i class="ti ti-plus"></i>Log First Activity</button></div>`;
+  return acts.map(a=>{
     const d=a.date||String(a.created||'').slice(0,10);
-    const diff=d?Math.round((new Date()-new Date(d))/(1000*60*60*24)):null;
+    const diff=d?Math.floor((new Date()-new Date(d))/(1000*60*60*24)):null;
     const relDate=diff===null?'':diff===0?'Today':diff===1?'Yesterday':diff+'d ago';
-    const color=typeColor[a.type]||'#6b7280';
-    return`<div style="border:1px solid var(--bdr);border-radius:10px;overflow:hidden;background:var(--sur)">
-      <!-- Header bar -->
-      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${color}12;border-bottom:1px solid ${color}30">
-        <div style="width:28px;height:28px;border-radius:7px;background:${color};display:flex;align-items:center;justify-content:center;flex-shrink:0">
-          <i class="ti ${icons[a.type]||'ti-dots'}" style="font-size:13px;color:#fff"></i>
-        </div>
-        <div style="flex:1;min-width:0">
-          <span style="font-weight:700;font-size:13px;color:${color}">${a.type||'Activity'}</span>
-          ${a.agent?`<span style="font-size:12px;color:var(--text-m);margin-left:8px">· ${a.agent}</span>`:''}
-        </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:12px;font-weight:600;color:var(--text)">${d}</div>
-          <div style="font-size:11px;color:var(--text-m)">${relDate}</div>
-        </div>
+    const color=actColors[a.type]||'#6b7280';
+    return`<div class="act-entry">
+      <div class="act-dot" style="background:${color}18">
+        <i class="ti ${actIcons[a.type]||'ti-dots'}" style="font-size:13px;color:${color}"></i>
       </div>
-      <!-- Body -->
-      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:8px">
-        ${a.note?`<div style="font-size:13px;color:var(--text);line-height:1.5">${a.note}</div>`:''}
-        ${a.outcome?`<div style="background:#f0fdf4;border-left:3px solid #22c55e;padding:8px 12px;border-radius:0 6px 6px 0;font-size:13px">
-          <div style="font-size:10px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">✓ Agreed</div>
-          <div style="color:var(--text)">${a.outcome}</div>
-        </div>`:''}
-        ${a.next_step?`<div style="background:#eff6ff;border-left:3px solid #3b82f6;padding:8px 12px;border-radius:0 6px 6px 0;font-size:13px">
-          <div style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">→ Next step</div>
-          <div style="color:var(--text);display:flex;align-items:center;gap:8px;flex-wrap:wrap">${a.next_step}${a.next_date?`<span style="background:#dbeafe;color:#1d4ed8;font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600">${a.next_date}</span>`:''}</div>
-        </div>`:''}
-        ${!a.note&&!a.outcome&&!a.next_step?`<div style="font-size:13px;color:var(--text-l);font-style:italic">No details recorded</div>`:''}
+      <div class="act-body">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px">
+          <div class="act-title">${a.type}${a.contact_name?` · <span style="color:var(--blue);font-weight:500">${a.contact_name}</span>`:''}</div>
+          <div style="font-size:11px;color:var(--text-l);flex-shrink:0;margin-left:8px">${relDate} · ${d}</div>
+        </div>
+        ${a.direction||a.duration?`<div style="font-size:11px;color:var(--text-m);margin-bottom:3px">${[a.direction,a.duration?a.duration+' min':''].filter(Boolean).join(' · ')}</div>`:''}
+        ${a.note?`<div class="act-desc">${a.note}</div>`:''}
+        ${a.sentiment?`<span style="font-size:11px;margin-top:4px;display:inline-block">${{Positive:'😊',Neutral:'😐',Negative:'😟',Interested:'🔥',Hesitant:'🤔'}[a.sentiment]||''} <span style="color:var(--text-m)">${a.sentiment}</span></span>`:''}
+        ${a.outcome?`<div style="margin-top:6px;background:#f0fdf4;border-left:2px solid #22c55e;padding:5px 10px;border-radius:0 5px 5px 0;font-size:12px"><strong style="color:#15803d">✓</strong> ${a.outcome}</div>`:''}
+        ${a.next_step?`<div style="margin-top:4px;background:#eff6ff;border-left:2px solid #3b82f6;padding:5px 10px;border-radius:0 5px 5px 0;font-size:12px"><strong style="color:#1d4ed8">→</strong> ${a.next_step}${a.next_date?' <span style="color:var(--text-m)">'+a.next_date+'</span>':''}</div>`:''}
+        <div class="act-meta">${a.agent||''}</div>
       </div>
     </div>`;
-  }).join('')}</div>`;
+  }).join('');
 }
 
+function filterActFeed(types, el){
+  document.querySelectorAll('.act-tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  const feed=document.getElementById('act-feed-'+window._curCoId);
+  if(!feed)return;
+  const acts=types==='all'?window._curCoActs:window._curCoActs.filter(a=>types.split(',').includes(a.type));
+  feed.innerHTML=renderActFeedItems(acts,window._curCoId);
+}
+
+async function quickNote(coId,text){
+  const act={id:uid(),company_id:coId,company:db.companies.find(x=>x.id===coId)?.name||'',type:'note',note:text,date:today(),agent:currentUser?.name||''};
+  db.activities.push(act);
+  await persist('activities',act);
+  openCompanyDetail(coId);
+}
+
+function cdTab(tab,id,el){}
 // ─── Deal Detail ────────────────────────────────────────────────────────────
 function openDealDetail(id){
   const d=db.deals.find(x=>x.id===id);if(!d)return;
   cur.deal=id;
   $('ptitle').textContent=d.company+' — '+(d.model||'Deal');
-  $('breadcrumb').innerHTML=`<span style="cursor:pointer;color:var(--blue)" onclick="go('pipeline',document.querySelector('.ni:nth-child(2)'))">Pipeline</span><i class="ti ti-chevron-right" style="font-size:12px;margin:0 4px"></i>`;
+  $('breadcrumb').innerHTML=`<span style="cursor:pointer;color:var(--blue)" onclick="go('pipeline',null)">Pipeline</span><i class="ti ti-chevron-right" style="font-size:12px;margin:0 4px"></i>`;
   $('topbar-right').innerHTML=`<button class="btn" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-message-circle"></i>Log Activity</button><button class="btn" onclick="openM('deal','${id}')"><i class="ti ti-edit"></i>Edit</button>`;
   const tasks=db.tasks.filter(t=>t.deal_id===id);
   const acts=db.activities.filter(a=>a.deal_id===id||a.company_id===d.company_id).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
