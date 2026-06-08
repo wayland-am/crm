@@ -834,38 +834,167 @@ function renderDashboard(){
 }
 
 // ─── Pipeline ──────────────────────────────────────────────────────────────
+// ─── Pipeline helpers ──────────────────────────────────────────────────────
+function dealDaysSinceActivity(dealId){
+  const acts=db.activities.filter(a=>a.deal_id===dealId||a.company_id===(db.deals.find(d=>d.id===dealId)?.company_id));
+  if(!acts.length)return null;
+  const last=acts.map(a=>a.date||a.created||'').filter(Boolean).sort().pop();
+  if(!last)return null;
+  return Math.floor((new Date()-new Date(last))/(1000*60*60*24));
+}
+
+function dealStaleDays(d){
+  // Days since last activity OR days in current stage (days field)
+  const actDays=dealDaysSinceActivity(d.id);
+  return actDays!==null?actDays:(Number(d.days)||0);
+}
+
+function forecastByMonth(deals){
+  const months={};
+  deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.next_date).forEach(d=>{
+    const m=d.next_date.slice(0,7); // YYYY-MM
+    if(!months[m])months[m]={amount:0,deals:[]};
+    months[m].amount+=(d.amount*(({Lead:0.1,Qualified:0.25,Proposal:0.5,Negotiation:0.75}[d.stage]||0)));
+    months[m].deals.push(d);
+  });
+  return Object.entries(months).sort(([a],[b])=>a.localeCompare(b)).slice(0,4);
+}
+
 function renderPipeline(){
   const visStages=STAGES.filter(s=>s!=='Lost');
   const allMyDeals=myDeals();
-  const pipeVal=allMyDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').reduce((s,d)=>s+d.amount,0);
+  const active=allMyDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost');
+  const pipeVal=active.reduce((s,d)=>s+d.amount,0);
+  const stale=active.filter(d=>dealStaleDays(d)>=30);
+  const forecast=forecastByMonth(allMyDeals);
+
   $('content').innerHTML=`
-  <div style="display:flex;gap:16px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
-    <div class="metric" style="padding:12px 16px;margin:0"><div class="metric-label">Pipeline</div><div class="metric-value" style="font-size:20px">${fmtUSD(pipeVal)}</div></div>
-    ${visStages.map(s=>{const d=allMyDeals.filter(x=>x.stage===s);const v=d.reduce((a,x)=>a+x.amount,0);return`<div class="metric" style="padding:12px 16px;margin:0"><div class="metric-label" style="color:${STAGE_COLOR[s]}">${s}</div><div class="metric-value" style="font-size:18px">${d.length}</div><div class="metric-sub">${v?fmtUSD(v):''}</div></div>`;}).join('')}
+  <!-- METRICS ROW -->
+  <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:stretch">
+    <div class="metric" style="padding:12px 16px;margin:0"><div class="metric-label">Total Pipeline</div><div class="metric-value" style="font-size:20px">${fmtUSD(pipeVal)}</div><div class="metric-sub">${active.length} active deals</div></div>
+    ${visStages.map(s=>{
+      const d=allMyDeals.filter(x=>x.stage===s);
+      const v=d.reduce((a,x)=>a+x.amount,0);
+      return`<div class="metric" style="padding:12px 16px;margin:0;border-top:3px solid ${STAGE_COLOR[s]}">
+        <div class="metric-label" style="color:${STAGE_COLOR[s]}">${s}</div>
+        <div class="metric-value" style="font-size:18px">${d.length}</div>
+        <div class="metric-sub">${v?fmtUSD(v):''}</div>
+      </div>`;
+    }).join('')}
+    ${stale.length?`<div class="metric" style="padding:12px 16px;margin:0;border-top:3px solid var(--red);cursor:pointer" onclick="document.getElementById('stale-section').scrollIntoView({behavior:'smooth'})">
+      <div class="metric-label" style="color:var(--red)"><i class="ti ti-clock-exclamation"></i> Stale</div>
+      <div class="metric-value" style="font-size:18px;color:var(--red)">${stale.length}</div>
+      <div class="metric-sub" style="color:var(--red)">30+ days inactive</div>
+    </div>`:''}
   </div>
+
+  <!-- STALE DEALS WARNING -->
+  ${stale.length?`<div id="stale-section" style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:14px 16px;margin-bottom:16px">
+    <div style="font-weight:700;color:#b91c1c;margin-bottom:10px;font-size:13px"><i class="ti ti-clock-exclamation"></i> ${stale.length} deal${stale.length>1?'s':''} with no activity for 30+ days — follow up needed</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${stale.sort((a,b)=>dealStaleDays(b)-dealStaleDays(a)).map(d=>`<div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:8px;padding:10px 14px;cursor:pointer" onclick="openDealDetail('${d.id}')">
+        <div style="flex:1;min-width:0">
+          <span style="font-weight:700;font-size:13px">${d.company}</span>
+          <span style="font-size:12px;color:var(--text-m);margin-left:8px">${d.model||'—'}</span>
+        </div>
+        <span class="b ${stageBadge(d.stage)}">${d.stage}</span>
+        <span style="font-weight:800;font-size:13px">${fmtUSD(d.amount)}</span>
+        <span style="font-size:12px;color:var(--red);font-weight:600;flex-shrink:0">${dealStaleDays(d)}d silent</span>
+        <button class="btn btn-sm" onclick="event.stopPropagation();openM('activity',null,'${d.company_id}',null)"><i class="ti ti-message-circle"></i>Log call</button>
+      </div>`).join('')}
+    </div>
+  </div>`:''}
+
+  <!-- FORECAST -->
+  ${forecast.length?`<div style="background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:14px 16px;margin-bottom:16px">
+    <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--text-m)"><i class="ti ti-chart-line"></i> Revenue Forecast (weighted by probability)</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap">
+      ${forecast.map(([month,data])=>{
+        const label=new Date(month+'-01').toLocaleDateString('en',{month:'short',year:'numeric'});
+        return`<div style="background:var(--blue-lt);border-radius:8px;padding:10px 16px;min-width:130px">
+          <div style="font-size:11px;color:var(--blue);font-weight:700;text-transform:uppercase">${label}</div>
+          <div style="font-size:18px;font-weight:800;color:var(--blue)">${fmtUSD(Math.round(data.amount))}</div>
+          <div style="font-size:11px;color:var(--text-m)">${data.deals.length} deal${data.deals.length>1?'s':''}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`:''}
+
+  <!-- KANBAN BOARD -->
   <div class="pipeline">
     ${visStages.map(stage=>{
       const cards=allMyDeals.filter(d=>d.stage===stage);
       const tot=cards.reduce((s,d)=>s+d.amount,0);
       return`<div class="p-col">
         <div class="p-head" style="background:${STAGE_COLOR[stage]}22;color:${STAGE_COLOR[stage]}">${stage}<span class="cnt">${cards.length}${tot?' · $'+Math.round(tot/1000)+'K':''}</span></div>
-        ${cards.map(d=>`<div class="p-card" style="border-left-color:${STAGE_COLOR[d.stage]}" onclick="openDealDetail('${d.id}')">
-          <div class="p-card-co">${d.company}</div>
-          <div class="p-card-model">${d.model||'—'}</div>
-          <div class="p-card-amt">${fmtUSD(d.amount)}</div>
-          <div class="p-card-foot">
-            <span class="p-card-agent">${(d.agent||'').split(' ')[0]}</span>
-            <span class="p-prob b-gray b" style="font-size:10px">${STAGE_P[d.stage]||0}%</span>
-          </div>
-        </div>`).join('')}
+        ${cards.map(d=>{
+          const staleDays=dealStaleDays(d);
+          const isStale=staleDays>=30;
+          const isWarning=staleDays>=14&&staleDays<30;
+          return`<div class="p-card" style="border-left-color:${isStale?'#ef4444':isWarning?'#f59e0b':STAGE_COLOR[d.stage]}" onclick="openDealDetail('${d.id}')">
+            <div class="p-card-co">${d.company}</div>
+            <div class="p-card-model">${d.model||'—'}</div>
+            ${d.competitor?`<div style="font-size:10px;color:var(--red);margin-top:2px"><i class="ti ti-sword"></i> vs ${d.competitor}</div>`:''}
+            <div class="p-card-amt">${fmtUSD(d.amount)}</div>
+            <div class="p-card-foot">
+              <span class="p-card-agent">${(d.agent||'').split(' ')[0]}</span>
+              ${isStale?`<span style="font-size:10px;color:#ef4444;font-weight:700">${staleDays}d ⚠</span>`:
+                isWarning?`<span style="font-size:10px;color:#f59e0b;font-weight:700">${staleDays}d</span>`:
+                `<span class="p-prob b-gray b" style="font-size:10px">${STAGE_P[d.stage]||0}%</span>`}
+            </div>
+          </div>`;
+        }).join('')}
       </div>`;
     }).join('')}
   </div>`;
 }
 
 // ─── Companies ─────────────────────────────────────────────────────────────
-let coSort={col:'name',dir:1};
-let coFilter='';
+let selectedCompanies=new Set();
+
+function toggleSelectCompany(id,cb){
+  if(cb.checked)selectedCompanies.add(id);else selectedCompanies.delete(id);
+  updateBulkBar();
+}
+
+function updateBulkBar(){
+  const bar=$('bulk-bar');
+  if(!bar)return;
+  if(selectedCompanies.size>0){
+    bar.style.display='flex';
+    const lbl=bar.querySelector('#bulk-count');
+    if(lbl)lbl.textContent=`${selectedCompanies.size} selected`;
+  }else{
+    bar.style.display='none';
+  }
+}
+
+async function bulkUpdateStatus(status){
+  if(!selectedCompanies.size)return;
+  if(!confirm(`Set ${selectedCompanies.size} companies to "${status}"?`))return;
+  for(const id of selectedCompanies){
+    const c=db.companies.find(x=>x.id===id);
+    if(c){
+      c.status=status;
+      await persist('companies',{...c});
+    }
+  }
+  selectedCompanies.clear();
+  renderCompanies();
+}
+
+async function bulkUpdateCategory(cat){
+  if(!selectedCompanies.size)return;
+  if(!confirm(`Set category "${cat}" for ${selectedCompanies.size} companies?`))return;
+  for(const id of selectedCompanies){
+    const c=db.companies.find(x=>x.id===id);
+    if(c){c.category=cat;await persist('companies',{...c});}
+  }
+  selectedCompanies.clear();
+  renderCompanies();
+}
+
+
 
 function sortCompanies(col){
   if(coSort.col===col)coSort.dir*=-1;else{coSort.col=col;coSort.dir=1;}
@@ -878,6 +1007,14 @@ function renderCompanies(filter){
   const th=(col,label)=>`<th style="cursor:pointer;user-select:none;white-space:nowrap" onclick="sortCompanies('${col}')">${label}${si(col)}</th>`;
 
   $('content').innerHTML=`
+  <div id="bulk-bar" style="display:none;align-items:center;gap:8px;padding:10px 14px;background:var(--blue-lt);border:1px solid #93c5fd;border-radius:8px;margin-bottom:10px;flex-wrap:wrap">
+    <span style="font-weight:700;color:var(--blue);font-size:13px" id="bulk-count">0 selected</span>
+    <span style="color:var(--blue);font-size:13px">· Status:</span>
+    ${['Active','Prospect','Negotiating','Inactive'].map(s=>`<button class="btn btn-sm" onclick="bulkUpdateStatus('${s}')">${s}</button>`).join('')}
+    <span style="color:var(--blue);font-size:13px">· Category:</span>
+    ${['A','B','C','D'].map(c=>`<button class="btn btn-sm" onclick="bulkUpdateCategory('${c}')">${c}</button>`).join('')}
+    <button class="btn btn-sm" style="margin-left:auto" onclick="selectedCompanies.clear();document.querySelectorAll('.co-cb').forEach(cb=>cb.checked=false);updateBulkBar()"><i class="ti ti-x"></i>Cancel</button>
+  </div>
   <div class="toolbar">
     <div class="search" style="flex:1;max-width:400px">
       <i class="ti ti-search"></i>
@@ -888,6 +1025,7 @@ function renderCompanies(filter){
   </div>
   <div class="tbl-wrap"><table class="tbl">
     <thead><tr>
+      <th style="width:32px"><input type="checkbox" title="Select all" onchange="document.querySelectorAll('.co-cb').forEach(cb=>{cb.checked=this.checked;toggleSelectCompany(cb.dataset.id,cb)})"></th>
       ${th('name','Company')}
       ${th('industry','Industry')}
       ${th('category','Cat.')}
@@ -914,10 +1052,11 @@ function renderCompaniesRows(){
 
   // Update sort headers
   const thead=document.querySelector('.tbl thead tr');
-  if(thead)thead.innerHTML=`
+  if(thead)thead.innerHTML=`<tr>
+    <th style="width:32px"><input type="checkbox" title="Select all" onchange="document.querySelectorAll('.co-cb').forEach(cb=>{cb.checked=this.checked;toggleSelectCompany(cb.dataset.id,cb)})"></th>
     ${th('name','Company')}${th('industry','Industry')}${th('category','Cat.')}
     ${th('city','City')}${th('contacts','Contacts')}${th('deals','Deals')}
-    ${th('fleet','Fleet')}${th('last_activity','Last Contact')}${th('status','Status')}<th></th>`;
+    ${th('fleet','Fleet')}${th('last_activity','Last Contact')}${th('status','Status')}<th></th></tr>`;
 
   // Update clear button
   const inp=$('co-search-input');
@@ -971,6 +1110,7 @@ function renderCompaniesRows(){
     const actColor=daysSince===null?'var(--text-l)':daysSince<=7?'var(--green)':daysSince<=30?'var(--amber)':'var(--red)';
     const actLabel=daysSince===null?'—':daysSince===0?'Today':daysSince===1?'Yesterday':daysSince+'d ago';
     return`<tr onclick="openCompanyDetail('${c.id}')">
+      <td onclick="event.stopPropagation()"><input type="checkbox" class="co-cb" data-id="${c.id}" onchange="toggleSelectCompany('${c.id}',this)"></td>
       <td><div style="display:flex;align-items:center;gap:9px"><div class="av ${avC(i)}" style="width:32px;height:32px;font-size:12px">${ini(c.name)}</div><div><div style="font-weight:700">${c.name}</div>${c.website?`<div style="font-size:11px;color:var(--blue)">${c.website}</div>`:''}</div></div></td>
       <td><div style="display:flex;align-items:center;gap:6px">${c.category?`<span class="cat-badge cat-${c.category}">${c.category}</span>`:''}<span style="font-size:12px;color:var(--text-m)">${c.industry||''}</span></div></td>
       <td>${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Cat. ${c.category}</span>`:'-'}</td>
@@ -1227,33 +1367,67 @@ function openDealDetail(id){
   const d=db.deals.find(x=>x.id===id);if(!d)return;
   cur.deal=id;
   $('ptitle').textContent=d.company+' — '+(d.model||'Deal');
-  $('breadcrumb').innerHTML=`<span onclick="go('pipeline',document.querySelector('.ni:nth-child(2)'))">Pipeline</span><i class="ti ti-chevron-right" style="font-size:12px"></i>`;
-  $('topbar-right').innerHTML=`<button class="btn" onclick="openM('activity',null,null,'${id}')"><i class="ti ti-plus"></i>Activity</button><button class="btn" onclick="openM('deal','${id}')"><i class="ti ti-edit"></i>Edit</button>`;
+  $('breadcrumb').innerHTML=`<span style="cursor:pointer;color:var(--blue)" onclick="go('pipeline',document.querySelector('.ni:nth-child(2)'))">Pipeline</span><i class="ti ti-chevron-right" style="font-size:12px;margin:0 4px"></i>`;
+  $('topbar-right').innerHTML=`<button class="btn" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-message-circle"></i>Log Activity</button><button class="btn" onclick="openM('deal','${id}')"><i class="ti ti-edit"></i>Edit</button>`;
   const tasks=db.tasks.filter(t=>t.deal_id===id);
-  const acts=db.activities.filter(a=>a.deal_id===id).reverse();
+  const acts=db.activities.filter(a=>a.deal_id===id||a.company_id===d.company_id).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
   const stageIdx=STAGES.indexOf(d.stage);
+  const staleDays=dealStaleDays(d);
+  const isStale=staleDays>=30;
+  const isLost=d.stage==='Lost';
 
   $('content').innerHTML=`
-  <div class="stage-strip" style="margin-bottom:20px">
+  <!-- STAGE STRIP -->
+  <div class="stage-strip" style="margin-bottom:16px">
     ${STAGES.map((s,i)=>`<div class="stage-step ${i<stageIdx?'done':i===stageIdx?'active':''}" onclick="moveDeal('${id}','${s}')">${s}</div>`).join('')}
   </div>
+
+  <!-- STALE WARNING -->
+  ${isStale&&!isLost?`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;gap:12px">
+    <i class="ti ti-clock-exclamation" style="font-size:24px;color:#b91c1c;flex-shrink:0"></i>
+    <div style="flex:1">
+      <div style="font-weight:700;color:#b91c1c;font-size:13px">No activity for ${staleDays} days</div>
+      <div style="font-size:12px;color:#7f1d1d">This deal needs follow-up. Log a call or meeting to keep it moving.</div>
+    </div>
+    <button class="btn btn-sm" style="background:#b91c1c;color:#fff;border:none" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-phone"></i>Log Call</button>
+  </div>`:''}
+
   <div style="display:grid;grid-template-columns:300px 1fr;gap:18px">
     <div>
+      <!-- DEAL INFO CARD -->
       <div class="card" style="margin-bottom:14px">
-        <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:4px">${fmtUSD(d.amount)}</div>
-        <span class="b ${stageBadge(d.stage)}" style="margin-bottom:14px;display:inline-block">${d.stage}</span>
-        ${[['Company',`<span style="cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${d.company_id}')">${d.company}</span>`],['Model',d.model],['Contact',d.contact],['Manager',d.agent],['Currency',d.currency],['Probability',d.probability?d.probability+'%':''],['Days in Pipeline',d.days+' d'],['Next Action',d.next_action],['Next Action Date',d.next_date]].filter(r=>r[1]).map(([k,v])=>`<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')}
+        <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px">${fmtUSD(d.amount)}</div>
+        <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+          <span class="b ${stageBadge(d.stage)}">${d.stage}</span>
+          ${d.probability?`<span class="b b-gray">${d.probability}% probability</span>`:''}
+          ${staleDays!==null&&!isLost?`<span class="b" style="background:${isStale?'#fee2e2':staleDays>=14?'#fef3c7':'var(--gray-100)'};color:${isStale?'#b91c1c':staleDays>=14?'#b45309':'var(--text-m)'}">${staleDays}d since contact</span>`:''}
+        </div>
+        ${[
+          ['Company',`<span style="cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${d.company_id}')">${d.company}</span>`],
+          ['Model',d.model],
+          ['Manager',d.agent],
+          ['Currency',d.currency],
+          ['Next Action',d.next_action],
+          ['Next Action Date',d.next_date],
+          d.competitor?['Competitor',`<span style="color:var(--red)"><i class="ti ti-sword" style="font-size:11px"></i> ${d.competitor}</span>`]:null,
+          isLost&&d.lost_reason?['Reason Lost',`<span style="color:var(--red)">${d.lost_reason}</span>`]:null,
+        ].filter(Boolean).filter(r=>r[1]).map(([k,v])=>`<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')}
       </div>
+
+      <!-- TASKS CARD -->
       <div class="card">
-        <div class="card-title">Deal Tasks</div>
-        ${tasks.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-100)">
+        <div class="card-title">Deal Tasks <span style="font-weight:400;font-size:12px;color:var(--text-m)">(${tasks.length})</span>
+          <button class="btn btn-sm" onclick="openM('task',null,'${d.company_id}','${id}')"><i class="ti ti-plus"></i></button>
+        </div>
+        ${tasks.length?tasks.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-100)">
           <div class="cb ${t.done?'done':''}" onclick="toggleTask('${t.id}',${!t.done})">${t.done?'<i class="ti ti-check" style="font-size:11px"></i>':''}</div>
           <div style="flex:1;font-size:13px;${t.done?'text-decoration:line-through;color:var(--text-m)':''}">${t.title}</div>
           <span style="font-size:11px">${dueFmt(t.due)}</span>
-        </div>`).join('')}
-        <button class="btn btn-sm" style="margin-top:10px" onclick="openM('task',null,'${d.company_id}','${id}')"><i class="ti ti-plus"></i>Task</button>
+        </div>`).join(''):`<div style="font-size:13px;color:var(--text-m);padding:8px 0">No tasks</div>`}
       </div>
     </div>
+
+    <!-- ACTIVITY HISTORY -->
     <div class="card">
       <div class="card-title">Activity History
         <button class="btn btn-sm" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-plus"></i>Log</button>
@@ -1261,23 +1435,29 @@ function openDealDetail(id){
       ${acts.length?acts.map(a=>{
         const icons={Call:'ti-phone',Meeting:'ti-calendar-event',WhatsApp:'ti-brand-whatsapp',Email:'ti-mail',Proposal:'ti-file-text',Demo:'ti-eye',Documents:'ti-file',Other:'ti-dots',stage:'ti-arrow-right'};
         const typeColor={Call:'#3b82f6',Meeting:'#8b5cf6',WhatsApp:'#22c55e',Email:'#14b8a6',Proposal:'#f59e0b',Demo:'#22c55e',Documents:'#6b7280',Other:'#6b7280',stage:'#6b7280'};
-        const d=a.date||String(a.created||'').slice(0,10);
+        const ad=a.date||String(a.created||'').slice(0,10);
         const color=typeColor[a.type]||'#6b7280';
         return`<div style="border:1px solid var(--bdr);border-radius:10px;overflow:hidden;margin-bottom:10px;background:var(--sur)">
           <div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:${color}12;border-bottom:1px solid ${color}30">
             <div style="width:26px;height:26px;border-radius:6px;background:${color};display:flex;align-items:center;justify-content:center;flex-shrink:0">
               <i class="ti ${icons[a.type]||'ti-dots'}" style="font-size:12px;color:#fff"></i>
             </div>
-            <span style="font-weight:700;font-size:13px;color:${color};flex:1">${a.type||'Activity'}</span>
+            <div style="flex:1;min-width:0">
+              <span style="font-weight:700;font-size:13px;color:${color}">${a.type||'Activity'}</span>
+              ${a.direction?`<span style="font-size:11px;color:var(--text-m);margin-left:6px">${a.direction}</span>`:''}
+              ${a.duration?`<span style="font-size:11px;color:var(--text-m);margin-left:4px">· ${a.duration} min</span>`:''}
+              ${a.contact_name?`<span style="font-size:11px;background:var(--gray-100);padding:2px 8px;border-radius:12px;margin-left:6px;color:var(--text)"><i class="ti ti-user" style="font-size:10px"></i> ${a.contact_name}</span>`:''}
+              ${a.sentiment?`<span style="font-size:11px;margin-left:6px">${{Positive:'😊',Neutral:'😐',Negative:'😟',Interested:'🔥',Hesitant:'🤔'}[a.sentiment]||''} ${a.sentiment}</span>`:''}
+            </div>
             ${a.agent?`<span style="font-size:12px;color:var(--text-m)">${a.agent}</span>`:''}
-            <span style="font-size:12px;font-weight:600;color:var(--text);flex-shrink:0">${d}</span>
+            <span style="font-size:12px;font-weight:600;color:var(--text);flex-shrink:0">${ad}</span>
           </div>
           <div style="padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:6px">
             ${a.note?`<div style="color:var(--text)">${a.note}</div>`:''}
             ${a.outcome?`<div style="background:#f0fdf4;border-left:3px solid #22c55e;padding:6px 10px;border-radius:0 5px 5px 0;font-size:12px"><strong style="color:#15803d">✓ Agreed:</strong> ${a.outcome}</div>`:''}
             ${a.next_step?`<div style="background:#eff6ff;border-left:3px solid #3b82f6;padding:6px 10px;border-radius:0 5px 5px 0;font-size:12px"><strong style="color:#1d4ed8">→ Next:</strong> ${a.next_step}${a.next_date?` <em>${a.next_date}</em>`:''}</div>`:''}
           </div>
-        </div>`;}).join(''):`<div class="empty" style="padding:24px"><i class="ti ti-clock"></i>No activity</div>`}
+        </div>`;}).join(''):`<div class="empty" style="padding:24px"><i class="ti ti-clock"></i><div class="empty-title">No activity yet</div><button class="btn btn-sm btn-primary" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-phone"></i>Log First Call</button></div>`}
     </div>
   </div>`;
 }
@@ -1492,38 +1672,138 @@ async function quickDoneTask(id){
 
 // ─── Reports ───────────────────────────────────────────────────────────────
 function renderReports(){
-  const agentSales=AGENTS().map(a=>({n:a,v:db.deals.filter(d=>d.agent===a&&d.stage==='Won').reduce((s,d)=>s+d.amount,0)})).sort((a,b)=>b.v-a.v);
-  const maxA=agentSales[0]?.v||1;
-  const stageCounts=STAGES.map(s=>({s,cnt:db.deals.filter(d=>d.stage===s).length,val:db.deals.filter(d=>d.stage===s).reduce((a,d)=>a+d.amount,0)}));
+  const allDeals=currentUser?.role==='manager'?db.deals:myDeals();
+  const wonDeals=allDeals.filter(d=>d.stage==='Won');
+  const activeDeals=allDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost');
+  const lostDeals=allDeals.filter(d=>d.stage==='Lost');
+  const convRate=allDeals.length?Math.round(wonDeals.length/allDeals.length*100):0;
+  const pipeVal=activeDeals.reduce((s,d)=>s+d.amount,0);
+  const wonVal=wonDeals.reduce((s,d)=>s+d.amount,0);
+  const avgDeal=allDeals.length?Math.round(allDeals.reduce((s,d)=>s+d.amount,0)/allDeals.length):0;
+
+  // Avg days to close (Won deals with days field)
+  const closedWithDays=wonDeals.filter(d=>Number(d.days)>0);
+  const avgClose=closedWithDays.length?Math.round(closedWithDays.reduce((s,d)=>s+Number(d.days),0)/closedWithDays.length):null;
+
+  // Stage conversion funnel
+  const stageCounts=STAGES.map(s=>({s,cnt:allDeals.filter(d=>d.stage===s).length,val:allDeals.filter(d=>d.stage===s).reduce((a,d)=>a+d.amount,0)}));
+
+  // Agent activity (last 30 days)
+  const cutoff=new Date();cutoff.setDate(cutoff.getDate()-30);
+  const cutoffStr=cutoff.toISOString().slice(0,10);
+  const recentActs=db.activities.filter(a=>(a.date||a.created||'')>=cutoffStr);
+
+  const agentActivity=AGENTS().map(a=>{
+    const acts=recentActs.filter(x=>x.agent===a);
+    const calls=acts.filter(x=>x.type==='Call'||x.type==='WhatsApp').length;
+    const meetings=acts.filter(x=>x.type==='Meeting').length;
+    const proposals=acts.filter(x=>x.type==='Proposal').length;
+    const deals=allDeals.filter(d=>d.agent===a&&d.stage!=='Lost').length;
+    const won=wonDeals.filter(d=>d.agent===a).reduce((s,d)=>s+d.amount,0);
+    return{name:a,calls,meetings,proposals,total:acts.length,deals,won};
+  }).filter(a=>a.total>0||a.deals>0).sort((a,b)=>b.total-a.total);
+
+  // Lost reason breakdown
+  const lostReasons={};
+  lostDeals.forEach(d=>{const r=d.lost_reason||'Unknown';lostReasons[r]=(lostReasons[r]||0)+1;});
+  const lostArr=Object.entries(lostReasons).sort(([,a],[,b])=>b-a);
+
+  // Competitor breakdown
+  const compMap={};
+  allDeals.filter(d=>d.competitor).forEach(d=>{const c=d.competitor;compMap[c]=(compMap[c]||0)+1;});
+  const compArr=Object.entries(compMap).sort(([,a],[,b])=>b-a);
+
+  // Brand fleet breakdown
   const brandCount={};
   db.fleet.filter(u=>u.brand!=='Hitachi').forEach(u=>{brandCount[u.brand]=(brandCount[u.brand]||0)+1});
   const brands=Object.keys(brandCount).sort((a,b)=>brandCount[b]-brandCount[a]);
-  const convRate=db.deals.length?Math.round(db.deals.filter(d=>d.stage==='Won').length/db.deals.length*100):0;
 
   $('content').innerHTML=`
+  <!-- KPI METRICS -->
   <div class="metrics" style="margin-bottom:20px">
-    <div class="metric"><div class="metric-label">Total Deals</div><div class="metric-value">${db.deals.length}</div></div>
-    <div class="metric"><div class="metric-label">Conversion</div><div class="metric-value">${convRate}%</div></div>
-    <div class="metric"><div class="metric-label">Revenue Won</div><div class="metric-value">${fmtUSD(db.deals.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0))}</div></div>
-    <div class="metric"><div class="metric-label">Avg. Deal Size</div><div class="metric-value">${fmtUSD(db.deals.length?Math.round(db.deals.reduce((s,d)=>s+d.amount,0)/db.deals.length):0)}</div></div>
+    <div class="metric"><div class="metric-label">Total Deals</div><div class="metric-value">${allDeals.length}</div><div class="metric-sub">${activeDeals.length} active</div></div>
+    <div class="metric"><div class="metric-label">Win Rate</div><div class="metric-value">${convRate}%</div><div class="metric-sub">${wonDeals.length} won · ${lostDeals.length} lost</div></div>
+    <div class="metric"><div class="metric-label">Revenue Won</div><div class="metric-value">${fmtUSD(wonVal)}</div></div>
+    <div class="metric"><div class="metric-label">Avg. Deal Size</div><div class="metric-value">${fmtUSD(avgDeal)}</div></div>
+    <div class="metric"><div class="metric-label">Avg. Close Time</div><div class="metric-value">${avgClose!==null?avgClose+'d':'—'}</div><div class="metric-sub">days in pipeline</div></div>
+    <div class="metric"><div class="metric-label">Active Pipeline</div><div class="metric-value">${fmtUSD(pipeVal)}</div></div>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px;margin-bottom:18px">
-    <div class="card"><div class="card-title">Closed Sales by Manager</div>
-      ${agentSales.map(a=>`<div class="bar-row"><div class="bar-label">${a.n.split(' ').slice(0,2).join(' ')}</div><div class="bar-track"><div class="bar-fill" style="width:${Math.round(a.v/maxA*100)}%;background:#185FA5"></div></div><div class="bar-val">${a.v?'$'+Math.round(a.v/1000)+'K':'—'}</div></div>`).join('')}
+
+  <!-- AGENT ACTIVITY TABLE -->
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-title">Team Activity — Last 30 Days</div>
+    ${agentActivity.length?`<div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Manager</th><th style="text-align:center">📞 Calls</th><th style="text-align:center">🤝 Meetings</th><th style="text-align:center">📋 Proposals</th><th style="text-align:center">Total Activities</th><th style="text-align:center">Active Deals</th><th style="text-align:right">Won</th></tr></thead>
+      <tbody>${agentActivity.map((a,i)=>`<tr>
+        <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:28px;height:28px;font-size:10px">${ini(a.name)}</div>${a.name}</div></td>
+        <td style="text-align:center"><strong>${a.calls||'—'}</strong></td>
+        <td style="text-align:center"><strong>${a.meetings||'—'}</strong></td>
+        <td style="text-align:center"><strong>${a.proposals||'—'}</strong></td>
+        <td style="text-align:center">
+          <div style="display:flex;align-items:center;justify-content:center;gap:6px">
+            <div style="width:60px;height:6px;background:var(--gray-100);border-radius:3px;overflow:hidden">
+              <div style="width:${Math.min(100,Math.round(a.total/Math.max(...agentActivity.map(x=>x.total),1)*100))}%;height:100%;background:var(--blue);border-radius:3px"></div>
+            </div>
+            <strong>${a.total}</strong>
+          </div>
+        </td>
+        <td style="text-align:center">${a.deals}</td>
+        <td style="text-align:right;color:var(--green);font-weight:700">${a.won?fmtUSD(a.won):'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>`:`<div class="empty" style="padding:24px"><i class="ti ti-chart-bar"></i><div class="empty-title">No activity logged in last 30 days</div></div>`}
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+    <!-- FUNNEL CONVERSION -->
+    <div class="card">
+      <div class="card-title">Sales Funnel — Stage Conversion</div>
+      ${stageCounts.filter(x=>x.cnt>0).map((x,i,arr)=>{
+        const pct=arr[0].cnt?Math.round(x.cnt/arr[0].cnt*100):0;
+        const convFromPrev=i>0&&arr[i-1].cnt?Math.round(x.cnt/arr[i-1].cnt*100):null;
+        return`<div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span style="font-size:13px;font-weight:600;color:${STAGE_COLOR[x.s]}">${x.s}</span>
+            <div style="display:flex;gap:8px;align-items:center">
+              ${convFromPrev!==null?`<span style="font-size:11px;color:var(--text-m)">↓ ${convFromPrev}% from prev</span>`:''}
+              <span style="font-size:13px;font-weight:700">${x.cnt}</span>
+            </div>
+          </div>
+          <div style="height:8px;background:var(--gray-100);border-radius:4px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:${STAGE_COLOR[x.s]};border-radius:4px;transition:width .5s"></div>
+          </div>
+          ${x.val?`<div style="font-size:11px;color:var(--text-m);margin-top:2px">${fmtUSD(x.val)}</div>`:''}
+        </div>`;
+      }).join('')}
     </div>
-    <div class="card"><div class="card-title">Sales Funnel</div>
-      <div style="position:relative;width:100%;height:${Math.max(STAGES.length*44+60,200)}px"><canvas id="funnelChart" role="img" aria-label="Sales Funnel by stage">Funnel data.</canvas></div>
+
+    <!-- LOST REASONS + COMPETITORS -->
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div class="card" style="flex:1">
+        <div class="card-title">Why Deals Are Lost</div>
+        ${lostArr.length?lostArr.map(([reason,cnt])=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-100)">
+          <div style="flex:1;font-size:13px">${reason}</div>
+          <span class="b b-red" style="font-size:11px">${cnt}</span>
+          <div style="width:50px;height:5px;background:var(--gray-100);border-radius:3px;overflow:hidden"><div style="width:${Math.round(cnt/lostArr[0][1]*100)}%;height:100%;background:var(--red);border-radius:3px"></div></div>
+        </div>`).join(''):`<div class="empty" style="padding:16px"><i class="ti ti-check"></i><div class="empty-title" style="font-size:13px">No lost deals</div></div>`}
+      </div>
+      <div class="card" style="flex:1">
+        <div class="card-title">Competitors in Deals</div>
+        ${compArr.length?compArr.map(([comp,cnt])=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-100)">
+          <i class="ti ti-sword" style="color:var(--red);font-size:13px"></i>
+          <div style="flex:1;font-size:13px">${comp}</div>
+          <span class="b b-gray" style="font-size:11px">${cnt} deal${cnt>1?'s':''}</span>
+        </div>`).join(''):`<div class="empty" style="padding:16px"><i class="ti ti-shield"></i><div class="empty-title" style="font-size:13px">No competitors logged</div></div>`}
+      </div>
     </div>
   </div>
+
+  <!-- COMPETITOR FLEET -->
   <div class="card">
     <div class="card-title">Competitor Fleet — Replacement Potential</div>
-    ${brands.length?`<div style="position:relative;width:100%;height:${Math.max(brands.length*44+80,160)}px"><canvas id="compChart" role="img" aria-label="Competitor brands in client fleets">Data.</canvas></div>`:`<div class="empty" style="padding:24px"><i class="ti ti-chart-bar"></i>No competitor data</div>`}
+    ${brands.length?`<div style="position:relative;width:100%;height:${Math.max(brands.length*44+80,160)}px"><canvas id="compChart"></canvas></div>`:`<div class="empty" style="padding:24px"><i class="ti ti-chart-bar"></i>No competitor data</div>`}
   </div>`;
 
   setTimeout(()=>{
-    if(charts.funnel)charts.funnel.destroy();
-    const fCtx=$('funnelChart');
-    if(fCtx)charts.funnel=new Chart(fCtx,{type:'bar',data:{labels:stageCounts.map(x=>x.s),datasets:[{label:'Deals',data:stageCounts.map(x=>x.cnt),backgroundColor:STAGES.map(s=>STAGE_COLOR[s]),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,color:'#6b7280'},grid:{color:'rgba(0,0,0,0.05)'}},y:{grid:{display:false},ticks:{color:'#6b7280'}}}}});
     if(brands.length){
       if(charts.comp)charts.comp.destroy();
       const cCtx=$('compChart');
@@ -1561,6 +1841,10 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Client Category</label><select class="fc" id="f-category"><option value="">— not set —</option>${Object.entries(CAT_RULES).map(([k,v])=>`<option value="${k}" ${e.category===k?'selected':''}>${v.label} (${v.desc})</option>`).join('')}</select></div>
         <div class="fg"><label class="fl">Assigned Agent</label><select class="fc" id="f-assigned">${[{name:'— not assigned —',id:''},...db.agents].map(a=>`<option value="${a.name||''}" ${(e.assigned_agent||'')===(a.name||'')?'selected':''}>${a.name||'— not assigned —'}</option>`).join('')}${db.agents.length===0?AGENTS().map(a=>`<option value="${a}" ${(e.assigned_agent||'')===a?'selected':''}>${a}</option>`).join(''):''}</select></div>
       </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Annual Equipment Budget ($)</label><input class="fc" id="f-budget" type="number" value="${e.budget||''}" placeholder="0"></div>
+        <div class="fg"><label class="fl">Purchase Seasonality</label><select class="fc" id="f-seasonality"><option value="">— not set —</option>${['Q1 (Jan–Mar)','Q2 (Apr–Jun)','Q3 (Jul–Sep)','Q4 (Oct–Dec)','Spring','Autumn','Year-round'].map(s=>`<option ${e.seasonality===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      </div>
       <div class="fg"><label class="fl">Website</label><input class="fc" id="f-website" value="${e.website||''}" placeholder="https://"></div>
       <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="f-notes" rows="2">${e.notes||''}</textarea></div>`,
     contact:`
@@ -1574,6 +1858,10 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Phone</label><input class="fc" id="f-phone" data-phone data-exclude-id="${id||''}" value="${e.phone||''}" placeholder="+374 XX XXX XXX"></div>
         <div class="fg"><label class="fl">Email</label><input class="fc" id="f-email" data-email data-exclude-id="${id||''}" value="${e.email||''}" placeholder="example@company.com" autocomplete="email"></div>
       </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Preferred Channel</label><select class="fc" id="f-channel"><option value="">— not set —</option>${['Call','WhatsApp','Email','Telegram','In Person'].map(c=>`<option ${e.channel===c?'selected':''}>${c}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Language</label><select class="fc" id="f-lang"><option value="">— not set —</option>${['Armenian','Russian','English'].map(l=>`<option ${e.language===l?'selected':''}>${l}</option>`).join('')}</select></div>
+      </div>
       <div id="dup-warn"></div>`,
     deal:`
       <div class="fg"><label class="fl">Company *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
@@ -1583,15 +1871,22 @@ function openM(type,id=null,coId=null,dealId=null){
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Currency</label><select class="fc" id="f-currency">${['USD','EUR','AMD','RUB'].map(c=>`<option ${(e.currency||'USD')===c?'selected':''}>${c}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Stage</label><select class="fc" id="f-stage">${['Lead','Qualified','Proposal','Negotiation','Won','Lost'].map(s=>`<option ${(e.stage||'Lead')===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Stage</label><select class="fc" id="f-stage" onchange="updateLostReason(this.value)">${['Lead','Qualified','Proposal','Negotiation','Won','Lost'].map(s=>`<option ${(e.stage||'Lead')===s?'selected':''}>${s}</option>`).join('')}</select></div>
       </div>
       <div class="fr">
+        <div class="fg"><label class="fl">Competitor</label><input class="fc" id="f-competitor" value="${e.competitor||''}" placeholder="Komatsu, Caterpillar, Volvo..."></div>
         <div class="fg"><label class="fl">Manager</label><select class="fc" id="f-agent">${AGENTS().map(a=>`<option ${(e.agent||currentUser?.name||'')=== a?'selected':''}>${a}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Days in Pipeline</label><input class="fc" id="f-days" type="number" value="${e.days||0}"></div>
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Next Action</label><input class="fc" id="f-next" value="${e.next_action||''}" placeholder="Send Proposal..."></div>
         <div class="fg"><label class="fl">Date</label><input class="fc" id="f-ndate" type="date" value="${e.next_date||''}"></div>
+      </div>
+      <div class="fg" id="lost-reason-wrap" style="display:${(e.stage||'Lead')==='Lost'?'block':'none'}">
+        <label class="fl">Reason Lost</label>
+        <select class="fc" id="f-lost-reason">
+          <option value="">— select reason —</option>
+          ${['Price too high','Chose competitor','Budget cut','No budget','Project cancelled','No response','Bought used equipment','Technical mismatch','Other'].map(r=>`<option ${e.lost_reason===r?'selected':''}>${r}</option>`).join('')}
+        </select>
       </div>`,
     fleet:`
       <div class="fg"><label class="fl">Company *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
@@ -1633,16 +1928,46 @@ function openM(type,id=null,coId=null,dealId=null){
       <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option>Sales Manager</option><option ${e.role==='Senior Manager'?'selected':''}>Senior Manager</option><option ${e.role==='Manager'?'selected':''}>Manager</option></select></div>`,
     activity:`
       <div class="fr">
-        <div class="fg"><label class="fl">Type</label><select class="fc" id="f-type">${['Call','Meeting','WhatsApp','Email','Proposal','Demo','Documents','Other'].map(t=>`<option>${t}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Type</label><select class="fc" id="f-type" onchange="updateActivityFields()">${['Call','Meeting','WhatsApp','Email','Proposal','Demo','Documents','Other'].map(t=>`<option>${t}</option>`).join('')}</select></div>
         <div class="fg"><label class="fl">Date</label><input class="fc" id="f-act-date" type="date" value="${today()}"></div>
+      </div>
+      <div class="fr" id="act-call-fields">
+        <div class="fg"><label class="fl">Direction</label><select class="fc" id="f-direction"><option>Outbound</option><option>Inbound</option></select></div>
+        <div class="fg"><label class="fl">Duration (min)</label><input class="fc" id="f-duration" type="number" placeholder="10" min="1" max="240"></div>
+      </div>
+      <div class="fg"><label class="fl">Contact Person</label>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <select class="fc" id="f-contact-person" onchange="onContactPersonChange(this)" style="flex:1">
+            <option value="">— select contact —</option>
+            ${(cur.company?db.contacts.filter(c=>c.company_id===cur.company):db.contacts).map(c=>`<option value="${c.id}">${c.first_name} ${c.last_name}${c.position?' ('+c.position+')':''}</option>`).join('')}
+            <option value="__new__">+ Add new contact...</option>
+          </select>
+        </div>
+        <div id="new-contact-inline" style="display:none;margin-top:10px;padding:12px;background:var(--blue-lt);border:1px solid #93c5fd;border-radius:8px">
+          <div style="font-size:12px;font-weight:700;color:var(--blue);margin-bottom:8px">New Contact</div>
+          <div class="fr">
+            <div class="fg"><label class="fl">First Name *</label><input class="fc" id="nc-fname" placeholder="First name"></div>
+            <div class="fg"><label class="fl">Last Name</label><input class="fc" id="nc-lname" placeholder="Last name"></div>
+          </div>
+          <div class="fr">
+            <div class="fg"><label class="fl">Position</label><input class="fc" id="nc-pos" placeholder="Director, Engineer..."></div>
+            <div class="fg"><label class="fl">Phone</label><input class="fc" id="nc-phone" data-phone placeholder="+374..."></div>
+          </div>
+        </div>
       </div>
       <div class="fg"><label class="fl">Summary — what was discussed</label><textarea class="fc" id="f-note" rows="3" placeholder="Topics covered, client's situation, questions raised..."></textarea></div>
       <div class="fg"><label class="fl">Outcome / Agreement</label><textarea class="fc" id="f-outcome" rows="2" placeholder="What was agreed, client's decision, objections..."></textarea></div>
+      <div class="fg"><label class="fl">Client Sentiment</label>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          ${[['Positive','😊','b-green'],['Neutral','😐','b-gray'],['Negative','😟','b-red'],['Interested','🔥','b-amber'],['Hesitant','🤔','b-purple']].map(([s,e,c])=>`<label style="display:flex;align-items:center;gap:5px;cursor:pointer;padding:6px 12px;border:2px solid var(--bdr);border-radius:20px;font-size:12px;user-select:none" onclick="setSentiment('${s}',this)"><span>${e}</span> ${s}</label>`).join('')}
+        </div>
+        <input type="hidden" id="f-sentiment">
+      </div>
       <div class="fr">
         <div class="fg"><label class="fl">Next Step</label><input class="fc" id="f-next-step" placeholder="Send proposal, call back, arrange demo..."></div>
         <div class="fg"><label class="fl">Follow-up Date</label><input class="fc" id="f-next-date" type="date"></div>
       </div>
-      <div class="fg"><label class="fl">Assigned To</label><select class="fc" id="f-agent">${(db.agents.length?db.agents.map(a=>a.name):['Maxim Kalashnikov']).map(a=>`<option ${a===(currentUser?.name||'')?' selected':''}>${a}</option>`).join('')}</select></div>`
+      <div class="fg"><label class="fl">Assigned To</label><select class="fc" id="f-agent">${(db.agents.length?db.agents.map(a=>a.name):(currentUser?[currentUser.name]:[])).map(a=>`<option ${a===(currentUser?.name||'')?'selected':''}>${a}</option>`).join('')}</select></div>`
   };
   $('mbody').innerHTML=bodies[type]||'';
   $('overlay').classList.add('open');
@@ -1682,14 +2007,26 @@ async function _saveM(){
 
   if(mtype==='company'){
     const name=(g('f-name')||'').trim();if(!name)return alert('Enter a name');
-    row={...row,name,industry:g('f-industry'),status:g('f-status'),city:g('f-city'),country:g('f-country'),website:g('f-website'),notes:g('f-notes'),category:g('f-category')||'',assigned_agent:g('f-assigned')||'',created:row.created||new Date().toISOString().slice(0,10)};
+    const prev=ex?{...ex}:null;
+    row={...row,name,industry:g('f-industry'),status:g('f-status'),city:g('f-city'),country:g('f-country'),website:g('f-website'),notes:g('f-notes'),category:g('f-category')||'',assigned_agent:g('f-assigned')||'',budget:g('f-budget')||'',seasonality:g('f-seasonality')||'',created:row.created||today()};
     const s=await persist('companies',row);
     if(!eid)db.companies.push(s);else Object.assign(db.companies.find(x=>x.id===eid),s);
+    // Log change history
+    if(prev&&eid){
+      const changes=[];
+      if(prev.status!==row.status)changes.push(`Status: ${prev.status||'—'} → ${row.status}`);
+      if(prev.category!==row.category)changes.push(`Category: ${prev.category||'—'} → ${row.category||'—'}`);
+      if(prev.assigned_agent!==row.assigned_agent)changes.push(`Agent: ${prev.assigned_agent||'—'} → ${row.assigned_agent||'—'}`);
+      if(changes.length){
+        const act={id:uid(),company_id:s.id,company:s.name,type:'note',note:'✏️ Updated: '+changes.join(' · '),date:today(),agent:currentUser?.name||''};
+        db.activities.push(act);persist('activities',act);
+      }
+    }
     updateCounts();renderCompanies();
   }else if(mtype==='contact'){
     const {id:coId,name:coName}=getCompanyFromForm();
     const fname=(g('f-fname')||'').trim();if(!fname)return alert('Enter a name');
-    row={...row,company_id:coId,company:coName,first_name:fname,last_name:g('f-lname')||'',position:g('f-pos')||'',phone:g('f-phone')||'',email:g('f-email')||'',notes:g('f-notes')||'',created:row.created||new Date().toISOString().slice(0,10)};
+    row={...row,company_id:coId,company:coName,first_name:fname,last_name:g('f-lname')||'',position:g('f-pos')||'',phone:g('f-phone')||'',email:g('f-email')||'',channel:g('f-channel')||'',language:g('f-lang')||'',notes:g('f-notes')||'',created:row.created||today()};
     const s=await persist('contacts',row);
     if(!eid)db.contacts.push(s);else Object.assign(db.contacts.find(x=>x.id===eid),s);
     updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderContacts();
@@ -1697,7 +2034,7 @@ async function _saveM(){
     let {id:coId,name:coName}=getCompanyFromForm();
     if(!coName)return alert('Select a company');
     if(!coId){const s=await persist('companies',{name:coName,status:'Prospect',created:new Date().toISOString().slice(0,10)});db.companies.push(s);coId=s.id;updateCounts();}
-    row={...row,company_id:coId,company:coName,model:g('f-model')||'',amount:Number(g('f-amount'))||0,currency:g('f-currency')||'USD',stage:g('f-stage')||'Lead',agent:g('f-agent')||'',next_action:g('f-next')||'',next_date:g('f-ndate')||'',days:Number(g('f-days'))||0,probability:{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[g('f-stage')]||0,created:row.created||new Date().toISOString().slice(0,10)};
+    row={...row,company_id:coId,company:coName,model:g('f-model')||'',amount:Number(g('f-amount'))||0,currency:g('f-currency')||'USD',stage:g('f-stage')||'Lead',agent:g('f-agent')||'',next_action:g('f-next')||'',next_date:g('f-ndate')||'',days:Number(g('f-days'))||0,competitor:g('f-competitor')||'',lost_reason:g('f-lost-reason')||'',probability:{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[g('f-stage')]||0,created:row.created||today()};
     const s=await persist('deals',row);
     if(!eid)db.deals.push(s);else Object.assign(db.deals.find(x=>x.id===eid),s);
     updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderPipeline();
@@ -1735,7 +2072,31 @@ async function _saveM(){
   }else if(mtype==='activity'){
     const coId=cur.company||null;const coName=coId?(db.companies.find(x=>x.id===coId)?.name||''):'';
     const nextStep=g('f-next-step')||'';const nextDate=g('f-next-date')||'';const agent=g('f-agent')||currentUser?.name||'';
-    row={...row,company_id:coId,company:coName,deal_id:cur.deal||null,type:g('f-type')||'',note:g('f-note')||'',outcome:g('f-outcome')||'',next_step:nextStep,next_date:nextDate,agent,date:g('f-act-date')||today(),created:today()};
+    let contactPersonId=g('f-contact-person')||'';
+    let contactPerson=null;
+
+    // Create new contact inline if selected
+    if(contactPersonId==='__new__'){
+      const fname=(g('nc-fname')||'').trim();
+      if(fname){
+        const newContact={id:uid(),company_id:coId,company:coName,first_name:fname,last_name:g('nc-lname')||'',position:g('nc-pos')||'',phone:g('nc-phone')||'',created:today()};
+        const saved=await persist('contacts',newContact);
+        db.contacts.push(saved);
+        contactPersonId=saved.id;
+        contactPerson=saved;
+        updateCounts();
+      } else {contactPersonId='';}
+    } else {
+      contactPerson=contactPersonId?db.contacts.find(c=>c.id===contactPersonId):null;
+    }
+
+    row={...row,company_id:coId,company:coName,deal_id:cur.deal||null,
+      type:g('f-type')||'',direction:g('f-direction')||'',duration:g('f-duration')||'',
+      contact_id:contactPersonId,
+      contact_name:contactPerson?`${contactPerson.first_name} ${contactPerson.last_name||''}`.trim():'',
+      note:g('f-note')||'',outcome:g('f-outcome')||'',sentiment:g('f-sentiment')||'',
+      next_step:nextStep,next_date:nextDate,agent,date:g('f-act-date')||today(),created:today()
+    };
     const s=await persist('activities',row);
     db.activities.push(s);
     // Auto-create follow-up task if date is set
@@ -3059,6 +3420,32 @@ function openAutoTemplate(trigger,action){
   },100);
 }
 
+function onContactPersonChange(sel){
+  const inline=$('new-contact-inline');
+  if(inline)inline.style.display=sel.value==='__new__'?'block':'none';
+  if(sel.value==='__new__')setTimeout(()=>$('nc-fname')?.focus(),50);
+  setTimeout(initInputs,30);
+}
+
+function updateActivityFields(){
+  const type=$('f-type')?.value;
+  const callFields=$('act-call-fields');
+  if(callFields)callFields.style.display=(type==='Call'||type==='WhatsApp')?'flex':'none';
+}
+
+function setSentiment(val,el){
+  $('f-sentiment').value=val;
+  document.querySelectorAll('#mbody label[onclick^="setSentiment"]').forEach(l=>{
+    l.style.borderColor='var(--bdr)';l.style.background='';l.style.fontWeight='';
+  });
+  el.style.borderColor='var(--blue)';el.style.background='var(--blue-lt)';el.style.fontWeight='700';
+}
+
+function updateLostReason(stage){
+  const wrap=$('lost-reason-wrap');
+  if(wrap)wrap.style.display=stage==='Lost'?'block':'none';
+}
+
 function updateAutoFields(){
   const trigger=$('auto-trigger')?.value;
   const action=$('auto-action')?.value;
@@ -3231,6 +3618,109 @@ async function saveAutomation(){
     await persist('automations',row);
     closeM();renderAutomation();
   }finally{saving=false;}
+}
+
+// ─── NOTIFICATIONS ─────────────────────────────────────────────────────────
+const NOTIF_STALE_DAYS=30;
+const NOTIF_CAT_DAYS={A:30,B:90,C:180};
+
+function buildNotifications(){
+  if(!currentUser)return[];
+  const notifs=[];
+  const todayStr=today();
+
+  // 1. Overdue tasks
+  myTasks().filter(t=>!t.done&&t.due&&t.due<todayStr).forEach(t=>{
+    const days=Math.floor((new Date()-new Date(t.due))/(1000*60*60*24));
+    notifs.push({id:'task-'+t.id,type:'overdue',priority:'high',icon:'ti-checkbox',color:'#ef4444',
+      title:`Task overdue: ${t.title||t.text||''}`,sub:`${t.company||''} · ${days}d overdue`,
+      action:`renderTasks()`,days});
+  });
+
+  // 2. Stale deals (30+ days no activity)
+  myDeals().filter(d=>d.stage!=='Won'&&d.stage!=='Lost').forEach(d=>{
+    const stale=dealStaleDays(d);
+    if(stale>=NOTIF_STALE_DAYS){
+      notifs.push({id:'stale-'+d.id,type:'stale',priority:'high',icon:'ti-clock-exclamation',color:'#f59e0b',
+        title:`No activity: ${d.company}`,sub:`${d.model||'deal'} · ${stale}d since last contact`,
+        action:`openDealDetail('${d.id}')`,days:stale});
+    }
+  });
+
+  // 3. Companies with no contact by category schedule
+  db.companies.filter(c=>c.category&&NOTIF_CAT_DAYS[c.category]).forEach(c=>{
+    const acts=db.activities.filter(a=>a.company_id===c.id);
+    const lastDate=acts.map(a=>a.date||a.created||'').filter(Boolean).sort().pop();
+    const daysSince=lastDate?Math.floor((new Date()-new Date(lastDate))/(1000*60*60*24)):999;
+    const threshold=NOTIF_CAT_DAYS[c.category];
+    if(daysSince>=threshold){
+      notifs.push({id:'nc-'+c.id,type:'nocontact',priority:c.category==='A'?'high':'medium',
+        icon:'ti-building',color:c.category==='A'?'#ef4444':'#f59e0b',
+        title:`Cat.${c.category} needs contact: ${c.name}`,
+        sub:`${daysSince}d since last interaction (target every ${threshold}d)`,
+        action:`openCompanyDetail('${c.id}')`,days:daysSince});
+    }
+  });
+
+  // 4. Tasks due today
+  myTasks().filter(t=>!t.done&&t.due===todayStr).forEach(t=>{
+    notifs.push({id:'today-'+t.id,type:'today',priority:'medium',icon:'ti-sun',color:'#3b82f6',
+      title:`Due today: ${t.title||t.text||''}`,sub:t.company||'',action:`renderTasks()`,days:0});
+  });
+
+  return notifs.sort((a,b)=>a.priority!==b.priority?(a.priority==='high'?-1:1):b.days-a.days);
+}
+
+function initNotifications(){
+  updateNotifBadge();
+  if(window._notifInterval)clearInterval(window._notifInterval);
+  window._notifInterval=setInterval(updateNotifBadge,5*60*1000);
+}
+
+function updateNotifBadge(){
+  const notifs=buildNotifications();
+  const badge=$('notif-badge');if(!badge)return;
+  const high=notifs.filter(n=>n.priority==='high').length;
+  if(high>0){badge.textContent=high>9?'9+':high;badge.style.display='flex';}
+  else badge.style.display='none';
+}
+
+function showNotifPanel(){
+  const existing=document.getElementById('notif-panel');
+  if(existing){existing.remove();return;}
+  const notifs=buildNotifications();
+  const panel=document.createElement('div');
+  panel.id='notif-panel';
+  panel.style.cssText='position:fixed;top:56px;right:16px;width:380px;max-height:520px;background:var(--sur);border:1px solid var(--bdr);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.16);z-index:400;overflow:hidden;display:flex;flex-direction:column';
+  panel.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--bdr)">
+      <span style="font-weight:700;font-size:14px">Notifications ${notifs.length?`<span style="background:var(--red);color:#fff;border-radius:10px;padding:1px 7px;font-size:11px;font-weight:700;margin-left:6px">${notifs.length}</span>`:''}</span>
+      <button onclick="document.getElementById('notif-panel')?.remove()" style="background:none;border:none;cursor:pointer;color:var(--text-m);font-size:20px;line-height:1">×</button>
+    </div>
+    <div style="overflow-y:auto;flex:1">
+      ${notifs.length?notifs.map(n=>`
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 16px;border-bottom:1px solid var(--gray-100);cursor:pointer"
+          onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background=''"
+          onclick="document.getElementById('notif-panel')?.remove();${n.action}">
+          <div style="width:32px;height:32px;border-radius:8px;background:${n.color}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
+            <i class="ti ${n.icon}" style="font-size:15px;color:${n.color}"></i>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px">${n.title}</div>
+            <div style="font-size:12px;color:var(--text-m)">${n.sub}</div>
+          </div>
+          ${n.priority==='high'?`<span style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;margin-top:6px"></span>`:''}
+        </div>`).join('')
+      :`<div style="text-align:center;padding:40px 20px">
+          <i class="ti ti-check-circle" style="font-size:36px;display:block;margin-bottom:12px;color:var(--green)"></i>
+          <div style="font-weight:600;margin-bottom:4px">All caught up!</div>
+          <div style="font-size:13px;color:var(--text-m)">No overdue tasks or stale deals</div>
+        </div>`}
+    </div>`;
+  document.body.appendChild(panel);
+  setTimeout(()=>{document.addEventListener('click',function close(e){
+    if(!panel.contains(e.target)&&!$('notif-btn')?.contains(e.target)){panel.remove();document.removeEventListener('click',close);}
+  });},10);
 }
 
 window.closeM=function(){$('overlay').classList.remove('open');}
