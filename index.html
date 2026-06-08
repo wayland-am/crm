@@ -424,7 +424,20 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
     </nav>
     <div class="sidebar-footer">
       <div class="sync-row"><div class="dot" id="dot"></div><span id="sync-txt">Not connected</span><button onclick="loadFromSheets().then(()=>render(cur.section||'dashboard'))" style="background:none;border:none;cursor:pointer;padding:0 4px;color:var(--text-l);font-size:13px;margin-left:4px" title="Force sync from Sheets"><i class="ti ti-refresh"></i></button></div>
-      <div class="user"><div class="av av-0" id="user-av">MK</div><div><div style="font-size:13px;font-weight:600">M. Kalashnikov</div><div style="font-size:11px;color:var(--text-m)">Sales Manager</div></div></div>
+      <div class="user" style="cursor:pointer;position:relative" onclick="toggleUserMenu()" id="user-info">
+        <div class="av av-0" id="user-av">MK</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600" id="user-name-lbl">M. Kalashnikov</div>
+          <div style="font-size:11px;color:var(--text-m)" id="user-role-lbl">Sales Manager</div>
+        </div>
+        <i class="ti ti-chevron-up" style="font-size:12px;color:var(--text-l)"></i>
+      </div>
+      <div id="user-menu" style="display:none;position:absolute;bottom:70px;left:12px;right:12px;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:200;overflow:hidden">
+        <div style="padding:10px 14px;border-bottom:1px solid var(--bdr);font-size:12px;color:var(--text-m)" id="user-menu-name">Signed in as M. Kalashnikov</div>
+        <div onclick="logout()" style="padding:10px 14px;font-size:13px;cursor:pointer;display:flex;align-items:center;gap:8px;color:var(--red)" onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background=''">
+          <i class="ti ti-logout"></i>Sign Out
+        </div>
+      </div>
     </div>
   </div>
   <div class="main">
@@ -2334,6 +2347,14 @@ async function doLogin(){
   initNotifications();
 }
 
+function toggleUserMenu(){
+  const m=$('user-menu');if(!m)return;
+  m.style.display=m.style.display==='none'?'block':'none';
+  if(m.style.display==='block'){
+    setTimeout(()=>{document.addEventListener('click',function close(e){if(!$('user-info')?.contains(e.target)){m.style.display='none';document.removeEventListener('click',close);}});},10);
+  }
+}
+
 function logout(){
   localStorage.removeItem('wcrm_session');
   currentUser=null;
@@ -2347,6 +2368,11 @@ function applyRoleUI(){
   const isManager=currentUser.role==='manager';
   document.querySelectorAll('.manager-only').forEach(el=>{el.style.display=isManager?'flex':'none';});
   const av=$('user-av');if(av)av.textContent=ini(currentUser.name);
+  // Update sidebar user info
+  const nameLbl=$('user-name-lbl');if(nameLbl)nameLbl.textContent=currentUser.name;
+  const roleLbl=$('user-role-lbl');if(roleLbl)roleLbl.textContent=isManager?'Sales Manager':'Sales Rep';
+  const menuName=$('user-menu-name');if(menuName)menuName.textContent='Signed in as '+currentUser.name;
+  // Legacy selectors
   const footer=$('sidebar-user-name');if(footer)footer.textContent=currentUser.name;
   const role=$('sidebar-user-role');if(role)role.textContent=isManager?'Sales Manager':'Sales Rep';
 }
