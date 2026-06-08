@@ -765,14 +765,17 @@ function mkBtn(type,label){return`<button class="btn btn-primary" onclick="openM
 
 // ─── Dashboard ─────────────────────────────────────────────────────────────
 function renderDashboard(){
-  const active=db.deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost');
-  const won=db.deals.filter(d=>d.stage==='Won');
+  const isManager=currentUser?.role==='manager';
+  const myD=myDeals();
+  const myT=myTasks();
+  const active=myD.filter(d=>d.stage!=='Won'&&d.stage!=='Lost');
+  const won=myD.filter(d=>d.stage==='Won');
   const pipeVal=active.reduce((s,d)=>s+d.amount,0);
   const wonVal=won.reduce((s,d)=>s+d.amount,0);
-  const openTasks=db.tasks.filter(t=>!t.done);
+  const openTasks=myT.filter(t=>!t.done);
   const hitachi=db.fleet.filter(f=>f.brand==='Hitachi').length;
   const fleetTotal=db.fleet.length;
-  const replOpp=db.fleet.filter(u=>u.brand!=='Hitachi'&&(u.condition==='Poor'||u.condition==='Fair')).length;
+  const replOpp=db.fleet.filter(u=>u.condition==='Poor'||u.condition==='Fair').length;
 
   $('content').innerHTML=`
   <div class="metrics">
@@ -792,7 +795,7 @@ function renderDashboard(){
         </div>`).join('') || '<div class="empty" style="padding:20px"><i class="ti ti-versions"></i>No hot deals</div>'}
     </div>
     <div class="card">
-      <div class="card-title">Team</div>
+      ${isManager?`<div class="card-title">Team</div>
       ${AGENTS().slice(0,8).map((a,i)=>{
         const ad=db.deals.filter(d=>d.agent===a);
         const w=ad.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0);
@@ -800,7 +803,13 @@ function renderDashboard(){
           <div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:28px;height:28px;font-size:10px">${ini(a)}</div><span style="font-size:13px;font-weight:500">${a}</span></div>
           <div style="font-size:12px;color:var(--text-m)">${ad.length} deals${w?' · '+fmtUSD(w):''}</div>
         </div>`;
-      }).join('')}
+      }).join('')}`:`<div class="card-title">My Performance</div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding:8px 0">
+        <div class="info-row"><span class="info-label">My Deals</span><strong>${myD.length}</strong></div>
+        <div class="info-row"><span class="info-label">Active Pipeline</span><strong>${fmtUSD(pipeVal)}</strong></div>
+        <div class="info-row"><span class="info-label">Won</span><strong style="color:var(--green)">${fmtUSD(wonVal)}</strong></div>
+        <div class="info-row"><span class="info-label">Open Tasks</span><strong>${openTasks.length}</strong></div>
+      </div>`}
     </div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px">
@@ -827,15 +836,16 @@ function renderDashboard(){
 // ─── Pipeline ──────────────────────────────────────────────────────────────
 function renderPipeline(){
   const visStages=STAGES.filter(s=>s!=='Lost');
-  const pipeVal=db.deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').reduce((s,d)=>s+d.amount,0);
+  const allMyDeals=myDeals();
+  const pipeVal=allMyDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').reduce((s,d)=>s+d.amount,0);
   $('content').innerHTML=`
   <div style="display:flex;gap:16px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
     <div class="metric" style="padding:12px 16px;margin:0"><div class="metric-label">Pipeline</div><div class="metric-value" style="font-size:20px">${fmtUSD(pipeVal)}</div></div>
-    ${visStages.map(s=>{const d=db.deals.filter(x=>x.stage===s);const v=d.reduce((a,x)=>a+x.amount,0);return`<div class="metric" style="padding:12px 16px;margin:0"><div class="metric-label" style="color:${STAGE_COLOR[s]}">${s}</div><div class="metric-value" style="font-size:18px">${d.length}</div><div class="metric-sub">${v?fmtUSD(v):''}</div></div>`;}).join('')}
+    ${visStages.map(s=>{const d=allMyDeals.filter(x=>x.stage===s);const v=d.reduce((a,x)=>a+x.amount,0);return`<div class="metric" style="padding:12px 16px;margin:0"><div class="metric-label" style="color:${STAGE_COLOR[s]}">${s}</div><div class="metric-value" style="font-size:18px">${d.length}</div><div class="metric-sub">${v?fmtUSD(v):''}</div></div>`;}).join('')}
   </div>
   <div class="pipeline">
     ${visStages.map(stage=>{
-      const cards=db.deals.filter(d=>d.stage===stage);
+      const cards=allMyDeals.filter(d=>d.stage===stage);
       const tot=cards.reduce((s,d)=>s+d.amount,0);
       return`<div class="p-col">
         <div class="p-head" style="background:${STAGE_COLOR[stage]}22;color:${STAGE_COLOR[stage]}">${stage}<span class="cnt">${cards.length}${tot?' · $'+Math.round(tot/1000)+'K':''}</span></div>
@@ -2378,12 +2388,25 @@ function applyRoleUI(){
 }
 
 function myDeals(){
-  if(!currentUser||currentUser.role==='manager')return db.deals;
+  if(!currentUser)return[];
+  if(currentUser.role==='manager')return db.deals;
+  // Sales Rep sees only their own deals
   return db.deals.filter(d=>d.agent===currentUser.name);
 }
 function myTasks(){
-  if(!currentUser||currentUser.role==='manager')return db.tasks;
+  if(!currentUser)return[];
+  if(currentUser.role==='manager')return db.tasks;
   return db.tasks.filter(t=>t.agent===currentUser.name);
+}
+function myCompanies(){
+  if(!currentUser)return[];
+  if(currentUser.role==='manager')return db.companies;
+  // Sales Rep sees companies where they have deals or tasks
+  const myCoIds=new Set([
+    ...db.deals.filter(d=>d.agent===currentUser.name).map(d=>d.company_id),
+    ...db.tasks.filter(t=>t.agent===currentUser.name).map(t=>t.company_id),
+  ]);
+  return db.companies.filter(c=>myCoIds.has(c.id));
 }
 
 function renderUsers(){
