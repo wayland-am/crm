@@ -2363,9 +2363,28 @@ function myTasks(){
 function renderUsers(){
   if(currentUser?.role!=='manager'){$('content').innerHTML='<div class="empty" style="padding:60px"><i class="ti ti-lock"></i><div class="empty-title">Access Denied</div></div>';return;}
   $('topbar-right').innerHTML=`<button class="btn btn-primary" onclick="openM('user')"><i class="ti ti-plus"></i>Add User</button>`;
+
+  const inviteUrl=`${location.origin}${location.pathname}?api=${encodeURIComponent(API)}`;
+
   $('content').innerHTML=`
+  <!-- INVITE LINK -->
+  <div class="card" style="margin-bottom:16px;background:var(--blue-lt);border-color:#93c5fd">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div style="font-weight:700;font-size:14px;color:var(--blue);margin-bottom:4px"><i class="ti ti-link"></i> Invite Link</div>
+        <div style="font-size:12px;color:var(--blue-dk)">Share this link — opens CRM on any device without Setup screen</div>
+        <div style="font-size:11px;background:#fff;border:1px solid #93c5fd;border-radius:6px;padding:6px 10px;margin-top:8px;font-family:monospace;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${inviteUrl}</div>
+      </div>
+      <button class="btn" style="flex-shrink:0" onclick="
+        navigator.clipboard.writeText('${inviteUrl.replace(/'/g,"\\'")}')
+        .then(()=>{this.innerHTML='<i class=\\'ti ti-check\\'></i> Copied!';this.style.color='var(--green)';setTimeout(()=>{this.innerHTML='<i class=\\'ti ti-copy\\'></i> Copy Link';this.style.color='';},2000);})
+        .catch(()=>prompt('Copy this link:','${inviteUrl.replace(/'/g,"\\'")}'));
+      "><i class="ti ti-copy"></i> Copy Link</button>
+    </div>
+  </div>
+
   <div class="card" style="margin-bottom:16px">
-    <div class="card-title">Users CRM</div>
+    <div class="card-title">CRM Users</div>
     <div class="tbl-wrap"><table class="tbl">
       <thead><tr><th>Name</th><th>Role</th><th>Last Login</th><th>Status</th><th></th></tr></thead>
       <tbody>${db.users.length?db.users.map((u,i)=>`<tr>
@@ -3190,6 +3209,15 @@ function initMobile(){
 window.addEventListener('resize',initMobile);
 
 (function(){
+  // Check for ?api= URL parameter (for sharing direct link)
+  const urlParams=new URLSearchParams(window.location.search);
+  const apiFromUrl=urlParams.get('api');
+  if(apiFromUrl&&apiFromUrl.includes('script.google.com')){
+    localStorage.setItem('wcrm_url',apiFromUrl);
+    // Clean URL without reloading
+    window.history.replaceState({},'',window.location.pathname);
+  }
+
   const saved=localStorage.getItem('wcrm_url');
   if(saved){
     API=saved;
