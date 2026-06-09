@@ -657,12 +657,12 @@ const SHEETS=['companies','contacts','deals','fleet','tasks','activities','agent
 let pendingSync=false;
 
 // ── Fetch with timeout + exponential retry ──────────────────────────────────
-async function fetchWithTimeout(url,timeout=12000,retries=2){
+async function fetchWithTimeout(url,timeout=12000,retries=2,options={}){
   for(let attempt=0;attempt<=retries;attempt++){
     const ctrl=new AbortController();
     const timer=setTimeout(()=>ctrl.abort(),timeout);
     try{
-      const res=await fetch(url,{redirect:'follow',signal:ctrl.signal});
+      const res=await fetch(url,{redirect:'follow',signal:ctrl.signal,...options});
       clearTimeout(timer);return res;
     }catch(e){
       clearTimeout(timer);
@@ -675,8 +675,19 @@ async function fetchWithTimeout(url,timeout=12000,retries=2){
 
 async function apiCall(params){
   try{
-    const url=API+'?payload='+encodeURIComponent(JSON.stringify(params));
-    const res=await fetchWithTimeout(url,12000,2);
+    // Use POST for large payloads (photos), GET for regular calls
+    const isLarge=params.action==='uploadPhoto';
+    let res;
+    if(isLarge){
+      res=await fetchWithTimeout(API,60000,1,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(params)
+      });
+    }else{
+      const url=API+'?payload='+encodeURIComponent(JSON.stringify(params));
+      res=await fetchWithTimeout(url,12000,2);
+    }
     const text=await res.text();
     const data=JSON.parse(text);
     if(!data.ok)throw new Error(data.error||'Error');
