@@ -1488,6 +1488,18 @@ function openCompanyDetail(id){
         </div>
       </div>
 
+      <!-- Photos -->
+      <div class="cd-sec">
+        <div class="cd-sec-title">Photos
+          <button class="btn btn-xs btn-ghost" onclick="openPhotoUpload('${id}')"><i class="ti ti-camera-plus"></i></button>
+        </div>
+        <div id="co-photos-${id}" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+          <div style="font-size:12px;color:var(--text-m);grid-column:1/-1;text-align:center;padding:8px">
+            <i class="ti ti-loader-2" style="animation:spin .8s linear infinite"></i> Loading...
+          </div>
+        </div>
+      </div>
+
     </div>
 
     <!-- CENTER: Activity feed + tab filter -->
@@ -1606,6 +1618,8 @@ function openCompanyDetail(id){
   // Store company acts for filter
   window._curCoActs=acts;
   window._curCoId=id;
+  // Load photos asynchronously (don't block render)
+  setTimeout(()=>loadCompanyPhotos(id),100);
 }
 
 function renderActFeedItems(acts, coId){
@@ -4640,6 +4654,159 @@ async function saveApiKey(btn){
 }
 
 
+// ─── PHOTOS ────────────────────────────────────────────────────────────────
+async function loadCompanyPhotos(coId){
+  const el=document.getElementById('co-photos-'+coId);
+  if(!el)return;
+  try{
+    const photos=await apiCall({action:'getPhotos',company_id:coId});
+    renderPhotoGallery(coId,photos||[]);
+  }catch(e){
+    el.innerHTML=`<div style="font-size:12px;color:var(--text-m);grid-column:1/-1;text-align:center;padding:8px">
+      <button class="btn btn-sm" onclick="openPhotoUpload('${coId}')"><i class="ti ti-camera-plus"></i>Add photo</button>
+    </div>`;
+  }
+}
+
+function renderPhotoGallery(coId,photos){
+  const el=document.getElementById('co-photos-'+coId);
+  if(!el)return;
+  if(!photos.length){
+    el.innerHTML=`<div style="font-size:12px;color:var(--text-m);grid-column:1/-1;text-align:center;padding:12px">
+      <i class="ti ti-photo" style="font-size:24px;display:block;margin-bottom:6px;opacity:.3"></i>
+      No photos yet<br>
+      <button class="btn btn-sm" style="margin-top:8px" onclick="openPhotoUpload('${coId}')"><i class="ti ti-camera-plus"></i>Upload</button>
+    </div>`;
+    return;
+  }
+  el.innerHTML=photos.map(p=>`
+    <div style="position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;cursor:pointer;background:var(--gray-100)"
+         onclick="openPhotoViewer('${p.id}','${p.caption||p.name}')">
+      <img src="${p.thumb}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover" loading="lazy"
+           onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;font-size:28px\\'>📷</div>'">
+      <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));padding:4px 6px;font-size:10px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.caption||p.name}</div>
+      <button onclick="event.stopPropagation();deleteCompanyPhoto('${p.id}','${coId}')"
+        style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.5);border:none;border-radius:50%;width:20px;height:20px;color:#fff;cursor:pointer;font-size:11px;line-height:1">×</button>
+    </div>`).join('')+
+    `<div style="aspect-ratio:1;border-radius:6px;border:1.5px dashed var(--bdr);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-l)"
+         onclick="openPhotoUpload('${coId}')">
+      <i class="ti ti-plus" style="font-size:20px"></i>
+    </div>`;
+}
+
+function openPhotoViewer(fileId,caption){
+  const url='https://drive.google.com/file/d/'+fileId+'/view';
+  const imgUrl='https://drive.google.com/uc?id='+fileId+'&export=view';
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML=`
+    <div style="position:absolute;top:16px;right:16px;display:flex;gap:8px">
+      <a href="${url}" target="_blank" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:none"><i class="ti ti-external-link"></i>Google Drive</a>
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:14px">✕</button>
+    </div>
+    <img src="${imgUrl}" style="max-width:90vw;max-height:82vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5)"
+         onerror="this.style.display='none';document.getElementById('photo-err').style.display='block'">
+    <div id="photo-err" style="display:none;color:#fff;text-align:center;padding:40px"><i class="ti ti-photo-off" style="font-size:48px;display:block;margin-bottom:12px;opacity:.5"></i>Can't preview — <a href="${url}" target="_blank" style="color:var(--blue)">open in Drive</a></div>
+    <div style="color:rgba(255,255,255,.8);margin-top:12px;font-size:13px;text-align:center">${caption}</div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+}
+
+function openPhotoUpload(coId){
+  const co=db.companies.find(x=>x.id===coId);
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML=`
+    <div style="background:var(--sur);border-radius:12px;padding:24px;width:400px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px">📷 Upload Photo</div>
+      <div style="font-size:12px;color:var(--text-m);margin-bottom:16px">${co?.name||''} — saved to Google Drive</div>
+      <div style="border:2px dashed var(--bdr);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:12px"
+           onclick="document.getElementById('photo-file-inp').click()"
+           ondragover="event.preventDefault();this.style.borderColor='var(--blue)'"
+           ondragleave="this.style.borderColor='var(--bdr)'"
+           ondrop="event.preventDefault();this.style.borderColor='var(--bdr)';handlePhotoDrop(event,'${coId}')">
+        <i class="ti ti-camera" style="font-size:32px;color:var(--blue);display:block;margin-bottom:8px"></i>
+        <div style="font-weight:600;color:var(--blue)">Tap to select or drag photo</div>
+        <div style="font-size:11px;color:var(--text-m);margin-top:4px">JPG, PNG, HEIC · Max 10MB</div>
+        <input type="file" id="photo-file-inp" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,'${coId}')">
+      </div>
+      <div id="photo-preview" style="display:none;margin-bottom:12px">
+        <img id="photo-preview-img" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px">
+        <div style="font-size:11px;color:var(--text-m);margin-top:4px" id="photo-preview-name"></div>
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:11px;color:var(--text-m);display:block;margin-bottom:4px">Caption</label>
+        <input class="fc" id="photo-caption" placeholder="Карьер, техника, встреча...">
+      </div>
+      <div id="photo-upload-status" style="min-height:18px;font-size:12px;margin-bottom:10px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button>
+        <button class="btn btn-primary" id="photo-upload-btn" onclick="uploadCompanyPhoto('${coId}',this)" disabled>
+          <i class="ti ti-upload"></i>Upload
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+}
+
+let _photoFile=null;
+
+function handlePhotoSelect(inp,coId){
+  const file=inp.files[0];if(!file)return;
+  _photoFile=file;
+  const prev=document.getElementById('photo-preview');
+  const img=document.getElementById('photo-preview-img');
+  const nm=document.getElementById('photo-preview-name');
+  if(prev){prev.style.display='block';}
+  if(img)img.src=URL.createObjectURL(file);
+  if(nm)nm.textContent=file.name+' ('+Math.round(file.size/1024)+'KB)';
+  const btn=document.getElementById('photo-upload-btn');
+  if(btn)btn.disabled=false;
+  const cap=document.getElementById('photo-caption');
+  if(cap&&!cap.value)cap.value=file.name.replace(/\.[^.]+$/,'').replace(/[_\-]/g,' ');
+}
+
+function handlePhotoDrop(e,coId){
+  const file=e.dataTransfer.files[0];
+  if(!file||!file.type.startsWith('image/'))return;
+  handlePhotoSelect({files:e.dataTransfer.files},coId);
+}
+
+async function uploadCompanyPhoto(coId,btn){
+  if(!_photoFile){alert('Select a photo first');return;}
+  const caption=document.getElementById('photo-caption')?.value||'';
+  const status=document.getElementById('photo-upload-status');
+  btn.disabled=true;
+  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin .8s linear infinite"></i> Uploading...';
+  if(status)status.innerHTML='<span style="color:var(--blue)">Reading photo...</span>';
+  const co=db.companies.find(x=>x.id===coId);
+  try{
+    const base64=await new Promise((res,rej)=>{
+      const r=new FileReader();
+      r.onload=()=>res(r.result.split(',')[1]);
+      r.onerror=rej;
+      r.readAsDataURL(_photoFile);
+    });
+    if(status)status.innerHTML='<span style="color:var(--blue)">Saving to Google Drive...</span>';
+    await apiCall({action:'uploadPhoto',company_id:coId,company:co?.name||'',
+      filename:_photoFile.name,mimeType:_photoFile.type||'image/jpeg',base64,caption});
+    if(status)status.innerHTML='<span style="color:var(--green)">✅ Uploaded!</span>';
+    _photoFile=null;
+    setTimeout(()=>{btn.closest('div[style*=fixed]')?.remove();loadCompanyPhotos(coId);showToast('📷 Photo saved to Drive');},800);
+  }catch(e){
+    if(status)status.innerHTML=`<span style="color:var(--red)">⚠ ${e.message}</span>`;
+    btn.disabled=false;btn.innerHTML='<i class="ti ti-upload"></i>Retry';
+  }
+}
+
+async function deleteCompanyPhoto(fileId,coId){
+  if(!confirm('Delete this photo from Drive?'))return;
+  try{await apiCall({action:'deletePhoto',fileId});showToast('Photo deleted');loadCompanyPhotos(coId);}
+  catch(e){showToast('Error: '+e.message);}
+}
+
+// ─── LOCATIONS ─────────────────────────────────────────────────────────────
 function getLocations(coId){
   return(db.locations||[]).filter(l=>l.company_id===coId);
 }
