@@ -675,19 +675,8 @@ async function fetchWithTimeout(url,timeout=12000,retries=2,options={}){
 
 async function apiCall(params){
   try{
-    // Use POST for large payloads (photos), GET for regular calls
-    const isLarge=params.action==='uploadPhoto';
-    let res;
-    if(isLarge){
-      res=await fetchWithTimeout(API,60000,1,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify(params)
-      });
-    }else{
-      const url=API+'?payload='+encodeURIComponent(JSON.stringify(params));
-      res=await fetchWithTimeout(url,12000,2);
-    }
+    const url=API+'?payload='+encodeURIComponent(JSON.stringify(params));
+    const res=await fetchWithTimeout(url,30000,2);
     const text=await res.text();
     const data=JSON.parse(text);
     if(!data.ok)throw new Error(data.error||'Error');
@@ -4789,19 +4778,17 @@ async function uploadCompanyPhoto(coId,btn){
   const caption=document.getElementById('photo-caption')?.value||'';
   const status=document.getElementById('photo-upload-status');
   btn.disabled=true;
-  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin .8s linear infinite"></i> Uploading...';
-  if(status)status.innerHTML='<span style="color:var(--blue)">Reading photo...</span>';
+  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin .8s linear infinite"></i> Preparing...';
+  if(status)status.innerHTML='<span style="color:var(--blue)">Compressing photo...</span>';
   const co=db.companies.find(x=>x.id===coId);
   try{
-    const base64=await new Promise((res,rej)=>{
-      const r=new FileReader();
-      r.onload=()=>res(r.result.split(',')[1]);
-      r.onerror=rej;
-      r.readAsDataURL(_photoFile);
-    });
-    if(status)status.innerHTML='<span style="color:var(--blue)">Saving to Google Drive...</span>';
-    await apiCall({action:'uploadPhoto',company_id:coId,company:co?.name||'',
-      filename:_photoFile.name,mimeType:_photoFile.type||'image/jpeg',base64,caption});
+    // Compress image to max 800px and ~200KB before sending
+    const base64=await compressImage(_photoFile,800,0.7);
+    if(status)status.innerHTML='<span style="color:var(--blue)">Uploading to Google Drive...</span>';
+    btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin .8s linear infinite"></i> Uploading...';
+    const params={action:'uploadPhoto',company_id:coId,company:co?.name||'',
+      filename:_photoFile.name,mimeType:'image/jpeg',base64,caption};
+    const result=await apiCall(params);
     if(status)status.innerHTML='<span style="color:var(--green)">✅ Uploaded!</span>';
     _photoFile=null;
     setTimeout(()=>{btn.closest('div[style*=fixed]')?.remove();loadCompanyPhotos(coId);showToast('📷 Photo saved to Drive');},800);
@@ -4809,6 +4796,29 @@ async function uploadCompanyPhoto(coId,btn){
     if(status)status.innerHTML=`<span style="color:var(--red)">⚠ ${e.message}</span>`;
     btn.disabled=false;btn.innerHTML='<i class="ti ti-upload"></i>Retry';
   }
+}
+
+// Compress image using canvas before upload
+function compressImage(file,maxPx,quality){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      let w=img.width,h=img.height;
+      if(w>maxPx||h>maxPx){
+        if(w>h){h=Math.round(h*maxPx/w);w=maxPx;}
+        else{w=Math.round(w*maxPx/h);h=maxPx;}
+      }
+      const canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      const dataUrl=canvas.toDataURL('image/jpeg',quality);
+      resolve(dataUrl.split(',')[1]);
+    };
+    img.onerror=reject;
+    img.src=url;
+  });
 }
 
 async function deleteCompanyPhoto(fileId,coId){
