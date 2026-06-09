@@ -639,7 +639,7 @@ const coOpts=()=>db.companies.map(c=>`<option value="${c.id}">${c.name}</option>
 const coDatalist=()=>db.companies.map(c=>`<option>${c.name}</option>`).join('');
 
 // ─── API ───────────────────────────────────────────────────────────────────
-const CACHE_KEY='wcrm_cache_v2';
+const CACHE_KEY='wcrm_cache_v3';
 const CACHE_TTL=5*60*1000; // 5 min
 let saveQueue=[];let saveTimer=null;let pendingSync=false;
 
@@ -1038,6 +1038,7 @@ function sortCompanies(col){
 
 function renderCompanies(filter){
   if(filter!==undefined)coFilter=filter;
+  $('topbar-right').innerHTML=`<button class="btn btn-primary" onclick="openM('company')"><i class="ti ti-plus"></i>Add Company</button>`;
   const si=col=>`<i class="ti ti-${coSort.col===col?(coSort.dir===1?'arrow-up':'arrow-down'):'arrows-sort'}" style="font-size:11px;margin-left:4px;opacity:${coSort.col===col?1:0.3}"></i>`;
   const th=(col,label)=>`<th style="cursor:pointer;user-select:none;white-space:nowrap" onclick="sortCompanies('${col}')">${label}${si(col)}</th>`;
 
@@ -1056,7 +1057,6 @@ function renderCompanies(filter){
       <input id="co-search-input" placeholder="Search by name, industry, city..." oninput="coFilter=this.value;debounce(renderCompaniesRows,250)()" value="${coFilter}" autocomplete="off">
       ${coFilter?`<button onclick="coFilter='';document.getElementById('co-search-input').value='';renderCompaniesRows()" style="background:none;border:none;cursor:pointer;padding:0 4px;color:var(--text-m);font-size:16px;line-height:1" title="Clear search">×</button>`:''}
     </div>
-    <button class="btn btn-primary" onclick="openM('company')"><i class="ti ti-plus"></i>Add Company</button>
   </div>
   <div class="tbl-wrap"><table class="tbl">
     <thead><tr>
