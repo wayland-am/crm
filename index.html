@@ -4778,17 +4778,35 @@ async function uploadCompanyPhoto(coId,btn){
   const caption=document.getElementById('photo-caption')?.value||'';
   const status=document.getElementById('photo-upload-status');
   btn.disabled=true;
-  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin .8s linear infinite"></i> Preparing...';
+  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin .8s linear infinite"></i> Compressing...';
   if(status)status.innerHTML='<span style="color:var(--blue)">Compressing photo...</span>';
   const co=db.companies.find(x=>x.id===coId);
   try{
-    // Compress image to max 800px and ~200KB before sending
-    const base64=await compressImage(_photoFile,800,0.7);
-    if(status)status.innerHTML='<span style="color:var(--blue)">Uploading to Google Drive...</span>';
+    // Compress to ~200KB max
+    const base64=await compressImage(_photoFile,600,0.6);
+    const sizeKB=Math.round(base64.length*3/4/1024);
+    if(status)status.innerHTML=`<span style="color:var(--blue)">Uploading (${sizeKB}KB)...</span>`;
     btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin .8s linear infinite"></i> Uploading...';
-    const params={action:'uploadPhoto',company_id:coId,company:co?.name||'',
-      filename:_photoFile.name,mimeType:'image/jpeg',base64,caption};
-    const result=await apiCall(params);
+
+    // Split base64 into chunks to work around URL length limits
+    const CHUNK=50000; // ~50KB per chunk
+    const chunks=[];
+    for(let i=0;i<base64.length;i+=CHUNK)chunks.push(base64.slice(i,i+CHUNK));
+
+    let fileId=null;
+    for(let i=0;i<chunks.length;i++){
+      if(status)status.innerHTML=`<span style="color:var(--blue)">Uploading part ${i+1}/${chunks.length}...</span>`;
+      const params={
+        action: i===0?'uploadPhotoChunk':'appendPhotoChunk',
+        company_id:coId, company:co?.name||'',
+        filename:_photoFile.name, mimeType:'image/jpeg',
+        caption, chunk:chunks[i], chunkIndex:i, totalChunks:chunks.length,
+        fileId: fileId||''
+      };
+      const result=await apiCall(params);
+      if(i===0&&result?.tempId)fileId=result.tempId;
+      if(result?.id)fileId=result.id; // final chunk returns real Drive ID
+    }
     if(status)status.innerHTML='<span style="color:var(--green)">✅ Uploaded!</span>';
     _photoFile=null;
     setTimeout(()=>{btn.closest('div[style*=fixed]')?.remove();loadCompanyPhotos(coId);showToast('📷 Photo saved to Drive');},800);
