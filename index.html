@@ -244,13 +244,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   .app{flex-direction:column;height:auto;min-height:100vh}
 
   /* Top nav bar instead of sidebar */
-  .sidebar{width:100%!important;min-width:unset!important;height:auto!important;border-right:none!important;border-bottom:1px solid var(--bdr);flex-direction:column;order:-1;overflow:hidden}
+  .sidebar{width:100%!important;min-width:unset!important;height:auto!important;border-right:none!important;border-bottom:1px solid rgba(255,255,255,.1);flex-direction:column;order:-1;overflow:hidden}
   .main{flex:1;min-width:0;overflow:hidden}
-  .logo{padding:12px 16px 10px;display:flex;align-items:center;gap:8px}
+  .logo{padding:10px 14px;display:flex;align-items:center;gap:8px}
   .logo-icon{width:28px;height:28px;font-size:15px}
   .logo-text{font-size:14px}
   .logo-sub{display:none}
-  .nav{display:flex;flex-direction:row;overflow-x:auto;padding:4px 8px;gap:2px;border-bottom:1px solid var(--bdr);-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .nav{display:flex;flex-direction:row;overflow-x:auto;padding:4px 8px;gap:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
   .nav::-webkit-scrollbar{display:none}
   .nav-sec{display:none}
   .ni{padding:7px 10px;white-space:nowrap;font-size:12px;flex-shrink:0;border-radius:var(--r)}
@@ -261,47 +261,52 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   /* Topbar */
   .topbar{padding:0 12px;height:48px;gap:8px}
   .page-title{font-size:15px}
-  #topbar-right .btn span, #topbar-right .btn i+*{display:none}
-  #topbar-right .btn{padding:6px 8px}
+  #topbar-right .btn{padding:6px 8px;font-size:12px}
+  #topbar-right .btn i~*{display:none}
   #global-search{display:none}
   .topbar > div:first-child{display:none}
 
   /* Content */
-  .content{padding:12px}
+  .content{padding:10px}
 
   /* Metrics */
-  .metrics{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:14px}
-  .metric{padding:12px 14px}
-  .metric-value{font-size:22px}
+  .metrics{grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px}
+  .metric{padding:10px 12px}
+  .metric-value{font-size:20px}
 
   /* Cards */
-  .card{padding:14px}
+  .card{padding:12px 14px}
 
   /* Dashboard grids */
-  .app .content > div[style*="grid-template-columns:1.6fr"]{grid-template-columns:1fr!important}
-  .app .content > div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
-  .app .content > div[style*="grid-template-columns:300px"]{grid-template-columns:1fr!important}
+  .app .content > div[style*="grid-template-columns"]{grid-template-columns:1fr!important}
 
-  /* Tables — horizontal scroll */
+  /* Tables */
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
   .tbl th,.tbl td{padding:8px 10px;font-size:12px;white-space:nowrap}
   .tbl .actions{opacity:1}
 
-  /* Pipeline — horizontal scroll */
+  /* Pipeline */
   .pipeline{overflow-x:auto;padding-bottom:12px;-webkit-overflow-scrolling:touch}
   .p-col{min-width:170px;width:170px}
   .p-head{font-size:11px;padding:6px 10px}
 
-  /* Company detail */
-  .detail-grid{grid-template-columns:1fr!important}
-  .detail-sidebar{order:2}
+  /* ── COMPANY DETAIL — 3 columns → 1 column stack ── */
+  .cd-wrap{grid-template-columns:1fr!important;grid-template-rows:auto!important}
+  .cd-col{border-right:none!important;border-bottom:1px solid var(--bdr);max-height:none!important;overflow-y:visible!important}
+  .kpi-strip-co{grid-template-columns:repeat(3,1fr)!important;overflow-x:auto}
+  .kpi-cell{padding:8px 10px}
+  .kpi-v{font-size:15px}
+  .kpi-l{font-size:9px}
+  .hero-co{flex-wrap:wrap;gap:8px;padding:12px}
+  .hero-co > div[style*="max-width:200px"]{max-width:100%!important;width:100%}
 
-  /* Tabs */
-  .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;width:100%}
+  /* ── Company detail act tabs — scrollable ── */
+  .act-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap!important}
+  .act-tab{white-space:nowrap;flex-shrink:0}
 
   /* Modal */
   .overlay{padding-top:0;align-items:flex-end}
-  .modal{width:100%;max-width:100%;border-radius:var(--rlg) var(--rlg) 0 0;max-height:92vh;padding:20px 16px}
+  .modal{width:100%;max-width:100%;border-radius:var(--rlg) var(--rlg) 0 0;max-height:92vh;padding:18px 14px}
   .fr{grid-template-columns:1fr!important}
 
   /* Search results */
@@ -311,73 +316,60 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   .stage-strip{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap}
   .stage-step{min-width:80px;font-size:10px;padding:5px 6px}
 
-  /* Fleet bar */
-  .fleet-bar{height:28px}
-
   /* Reports */
   .bar-label{width:70px;font-size:11px}
 
-  /* Contact cards grid */
+  /* Toolbar */
+  .toolbar{flex-wrap:wrap}
+  .toolbar .search{min-width:100%!important;max-width:100%!important}
+
+  /* Fleet grouped cards */
+  div[style*="grid-template-columns:260px 1fr 260px"]{grid-template-columns:1fr!important}
+  div[style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important}
+  div[style*="grid-template-columns:300px"]{grid-template-columns:1fr!important}
+  div[style*="grid-template-columns:200px"]{grid-template-columns:1fr!important}
+  div[style*="repeat(auto-fill"]{grid-template-columns:1fr!important}
+  div[style*="repeat(auto-fit"]{grid-template-columns:1fr!important}
+  .detail-grid{grid-template-columns:1fr!important}
+
+  /* Contacts/Agents grid */
   div[style*="repeat(auto-fill,minmax(220px"]{grid-template-columns:1fr!important}
   div[style*="repeat(auto-fill,minmax(240px"]{grid-template-columns:1fr!important}
+
+  /* Calendar */
+  .cal-grid{grid-template-columns:repeat(2,1fr)!important}
+
+  /* Parts table */
+  .tbl-wrap{overflow-x:auto!important}
+
+  /* Lead status pills */
+  div[style*="min-width:130px"]{min-width:100px!important;padding:8px 10px!important}
+
+  /* Segments */
+  div[style*="grid-template-columns:280px 1fr"]{grid-template-columns:1fr!important}
 }
 
 @media(max-width:600px){
   .metrics{grid-template-columns:repeat(2,1fr)}
-  .metric-value{font-size:20px}
+  .metric-value{font-size:18px}
   .p-col{min-width:150px;width:150px}
   .tbl th,.tbl td{padding:7px 8px;font-size:11px}
-}
-
-/* ── Mobile fixes for Segments, Leads, Automation ── */
-@media(max-width:960px){
-  .hide-sm{display:none!important}
-  /* Segments: stack filters above table */
-  div[style*="grid-template-columns:280px 1fr"]{grid-template-columns:1fr!important}
-  .seg-layout{grid-template-columns:1fr!important}
-
-  /* Leads: status bar horizontal scroll */
-  div[style*="overflow-x:auto;padding-bottom:4px"]{flex-wrap:nowrap!important;-webkit-overflow-scrolling:touch}
-
-  /* Automation template cards: 2 columns on tablet, 1 on phone */
-  div[style*="repeat(auto-fit,minmax(240px,1fr))"]{grid-template-columns:repeat(2,1fr)!important}
-
-  /* Calendar grid */
-  .cal-grid{grid-template-columns:repeat(2,1fr)!important}
-
-  /* Parts table: ensure scroll */
-  .tbl-wrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
-
-  /* Toolbar: wrap on small screens */
-  .toolbar{flex-wrap:wrap}
-  .toolbar .search{min-width:100%!important;max-width:100%!important}
-  .toolbar select,.toolbar .fc{width:100%!important;min-width:unset!important}
-
-  /* Automation card layout */
-  div[style*="display:flex;align-items:center;justify-content:space-between"]{flex-wrap:wrap;gap:8px}
-
-  /* Lead status cards: smaller */
-  div[style*="min-width:130px"]{min-width:100px!important;padding:8px 12px!important}
-}
-
-@media(max-width:600px){
-  .hide-xs{display:none!important}
-  /* Automation templates: 1 column */
-  div[style*="repeat(auto-fit,minmax(240px,1fr))"]{grid-template-columns:1fr!important}
-
-  /* Calendar: 1 column */
+  .kpi-strip-co{grid-template-columns:repeat(2,1fr)!important}
   .cal-grid{grid-template-columns:1fr!important}
-
-  /* Lead status strip: smaller pills */
   div[style*="min-width:130px"]{min-width:80px!important;font-size:11px!important}
-
-  /* Segment stats card */
   div[style*="grid-template-columns:repeat(auto-fit,minmax(150px"]{grid-template-columns:repeat(2,1fr)!important}
-
-  /* Modal form rows already 1 col, ensure task days input full width */
   #auto-task-days{width:100%!important}
-
-  /* Deal detail stage strip */
+  .stage-step{min-width:70px;font-size:9px}
+  .hero-co{padding:10px 12px}
+  /* Company detail - tighten sections */
+  .cd-sec{padding:10px 12px}
+  .fleet-row{grid-template-columns:1fr 40px 40px!important}
+  /* Activity feed */
+  .act-entry{padding:10px 12px}
+  /* Deals/contacts in right col — full width */
+  .deal-row{flex-wrap:wrap}
+  .ctc-row{gap:8px}
+}
   .stage-strip{gap:0}
 
   /* Topbar: hide breadcrumb text on very small */
@@ -658,20 +650,37 @@ const coDatalist=()=>db.companies.map(c=>`<option>${c.name}</option>`).join('');
 
 // ─── API ───────────────────────────────────────────────────────────────────
 const CACHE_KEY='wcrm_cache_v3';
-const CACHE_TTL=5*60*1000; // 5 min
-let saveQueue=[];let saveTimer=null;let pendingSync=false;
+const SHEETS=['companies','contacts','deals','fleet','tasks','activities','agents','users','leads','automations','contracts'];
+let pendingSync=false;
+
+// ── Fetch with timeout + exponential retry ──────────────────────────────────
+async function fetchWithTimeout(url,timeout=12000,retries=2){
+  for(let attempt=0;attempt<=retries;attempt++){
+    const ctrl=new AbortController();
+    const timer=setTimeout(()=>ctrl.abort(),timeout);
+    try{
+      const res=await fetch(url,{redirect:'follow',signal:ctrl.signal});
+      clearTimeout(timer);return res;
+    }catch(e){
+      clearTimeout(timer);
+      if(attempt===retries)throw e;
+      setSS('spin',`Timeout, retrying ${attempt+1}/${retries}...`);
+      await new Promise(r=>setTimeout(r,2000*(attempt+1)));
+    }
+  }
+}
 
 async function apiCall(params){
   try{
     const url=API+'?payload='+encodeURIComponent(JSON.stringify(params));
-    const res=await fetch(url,{redirect:'follow'});
+    const res=await fetchWithTimeout(url,12000,2);
     const text=await res.text();
     const data=JSON.parse(text);
     if(!data.ok)throw new Error(data.error||'Error');
     return data.data;
   }catch(e){
-    setSS('err',e.message.slice(0,40));
-    throw e;
+    const msg=e.name==='AbortError'?'Timeout — slow connection':e.message.slice(0,40);
+    setSS('err',msg);throw e;
   }
 }
 
@@ -690,7 +699,6 @@ function normalizeDb(){
   });
   db.leads.forEach(l=>{l.created=l.created||today();l.phone=clean(l.phone);l.email=clean(l.email);});
   if(!db.contracts)db.contracts=[];
-  // Clean #ERROR! values caused by + prefix being treated as formula in Sheets
   db.contacts.forEach(c=>{c.phone=clean(c.phone);c.email=clean(c.email);});
   db.agents.forEach(a=>{a.phone=clean(a.phone);a.email=clean(a.email);});
   db.companies.forEach(c=>{if(c.phone)c.phone=clean(c.phone);if(c.website)c.website=clean(c.website);});
@@ -705,53 +713,81 @@ function loadCache(){
     const raw=localStorage.getItem(CACHE_KEY);
     if(!raw)return false;
     const {ts,db:cached}=JSON.parse(raw);
-    if(Date.now()-ts>CACHE_TTL*12)return false; // 1 hour max
-    Object.assign(db,cached);
-    normalizeDb();
-    updateCounts();
-    return true;
+    if(Date.now()-ts>60*60*1000)return false;
+    Object.assign(db,cached);normalizeDb();updateCounts();return true;
   }catch(e){return false;}
 }
 
+// Show loading spinner in content
+function showLoadSpinner(msg){
+  const el=$('content');if(!el)return;
+  el.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px 20px;gap:16px;min-height:200px">
+    <div style="width:36px;height:36px;border:3px solid var(--bdr);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+    <div style="font-size:13px;color:var(--text-m)">${msg}</div>
+  </div>`;
+}
+
+// BATCH LOAD — try single request for all sheets, fallback to parallel
 async function loadFromSheets(){
   setSS('spin','Syncing...');
   try{
-    const sheets=['companies','contacts','deals','fleet','tasks','activities','agents','users','leads','automations','contracts'];
-    const res=await Promise.all(sheets.map(s=>apiCall({action:'read',sheet:s})));
-    sheets.forEach((s,i)=>{db[s]=res[i]||[];});
-    normalizeDb();
-    saveCache();
-    updateCounts();
+    // Attempt batch read (single round-trip)
+    const batch=await apiCall({action:'readAll',sheets:SHEETS});
+    if(batch&&typeof batch==='object'&&!Array.isArray(batch)){
+      SHEETS.forEach(s=>{if(batch[s])db[s]=batch[s];else if(!db[s])db[s]=[];});
+      normalizeDb();saveCache();updateCounts();
+      setSS('ok','Synced '+new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}));
+      return;
+    }
+  }catch(e){/* batch not supported — fall through */}
+
+  // Fallback: parallel individual requests with progress
+  try{
+    const chunks=[SHEETS.slice(0,6),SHEETS.slice(6)];
+    const results=[];
+    for(const chunk of chunks){
+      setSS('spin','Loading '+chunk[0]+'...');
+      const res=await Promise.all(chunk.map(s=>apiCall({action:'read',sheet:s}).catch(()=>[])));
+      results.push(...res);
+    }
+    SHEETS.forEach((s,i)=>{db[s]=results[i]||[];});
+    normalizeDb();saveCache();updateCounts();
     setSS('ok','Synced '+new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}));
-  }catch(e){setSS('err','Sync failed');}
+  }catch(e){
+    setSS('err','Sync failed — tap ↻ to retry');
+  }
 }
 
 async function load(){
   const hasCached=loadCache();
   if(hasCached){
-    // Render immediately from cache, sync in background
     setSS('ok','From cache');
-    setTimeout(()=>loadFromSheets(),100);
+    setTimeout(()=>loadFromSheets(),300);
   }else{
+    showLoadSpinner('Connecting to database...');
     await loadFromSheets();
   }
 }
 
-// Optimistic persist — update UI immediately, save to Sheets in background
+// Optimistic persist with auto-retry
 async function persist(sheet,row){
   if(!row.id)row.id=uid();
-  // Update cache immediately
   saveCache();
-  // Fire-and-forget to Sheets
   setSS('spin','Saving...');
   try{
     const r=await apiCall({action:'upsert',sheet,row});
     setSS('ok','Saved '+new Date().toLocaleTimeString('ru',{hour:'2-digit',minute:'2-digit'}));
-    saveCache();
-    return r||row;
+    saveCache();return r||row;
   }catch(e){
-    setSS('err','Save failed — retry');
-    return row; // Return local row so UI keeps working
+    setSS('err','Save failed, retrying...');
+    await new Promise(r=>setTimeout(r,2000));
+    try{
+      const r=await apiCall({action:'upsert',sheet,row});
+      setSS('ok','Saved');saveCache();return r||row;
+    }catch(e2){
+      setSS('err','Save failed — check connection');
+      return row;
+    }
   }
 }
 
@@ -761,8 +797,17 @@ async function remove(sheet,id){
   catch(e){setSS('err','Delete failed');}
 }
 
-// Background sync every 2 minutes
-setInterval(()=>{if(API&&!pendingSync){pendingSync=true;loadFromSheets().finally(()=>{pendingSync=false;});} },2*60*1000);
+// Auto-sync every 3 minutes, refresh visible page
+setInterval(()=>{
+  if(API&&!pendingSync){
+    pendingSync=true;
+    loadFromSheets().finally(()=>{
+      pendingSync=false;
+      const safe=['dashboard','pipeline','leads','companies','contacts','fleet','tasks','reports','agents','contracts'];
+      if(safe.includes(cur.section))try{render(cur.section);}catch(e){}
+    });
+  }
+},3*60*1000);
 
 function setSS(state,txt){$('dot').className='dot '+state;$('sync-txt').textContent=txt;}
 function updateCounts(){
@@ -3638,30 +3683,40 @@ window.openM=function(type,id=null,coId=null,dealId=null){
     const l=id?db.leads.find(x=>x.id===id):null;
     mtype='lead';eid=id;
     const agents=db.agents.map(a=>`<option ${l?.agent===a.name?'selected':''}>${a.name}</option>`).join('');
+    // Check if company already exists in DB
+    const existingCo=l?.company_id?db.companies.find(x=>x.id===l.company_id):null;
     $('overlay').innerHTML=`<div class="modal" onclick="event.stopPropagation()">
       <div class="modal-title">${l?'Edit Lead':'New Lead'}<span class="modal-close" onclick="closeM()"><i class="ti ti-x"></i></span></div>
+
+      <div class="fg">
+        <label class="fl">Company</label>
+        <div style="position:relative">
+          <input class="fc" id="m-lead-company" value="${l?.company||''}" placeholder="Start typing company name..." autocomplete="off"
+            oninput="showLeadCompanySuggest(this.value)" onfocus="showLeadCompanySuggest(this.value)">
+          <div id="lead-co-suggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--sur);border:1px solid var(--bdr);border-radius:0 0 8px 8px;z-index:100;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.1)"></div>
+        </div>
+        <input type="hidden" id="m-lead-co-id" value="${l?.company_id||''}">
+        ${existingCo?`<div style="margin-top:6px;padding:6px 10px;background:var(--green-lt,#f0fdf4);border-radius:6px;font-size:12px;color:var(--green)"><i class="ti ti-check-circle"></i> Existing client — <strong>${existingCo.name}</strong> (${existingCo.status||''})</div>`:'<div id="lead-co-status" style="margin-top:4px;font-size:12px;color:var(--text-m)"></div>'}
+      </div>
+
       <div class="fr">
-        <div class="fg"><label class="fl">Company</label><input class="fc" id="m-lead-company" value="${l?.company||''}" placeholder="Company namecompany name"></div>
         <div class="fg"><label class="fl">Contact Person</label><input class="fc" id="m-lead-contact" value="${l?.contact||''}" placeholder="Full name"></div>
+        <div class="fg"><label class="fl">Phone</label><input class="fc" id="m-lead-phone" data-phone data-exclude-id="${id||''}" value="${l?.phone||''}" placeholder="+374 XX XXX XXX"></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Phone</label><input class="fc" id="m-lead-phone" data-phone data-exclude-id="${id||''}" value="${l?.phone||''}" placeholder="+374 XX XXX XXX"></div>
         <div class="fg"><label class="fl">Email</label><input class="fc" id="m-lead-email" data-email data-exclude-id="${id||''}" value="${l?.email||''}" placeholder="example@company.com"></div>
+        <div class="fg"><label class="fl">Source</label><select class="fc" id="m-lead-source">${LEAD_SOURCES.map(s=>`<option ${l?.source===s?'selected':''}>${s}</option>`).join('')}</select></div>
       </div>
       <div id="dup-warn"></div>
       <div class="fr">
-        <div class="fg"><label class="fl">Source</label><select class="fc" id="m-lead-source">${LEAD_SOURCES.map(s=>`<option ${l?.source===s?'selected':''}>${s}</option>`).join('')}</select></div>
         <div class="fg"><label class="fl">Status</label><select class="fc" id="m-lead-status">${LEAD_STATUSES.map(s=>`<option ${(l?.status||'New')===s?'selected':''}>${s}</option>`).join('')}</select></div>
-      </div>
-      <div class="fr">
         <div class="fg"><label class="fl">Product of Interest</label><input class="fc" id="m-lead-product" value="${l?.product||''}" placeholder="Hitachi ZX330..."></div>
-        <div class="fg"><label class="fl">Budget ($)</label><input class="fc" id="m-lead-budget" type="number" value="${l?.budget||''}" placeholder="0"></div>
       </div>
       <div class="fr">
+        <div class="fg"><label class="fl">Budget ($)</label><input class="fc" id="m-lead-budget" type="number" value="${l?.budget||''}" placeholder="0"></div>
         <div class="fg"><label class="fl">Assigned To</label><select class="fc" id="m-lead-agent"><option value="">—</option>${agents}</select></div>
-        <div class="fg"><label class="fl">Date Created</label><input class="fc" id="m-lead-created" type="date" value="${l?.created||today()}"></div>
       </div>
-      <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="m-lead-notes" rows="3">${l?.notes||''}</textarea></div>
+      <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="m-lead-notes" rows="2">${l?.notes||''}</textarea></div>
       <div class="modal-footer">
         ${l?`<button class="btn btn-danger" onclick="delRecord('leads','${l.id}')">Delete</button>`:''}
         <button class="btn" onclick="closeM()">Cancel</button>
@@ -3714,19 +3769,59 @@ window.openM=function(type,id=null,coId=null,dealId=null){
   _origOpenM(type,id,coId,dealId);
 };
 
+function showLeadCompanySuggest(val){
+  const box=document.getElementById('lead-co-suggest');
+  const status=document.getElementById('lead-co-status');
+  if(!box)return;
+  if(!val||val.length<1){box.style.display='none';return;}
+  const matches=db.companies.filter(c=>multiSearch(c.name,val)).slice(0,8);
+  if(!matches.length){
+    box.style.display='none';
+    if(status)status.innerHTML='<i class="ti ti-info-circle"></i> New company — will be added to database';
+    document.getElementById('m-lead-co-id').value='';
+    return;
+  }
+  box.style.display='block';
+  box.innerHTML=matches.map(c=>`<div style="padding:9px 14px;cursor:pointer;font-size:13px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px"
+    onmousedown="selectLeadCompany('${c.id}','${c.name.replace(/'/g,"\\'")}','${c.status||''}')"
+    onmouseover="this.style.background='var(--gray-50)'" onmouseout="this.style.background=''">
+    <div class="av ${avC(0)}" style="width:26px;height:26px;font-size:10px;flex-shrink:0">${ini(c.name)}</div>
+    <div style="flex:1"><div style="font-weight:600">${c.name}</div><div style="font-size:11px;color:var(--text-m)">${c.industry||''} · ${c.status||''} ${c.category?'· Cat.'+c.category:''}</div></div>
+    <span class="b ${statusBadge(c.status)}" style="font-size:10px">${c.status||''}</span>
+  </div>`).join('');
+}
+
+function selectLeadCompany(id,name,status){
+  const inp=document.getElementById('m-lead-company');
+  const hiddenId=document.getElementById('m-lead-co-id');
+  const box=document.getElementById('lead-co-suggest');
+  const statusEl=document.getElementById('lead-co-status');
+  if(inp)inp.value=name;
+  if(hiddenId)hiddenId.value=id;
+  if(box)box.style.display='none';
+  if(statusEl){
+    const co=db.companies.find(x=>x.id===id);
+    const isExisting=co&&(co.status==='Active'||co.status==='Partner');
+    statusEl.innerHTML=isExisting
+      ?`<span style="color:var(--amber)"><i class="ti ti-alert-triangle"></i> Existing client (${co.status}) — consider logging as Activity instead</span>`
+      :`<span style="color:var(--green)"><i class="ti ti-check-circle"></i> Found in database — will link to company record</span>`;
+  }
+}
+
 async function saveLead(){
   if(saving)return;saving=true;
   const btn=$('save-btn');if(btn){btn.disabled=true;btn.textContent='Saving...';}
   try{
     const company=$('m-lead-company')?.value.trim();
+    const company_id=$('m-lead-co-id')?.value||'';
     const isNew=!eid;
     const row={
       id:eid||uid(),
-      company,contact:$('m-lead-contact')?.value.trim()||'',
+      company,company_id,contact:$('m-lead-contact')?.value.trim()||'',
       phone:$('m-lead-phone')?.value.trim()||'',email:$('m-lead-email')?.value.trim()||'',
       source:$('m-lead-source')?.value||'',status:$('m-lead-status')?.value||'New',
       product:$('m-lead-product')?.value.trim()||'',budget:$('m-lead-budget')?.value||'',
-      agent:$('m-lead-agent')?.value||'',created:$('m-lead-created')?.value||today(),
+      agent:$('m-lead-agent')?.value||'',created:today(),
       notes:$('m-lead-notes')?.value.trim()||''
     };
     if(eid){const i=db.leads.findIndex(x=>x.id===eid);if(i>=0)db.leads[i]={...db.leads[i],...row};}
