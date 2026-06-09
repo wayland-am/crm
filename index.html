@@ -1517,7 +1517,7 @@ function openDealDetail(id){
   cur.deal=id;
   $('ptitle').textContent=d.company+' — '+(d.model||'Deal');
   $('breadcrumb').innerHTML=`<span style="cursor:pointer;color:var(--blue)" onclick="go('pipeline',null)">Pipeline</span><i class="ti ti-chevron-right" style="font-size:12px;margin:0 4px"></i>`;
-  $('topbar-right').innerHTML=`<button class="btn" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-message-circle"></i>Log Activity</button>${d.stage==='Won'?`<button class="btn btn-primary" onclick="cur.company='${d.company_id}';cur.deal='${id}';openM('contract')"><i class="ti ti-file-invoice"></i>Create Contract</button>`:''}<button class="btn" onclick="openM('deal','${id}')"><i class="ti ti-edit"></i>Edit</button>`;
+  $('topbar-right').innerHTML=`<button class="btn" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-message-circle"></i>Log Activity</button>${d.stage==='Won'?`<button class="btn btn-primary" onclick="cur.company='${d.company_id}';cur.deal='${id}';openM('contract')"><i class="ti ti-file-invoice"></i>Create Contract</button>`:''}`;
   const tasks=db.tasks.filter(t=>t.deal_id===id);
   const acts=db.activities.filter(a=>a.deal_id===id||a.company_id===d.company_id).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
   const stageHistory=db.activities.filter(a=>a.deal_id===id&&a.type==='stage').sort((a,b)=>(a.date||a.created||'').localeCompare(b.date||b.created||''));
@@ -1546,7 +1546,13 @@ function openDealDetail(id){
     <div>
       <!-- DEAL INFO CARD -->
       <div class="card" style="margin-bottom:14px">
-        <div style="font-size:24px;font-weight:800;color:var(--text);margin-bottom:4px">${fmtUSD(d.amount)}</div>
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px">
+          <div style="font-size:24px;font-weight:800;color:var(--text)">${fmtUSD(d.amount)}</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-sm" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-message-circle"></i>Log</button>
+            <button class="btn btn-sm btn-primary" onclick="openM('deal','${id}')"><i class="ti ti-edit"></i>Edit</button>
+          </div>
+        </div>
         <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
           <span class="b ${stageBadge(d.stage)}">${d.stage}</span>
           ${d.probability?`<span class="b b-gray">${d.probability}% probability</span>`:''}
