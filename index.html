@@ -463,7 +463,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         <div class="av av-0" id="user-av">MK</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600" id="user-name-lbl">M. Kalashnikov</div>
-          <div style="font-size:11px;color:var(--text-m)" id="user-role-lbl">Sales Manager</div>
+          <div style="font-size:11px;color:var(--text-m)" id="user-role-lbl">Sales Sales Rep</div>
         </div>
         <i class="ti ti-chevron-up" style="font-size:12px;color:var(--text-l)"></i>
       </div>
@@ -706,7 +706,18 @@ function normalizeDb(){
   if(!db.contracts)db.contracts=[];
   db.contacts.forEach(c=>{c.phone=clean(c.phone);c.email=clean(c.email);});
   db.agents.forEach(a=>{a.phone=clean(a.phone);a.email=clean(a.email);});
-  db.companies.forEach(c=>{if(c.phone)c.phone=clean(c.phone);if(c.website)c.website=clean(c.website);});
+  const STATUS_VALS=['Active','Prospect','Inactive','Negotiating','Partner'];
+  db.companies.forEach(c=>{
+    if(c.phone)c.phone=clean(c.phone);
+    if(c.website)c.website=clean(c.website);
+    if(!c.status)c.status='Prospect';
+    // Clean ISO timestamps from notes field
+    if(c.notes&&/^\d{4}-\d{2}-\d{2}T/.test(c.notes.trim()))c.notes='';
+    // Clean status values that leaked into zip field
+    if(c.zip&&STATUS_VALS.includes(c.zip.trim()))c.zip='';
+    // Clean status values that leaked into city field
+    if(c.city&&STATUS_VALS.includes(c.city.trim()))c.city='';
+  });
 }
 
 function saveCache(){
@@ -1218,9 +1229,21 @@ function renderCompaniesRows(){
     const actLabel=daysSince===null?'—':daysSince===0?'Today':daysSince===1?'Yesterday':daysSince+'d ago';
     return`<tr onclick="openCompanyDetail('${c.id}')">
       <td onclick="event.stopPropagation()"><input type="checkbox" class="co-cb" data-id="${c.id}" onchange="toggleSelectCompany('${c.id}',this)"></td>
-      <td><div style="display:flex;align-items:center;gap:9px"><div class="av ${avC(i)}" style="width:32px;height:32px;font-size:12px">${ini(c.name)}</div><div><div style="font-weight:700">${c.name}</div>${c.website?`<div style="font-size:11px;color:var(--blue)">${c.website}</div>`:''}</div></div></td>
-      <td><div style="display:flex;align-items:center;gap:6px">${c.category?`<span class="cat-badge cat-${c.category}">${c.category}</span>`:''}<span style="font-size:12px;color:var(--text-m)">${c.industry||''}</span></div></td>
-      <td>${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Cat. ${c.category}</span>`:'-'}</td>
+      <td><div style="display:flex;align-items:center;gap:9px">
+        <div class="av ${avC(i)}" style="width:32px;height:32px;font-size:12px">${ini(c.name)}</div>
+        <div>
+          <div style="font-weight:700">${c.name}</div>
+          ${c.assigned_agent?`<div style="font-size:11px;color:var(--text-m)">${c.assigned_agent}</div>`:''}
+        </div>
+      </div></td>
+      <td>
+        ${c.industry?`<div style="font-size:13px">${c.industry}</div>`:`<span style="color:var(--text-l);font-size:12px">—</span>`}
+      </td>
+      <td>
+        ${c.category&&CAT_RULES[c.category]
+          ?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color};font-size:11px">Cat. ${c.category}</span>`
+          :`<span style="color:var(--text-l)">—</span>`}
+      </td>
       <td style="color:var(--text-m)">${c.city||'—'}</td>
       <td style="text-align:center">${ctcCount}</td>
       <td style="text-align:center">${dealCount}</td>
@@ -1228,7 +1251,7 @@ function renderCompaniesRows(){
       <td style="font-size:12px">
         ${lastAct?`<div style="color:${actColor};font-weight:600">${actLabel}</div><div style="font-size:11px;color:var(--text-m);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lastAct.type}${lastAct.note?' — '+lastAct.note:''}</div>`:`<span style="color:var(--text-l)">—</span>`}
       </td>
-      <td>${c.status?`<span class="b ${statusBadge(c.status)}">${c.status}</span>`:''}</td>
+      <td>${c.status?`<span class="b ${statusBadge(c.status)}">${c.status}</span>`:`<span style="color:var(--text-l);font-size:12px">—</span>`}</td>
       <td onclick="event.stopPropagation()"><div class="actions"><button class="btn btn-sm btn-ghost" onclick="openM('company','${c.id}')"><i class="ti ti-edit"></i></button><button class="btn btn-sm btn-ghost btn-danger" onclick="delRecord('companies','${c.id}')"><i class="ti ti-trash"></i></button></div></td>
     </tr>`;
   }).join(''):`<tr><td colspan="10"><div class="empty"><i class="ti ti-building"></i><div class="empty-title">No companies found</div>${coFilter?`<button class="btn btn-sm" onclick="coFilter='';document.getElementById('co-search-input').value='';renderCompaniesRows()">Clear filter</button>`:'Add first company'}</div></td></tr>`;
@@ -1561,7 +1584,7 @@ function openDealDetail(id){
         ${[
           ['Company',`<span style="cursor:pointer;color:var(--blue)" onclick="openCompanyDetail('${d.company_id}')">${d.company}</span>`],
           ['Model',d.model],
-          ['Manager',d.agent],
+          ['Sales Rep',d.agent],
           ['Currency',d.currency],
           ['Next Action',d.next_action],
           ['Next Action Date',d.next_date],
@@ -1992,7 +2015,7 @@ function renderReports(){
   <div class="card" style="margin-bottom:18px">
     <div class="card-title">Team Activity — Last 30 Days</div>
     ${agentActivity.length?`<div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Manager</th><th style="text-align:center">📞 Calls</th><th style="text-align:center">🤝 Meetings</th><th style="text-align:center">📋 Proposals</th><th style="text-align:center">Total</th><th style="text-align:center">Active Deals</th><th style="text-align:right">Won</th></tr></thead>
+      <thead><tr><th>Sales Rep</th><th style="text-align:center">📞 Calls</th><th style="text-align:center">🤝 Meetings</th><th style="text-align:center">📋 Proposals</th><th style="text-align:center">Total</th><th style="text-align:center">Active Deals</th><th style="text-align:right">Won</th></tr></thead>
       <tbody>${agentActivity.map((a,i)=>`<tr>
         <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:28px;height:28px;font-size:10px">${ini(a.name)}</div>${a.name}</div></td>
         <td style="text-align:center"><strong>${a.calls||'—'}</strong></td>
@@ -2009,9 +2032,9 @@ function renderReports(){
 
   <!-- NEW: AGENT FUNNEL -->
   ${agentFunnel.length?`<div class="card" style="margin-bottom:18px">
-    <div class="card-title">Agent Sales Funnel</div>
+    <div class="card-title">Sales Rep Funnel</div>
     <div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Manager</th><th style="text-align:center">Total Deals</th><th style="text-align:center">Active</th><th style="text-align:center">Won</th><th style="text-align:center">Lost</th><th style="text-align:center">Win Rate</th><th style="text-align:right">Avg Size</th><th style="text-align:right">Revenue</th></tr></thead>
+      <thead><tr><th>Sales Rep</th><th style="text-align:center">Total Deals</th><th style="text-align:center">Active</th><th style="text-align:center">Won</th><th style="text-align:center">Lost</th><th style="text-align:center">Win Rate</th><th style="text-align:right">Avg Size</th><th style="text-align:right">Revenue</th></tr></thead>
       <tbody>${agentFunnel.map((a,i)=>`<tr>
         <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:28px;height:28px;font-size:10px">${ini(a.name)}</div>${a.name}</div></td>
         <td style="text-align:center">${a.total}</td>
@@ -2178,7 +2201,7 @@ function openM(type,id=null,coId=null,dealId=null){
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Client Category</label><select class="fc" id="f-category"><option value="">— not set —</option>${Object.entries(CAT_RULES).map(([k,v])=>`<option value="${k}" ${e.category===k?'selected':''}>${v.label} (${v.desc})</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Assigned Agent</label><select class="fc" id="f-assigned">${[{name:'— not assigned —',id:''},...db.agents].map(a=>`<option value="${a.name||''}" ${(e.assigned_agent||'')===(a.name||'')?'selected':''}>${a.name||'— not assigned —'}</option>`).join('')}${db.agents.length===0?AGENTS().map(a=>`<option value="${a}" ${(e.assigned_agent||'')===a?'selected':''}>${a}</option>`).join(''):''}</select></div>
+        <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-assigned">${[{name:'— not assigned —',id:''},...db.agents].map(a=>`<option value="${a.name||''}" ${(e.assigned_agent||'')===(a.name||'')?'selected':''}>${a.name||'— not assigned —'}</option>`).join('')}${db.agents.length===0?AGENTS().map(a=>`<option value="${a}" ${(e.assigned_agent||'')===a?'selected':''}>${a}</option>`).join(''):''}</select></div>
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Annual Equipment Budget ($)</label><input class="fc" id="f-budget" type="number" value="${e.budget||''}" placeholder="0"></div>
@@ -2213,7 +2236,7 @@ function openM(type,id=null,coId=null,dealId=null){
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Competitor</label><input class="fc" id="f-competitor" value="${e.competitor||''}" placeholder="Komatsu, Caterpillar, Volvo..."></div>
-        <div class="fg"><label class="fl">Manager</label><select class="fc" id="f-agent">${AGENTS().map(a=>`<option ${(e.agent||currentUser?.name||'')=== a?'selected':''}>${a}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-agent">${AGENTS().map(a=>`<option ${(e.agent||currentUser?.name||'')=== a?'selected':''}>${a}</option>`).join('')}</select></div>
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Next Action</label><input class="fc" id="f-next" value="${e.next_action||''}" placeholder="Send Proposal..."></div>
@@ -2249,12 +2272,12 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Priority</label><select class="fc" id="f-priority"><option ${e.priority==='high'?'selected':''} value="high">High</option><option ${e.priority==='medium'?'selected':''} value="medium">Medium</option><option ${e.priority==='low'?'selected':''} value="low">Low</option></select></div>
       </div>
       <div class="fr">
-        <div class="fg"><label class="fl">Manager</label><select class="fc" id="f-agent">${AGENTS().map(a=>`<option ${(e.agent||currentUser?.name||'')=== a?'selected':''}>${a}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-agent">${AGENTS().map(a=>`<option ${(e.agent||currentUser?.name||'')=== a?'selected':''}>${a}</option>`).join('')}</select></div>
         <div class="fg"><label class="fl">Due Date</label><input class="fc" id="f-due" type="date" value="${e.due||''}"></div>
       </div>`,
     user:`
       <div class="fg"><label class="fl">Full Name *</label><input class="fc" id="f-name" value="${e.name||''}" placeholder="J. Smith"></div>
-      <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option value="rep" ${(e.role||'rep')==='rep'?'selected':''}>Sales Representative</option><option value="manager" ${e.role==='manager'?'selected':''}>Manager</option></select></div>
+      <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option value="rep" ${(e.role||'rep')==='rep'?'selected':''}>Sales Representative</option><option value="manager" ${e.role==='manager'?'selected':''}>Sales Rep</option></select></div>
       <div class="fg"><label class="fl">Password ${e.id?'(leave blank to keep unchanged)':'*'}</label><input class="fc" id="f-pass" type="password" placeholder="${e.id?'New password...':'Minimum 4 characters'}"></div>
       <div class="fg"><label class="fl">Status</label><select class="fc" id="f-active"><option value="true" ${String(e.active)!=='false'?'selected':''}>Active</option><option value="false" ${String(e.active)==='false'?'selected':''}>Blocked</option></select></div>`,
     agent:`
@@ -2263,7 +2286,7 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Phone</label><input class="fc" id="f-phone" data-phone value="${e.phone||''}" placeholder="+374 XX XXX XXX"></div>
         <div class="fg"><label class="fl">Email</label><input class="fc" id="f-email" data-email value="${e.email||''}"></div>
       </div>
-      <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option>Sales Manager</option><option ${e.role==='Senior Manager'?'selected':''}>Senior Manager</option><option ${e.role==='Manager'?'selected':''}>Manager</option></select></div>`,
+      <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option>Sales Manager</option><option ${e.role==='Senior Manager'?'selected':''}>Senior Manager</option><option ${e.role==='Sales Rep'?'selected':''}>Sales Rep</option></select></div>`,
     activity:`
       <div class="fr">
         <div class="fg"><label class="fl">Type</label><select class="fc" id="f-type" onchange="updateActivityFields()">${['Call','Meeting','WhatsApp','Email','Proposal','Demo','Documents','Other'].map(t=>`<option>${t}</option>`).join('')}</select></div>
@@ -2305,7 +2328,7 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Next Step</label><input class="fc" id="f-next-step" placeholder="Send proposal, call back, arrange demo..."></div>
         <div class="fg"><label class="fl">Follow-up Date</label><input class="fc" id="f-next-date" type="date"></div>
       </div>
-      <div class="fg"><label class="fl">Assigned To</label><select class="fc" id="f-agent">${(db.agents.length?db.agents.map(a=>a.name):(currentUser?[currentUser.name]:[])).map(a=>`<option ${a===(currentUser?.name||'')?'selected':''}>${a}</option>`).join('')}</select></div>`,
+      <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-agent">${(db.agents.length?db.agents.map(a=>a.name):(currentUser?[currentUser.name]:[])).map(a=>`<option ${a===(currentUser?.name||'')?'selected':''}>${a}</option>`).join('')}</select></div>`,
     contract:`
       <div class="fr">
         <div class="fg"><label class="fl">Contract № *</label><input class="fc" id="f-con-number" value="${e.number||''}" placeholder="ДП-2026-047"></div>
@@ -3176,7 +3199,7 @@ function renderUsers(){
       <thead><tr><th>Name</th><th>Role</th><th>Last Login</th><th>Status</th><th></th></tr></thead>
       <tbody>${db.users.length?db.users.map((u,i)=>`<tr>
         <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:30px;height:30px;font-size:11px">${ini(u.name)}</div><strong>${u.name}</strong></div></td>
-        <td><span class="b ${u.role==='manager'?'b-blue':'b-gray'}">${u.role==='manager'?'Manager':'Sales Rep'}</span></td>
+        <td><span class="b ${u.role==='manager'?'b-blue':'b-gray'}">${u.role==='manager'?'Sales Rep':'Sales Rep'}</span></td>
         <td style="color:var(--text-m);font-size:12px">${u.last_login||'—'}</td>
         <td><span class="b ${String(u.active)==='false'?'b-red':'b-green'}">${String(u.active)==='false'?'Blocked':'Active'}</span></td>
         <td><div class="actions">
@@ -3194,7 +3217,7 @@ function renderUsers(){
       <div><div style="font-weight:700;color:var(--blue);margin-bottom:8px;font-size:13px">Sales Representative</div>
         ${['✓ Own deals and tasks','✓ Own calendar','✓ All companies and contacts','✓ Fleet','✓ Parts forecast','✗ Others\' deals','✗ Team reports','✗ Operations & import','✗ User management'].map(i=>`<div style="font-size:13px;padding:3px 0;color:${i.startsWith('✗')?'var(--text-l)':'var(--text)'}">${i}</div>`).join('')}
       </div>
-      <div><div style="font-weight:700;color:var(--green);margin-bottom:8px;font-size:13px">Manager</div>
+      <div><div style="font-weight:700;color:var(--green);margin-bottom:8px;font-size:13px">Sales Rep</div>
         ${['✓ All deals from all managers','✓ All team tasks','✓ Shared calendar','✓ All companies and contacts','✓ Fleet','✓ Reports across entire team','✓ Operations & import','✓ User management'].map(i=>`<div style="font-size:13px;padding:3px 0">${i}</div>`).join('')}
       </div>
     </div>
@@ -4057,7 +4080,7 @@ window.openM=function(type,id=null,coId=null,dealId=null){
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Budget ($)</label><input class="fc" id="m-lead-budget" type="number" value="${l?.budget||''}" placeholder="0"></div>
-        <div class="fg"><label class="fl">Assigned To</label><select class="fc" id="m-lead-agent"><option value="">—</option>${agents}</select></div>
+        <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="m-lead-agent"><option value="">—</option>${agents}</select></div>
       </div>
       <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="m-lead-notes" rows="2">${l?.notes||''}</textarea></div>
       <div class="modal-footer">
