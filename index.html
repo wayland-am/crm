@@ -26,28 +26,32 @@
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;height:100vh;overflow:hidden}
 /* Layout */
 .app{display:flex;height:100vh}
-.sidebar{width:224px;min-width:224px;background:var(--sur);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
+.sidebar{width:224px;min-width:224px;background:#1a2332;border-right:none;display:flex;flex-direction:column;overflow:hidden}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
 /* Sidebar */
-.logo{padding:18px 16px 14px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px}
+.logo{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px}
 .logo-icon{width:34px;height:34px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0}
-.logo-text{font-size:15px;font-weight:700;color:var(--text)}
-.logo-sub{font-size:11px;color:var(--text-m)}
+.logo-text{font-size:15px;font-weight:700;color:#fff}
+.logo-sub{font-size:11px;color:rgba(255,255,255,.45)}
 .nav{flex:1;overflow-y:auto;padding:8px}
-.nav-sec{font-size:10px;font-weight:700;color:var(--text-l);text-transform:uppercase;letter-spacing:.8px;padding:12px 8px 4px}
-.ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:500;color:var(--text-m);transition:all .1s;margin-bottom:1px}
-.ni:hover{background:var(--gray-100);color:var(--text)}
-.ni.active{background:var(--blue-lt);color:var(--blue)}
+.nav-sec{font-size:10px;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.8px;padding:12px 8px 4px}
+.ni{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:500;color:rgba(255,255,255,.55);transition:all .15s;margin-bottom:1px}
+.ni:hover{background:rgba(255,255,255,.07);color:rgba(255,255,255,.9)}
+.ni.active{background:rgba(24,95,165,.5);color:#fff}
 .ni i{font-size:17px;width:18px;text-align:center}
-.ni .count{margin-left:auto;font-size:11px;background:var(--gray-200);color:var(--gray-600);padding:1px 6px;border-radius:10px;font-weight:600}
+.ni .count{margin-left:auto;font-size:11px;background:rgba(255,255,255,.12);color:rgba(255,255,255,.7);padding:1px 6px;border-radius:10px;font-weight:600}
 .ni.active .count{background:var(--blue);color:#fff}
-.sidebar-footer{border-top:1px solid var(--bdr);padding:12px 16px}
-.sync-row{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--text-m);margin-bottom:10px}
-.dot{width:7px;height:7px;border-radius:50%;background:var(--gray-300);flex-shrink:0}
+.sidebar-footer{border-top:1px solid rgba(255,255,255,.08);padding:12px 16px}
+.sync-row{display:flex;align-items:center;gap:7px;font-size:11px;color:rgba(255,255,255,.4);margin-bottom:10px}
+.dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.2);flex-shrink:0}
 .dot.ok{background:#22c55e}.dot.err{background:#ef4444}.dot.spin{background:var(--amber);animation:blink 1s infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
-.user{display:flex;align-items:center;gap:9px}
+.user{display:flex;align-items:center;gap:9px;color:rgba(255,255,255,.8)}
+#user-name-lbl{color:rgba(255,255,255,.9);font-size:13px;font-weight:600}
+#user-role-lbl{color:rgba(255,255,255,.4);font-size:11px}
+#user-menu{background:#253042!important;border-color:rgba(255,255,255,.1)!important}
+#user-menu-name{color:rgba(255,255,255,.5)!important;border-bottom-color:rgba(255,255,255,.1)!important}
 .av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
 /* Topbar */
 .topbar{height:54px;background:var(--sur);border-bottom:1px solid var(--bdr);padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
@@ -631,6 +635,19 @@ const today=()=>new Date().toISOString().slice(0,10);
 const fmtDate=d=>{if(!d)return'';return String(d).includes('T')?String(d).slice(0,10):String(d);};
 const dueFmt=d=>{if(!d)return'';const s=fmtDate(d);const diff=Math.round((new Date(s)-new Date(today()))/(1000*60*60*24));if(diff===0)return`<span style="color:var(--amber);font-weight:600">Today</span>`;if(diff===1)return`<span style="color:var(--blue)">Tomorrow</span>`;if(diff<0)return`<span style="color:var(--red);font-weight:600">${Math.abs(diff)}d overdue</span>`;return`<span style="color:var(--text-m)">${s}</span>`;};
 const debounce=(fn,ms=300)=>{let t;return(...a)=>{clearTimeout(t);t=setTimeout(()=>fn(...a),ms);};};
+
+// ─── Multilingual transliteration search ───────────────────────────────────
+const _TRU={а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};
+const _THY={ա:'a',բ:'b',գ:'g',դ:'d',ե:'e',զ:'z',է:'e',ը:'y',թ:'t',ժ:'zh',ի:'i',լ:'l',խ:'kh',ծ:'ts',կ:'k',հ:'h',ձ:'dz',ղ:'gh',մ:'m',յ:'y',ն:'n',շ:'sh',ո:'o',չ:'ch',պ:'p',ջ:'j',ռ:'r',ս:'s',վ:'v',տ:'t',ր:'r',ց:'ts',փ:'p',ք:'q',օ:'o',ֆ:'f',և:'ev'};
+function toLatin(s){return(s||'').toLowerCase().split('').map(c=>_TRU[c]||_THY[c]||c).join('');}
+function multiSearch(haystack,needle){
+  if(!needle)return true;
+  if(!haystack)return false;
+  const h=haystack.toLowerCase(), n=needle.toLowerCase();
+  if(h.includes(n))return true;
+  const hL=toLatin(haystack), nL=toLatin(needle);
+  return hL.includes(nL)||h.includes(nL)||hL.includes(n);
+}
 const coName=id=>{const c=db.companies.find(x=>x.id==id);return c?c.name:id||''};
 const stageBadge=s=>({Lead:'b-gray',Qualified:'b-purple',Proposal:'b-amber',Negotiation:'b-blue',Won:'b-green',Lost:'b-red'}[s]||'b-gray');
 const condBadge=c=>({Excellent:'b-green',Good:'b-blue',Fair:'b-amber',Poor:'b-red'}[c]||'b-gray');
@@ -1110,11 +1127,11 @@ function renderCompaniesRows(){
 
   const f=coFilter.toLowerCase();
   let rows=db.companies.filter(c=>!f||
-    (c.name||'').toLowerCase().includes(f)||
-    (c.industry||'').toLowerCase().includes(f)||
-    (c.city||'').toLowerCase().includes(f)||
-    (c.status||'').toLowerCase().includes(f)||
-    (c.category||'').toLowerCase().includes(f)
+    multiSearch(c.name,f)||
+    multiSearch(c.industry,f)||
+    multiSearch(c.city,f)||
+    multiSearch(c.status,f)||
+    multiSearch(c.category,f)
   );
 
   rows=[...rows].sort((a,b)=>{
@@ -1192,7 +1209,7 @@ function openCompanyDetail(id){
   const sentimentIcons={Positive:'😊',Neutral:'😐',Negative:'😟',Interested:'🔥',Hesitant:'🤔'};
 
   $('content').innerHTML=`
-  <!-- HERO HEADER -->
+  <!-- HERO HEADER — shows all key info once -->
   <div class="hero-co">
     <div class="av av-0" style="width:48px;height:48px;font-size:18px;border-radius:10px;flex-shrink:0;${c.category&&CAT_RULES[c.category]?'background:'+CAT_RULES[c.category].bg+';color:'+CAT_RULES[c.category].color:''}">${ini(c.name)}</div>
     <div style="flex:1;min-width:0">
@@ -1201,9 +1218,10 @@ function openCompanyDetail(id){
         <span class="b ${statusBadge(c.status)}">${c.status||'—'}</span>
         ${c.category&&CAT_RULES[c.category]?`<span class="b" style="background:${CAT_RULES[c.category].bg};color:${CAT_RULES[c.category].color}">Cat. ${c.category} · ${CAT_RULES[c.category].desc}</span>`:''}
       </div>
-      <div style="font-size:12px;color:var(--text-m);margin-top:3px;display:flex;gap:14px;flex-wrap:wrap">
-        ${c.industry?`<span><i class="ti ti-pickaxe" style="font-size:11px"></i> ${c.industry}</span>`:''}
-        ${c.city?`<span><i class="ti ti-map-pin" style="font-size:11px"></i> ${c.city}${c.country?', '+c.country:''}</span>`:''}
+      <div style="font-size:12px;color:var(--text-m);margin-top:4px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+        ${c.industry?`<span><i class="ti ti-building" style="font-size:11px"></i> ${c.industry}</span>`:''}
+        ${c.city||c.address?`<span><i class="ti ti-map-pin" style="font-size:11px"></i> ${[c.address,c.city,c.zip,c.country].filter(Boolean).join(', ')}</span>`:''}
+        ${c.phone?`<a href="tel:${c.phone}" style="color:var(--text-m)"><i class="ti ti-phone" style="font-size:11px"></i> ${c.phone}</a>`:''}
         ${c.website?`<a href="${c.website}" target="_blank" style="color:var(--blue)"><i class="ti ti-world" style="font-size:11px"></i> ${c.website}</a>`:''}
         ${c.assigned_agent?`<span><i class="ti ti-user" style="font-size:11px"></i> ${c.assigned_agent}</span>`:''}
       </div>
@@ -1228,20 +1246,8 @@ function openCompanyDetail(id){
   <!-- 3-COLUMN LAYOUT -->
   <div class="cd-wrap">
 
-    <!-- LEFT: Company info + Fleet + Sales potential -->
+    <!-- LEFT: Fleet + Sales potential + Map -->
     <div class="cd-col">
-
-      <!-- Company info -->
-      <div class="cd-sec">
-        <div class="cd-sec-title">Company information</div>
-        ${c.city?`<div class="cd-row"><span class="cd-lbl">City</span><span class="cd-val">${c.city}${c.country?', '+c.country:''}</span></div>`:''}
-        ${c.industry?`<div class="cd-row"><span class="cd-lbl">Industry</span><span class="cd-val">${c.industry}</span></div>`:''}
-        ${c.website?`<div class="cd-row"><span class="cd-lbl">Website</span><span class="cd-val" style="color:var(--blue)">${c.website}</span></div>`:''}
-        ${c.assigned_agent?`<div class="cd-row"><span class="cd-lbl">Owner</span><span class="cd-val">${c.assigned_agent}</span></div>`:''}
-        ${c.budget?`<div class="cd-row"><span class="cd-lbl">Budget/yr</span><span class="cd-val">${fmtUSD(c.budget)}</span></div>`:''}
-        ${c.seasonality?`<div class="cd-row"><span class="cd-lbl">Seasonality</span><span class="cd-val">${c.seasonality}</span></div>`:''}
-        ${c.notes?`<div style="margin-top:10px;font-size:12px;color:var(--text-m);background:var(--gray-50);padding:8px 10px;border-radius:6px;border-left:2px solid var(--bdr)">${c.notes}</div>`:''}
-      </div>
 
       <!-- Fleet -->
       <div class="cd-sec">
@@ -1250,17 +1256,15 @@ function openCompanyDetail(id){
         </div>
         ${fleet.length?`
         <div style="display:grid;grid-template-columns:1fr 50px 45px 50px;gap:4px;margin-bottom:6px;font-size:10px;color:var(--text-m);font-weight:600;text-transform:uppercase;letter-spacing:.4px">
-          <span>Model</span><span style="text-align:right">S/N</span><span style="text-align:right">Hours</span><span style="text-align:right">Status</span>
+          <span>Model</span><span style="text-align:right">S/N</span><span style="text-align:right">Year</span><span style="text-align:right">Status</span>
         </div>
         ${fleet.map(u=>`<div class="fleet-row">
           <div style="font-weight:600;display:flex;align-items:center;gap:4px"><span class="brand-dot" style="background:${BRAND_C[u.brand]||'#888'}"></span>${u.brand} ${u.model}</div>
           <div style="color:var(--text-m);font-size:10px;text-align:right">${u.serial||'—'}</div>
           <div style="text-align:right;color:var(--text-m)">${u.year||'—'}</div>
           <div style="text-align:right"><span class="b ${condBadge(u.condition)}" style="font-size:10px;padding:1px 5px">${u.condition||'?'}</span></div>
-        </div>`).join('')}`:
-        `<div class="empty" style="padding:16px"><i class="ti ti-tractor"></i><div class="empty-title" style="font-size:12px">No equipment</div><button class="btn btn-sm" onclick="openM('fleet',null,'${id}')"><i class="ti ti-plus"></i>Add</button></div>`}
+        </div>`).join('')}`:`<div class="empty" style="padding:16px"><i class="ti ti-tractor"></i><div class="empty-title" style="font-size:12px">No equipment</div><button class="btn btn-sm" onclick="openM('fleet',null,'${id}')"><i class="ti ti-plus"></i>Add</button></div>`}
       </div>
-
       <!-- Sales potential -->
       ${c.budget||fleet.length?`<div class="cd-sec">
         <div class="cd-sec-title">Sales potential</div>
@@ -1277,6 +1281,16 @@ function openCompanyDetail(id){
           <div class="prog-bar"><div class="prog-fill" style="width:${pct}%;background:${col}"></div></div>
         </div>`).join('')}
       </div>`:''}
+
+      <!-- Locations -->
+      <div class="cd-sec">
+        <div class="cd-sec-title">Site locations
+          <button class="btn btn-xs btn-ghost" onclick="openAddLocation('${id}')"><i class="ti ti-plus"></i></button>
+        </div>
+        <div id="co-locations-${id}">
+          ${renderLocations(id)}
+        </div>
+      </div>
 
     </div>
 
@@ -1568,11 +1582,11 @@ function renderContactsRows(){
 
   const f=ctFilter.toLowerCase();
   let rows=db.contacts.filter(c=>!f||
-    (c.first_name+' '+c.last_name).toLowerCase().includes(f)||
-    (c.company||'').toLowerCase().includes(f)||
-    (c.phone||'').includes(f)||
-    (c.email||'').toLowerCase().includes(f)||
-    (c.position||'').toLowerCase().includes(f)
+    multiSearch(c.first_name+' '+c.last_name,f)||
+    multiSearch(c.company,f)||
+    multiSearch(c.phone,f)||
+    multiSearch(c.email,f)||
+    multiSearch(c.position,f)
   );
   rows=[...rows].sort((a,b)=>{
     let av,bv;
@@ -1890,9 +1904,15 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Industry</label><select class="fc" id="f-industry">${['','Mining','Construction','Road Construction','Quarrying','Infrastructure','Industry','Other'].map(x=>`<option ${e.industry===x?'selected':''}>${x}</option>`).join('')}</select></div>
         <div class="fg"><label class="fl">Status</label><select class="fc" id="f-status">${['Active','Prospect','Negotiating','Partner','Inactive'].map(x=>`<option ${e.status===x?'selected':''}>${x}</option>`).join('')}</select></div>
       </div>
+      <div class="fg"><label class="fl">Street address</label><input class="fc" id="f-address" value="${e.address||''}" placeholder="ul. Tigranashen 14, office 5"></div>
       <div class="fr">
-        <div class="fg"><label class="fl">City</label><input class="fc" id="f-city" list="armenia-cities" value="${e.city||''}" placeholder="E.g. Yerevan, Gyumri..."></div>
+        <div class="fg"><label class="fl">City</label><input class="fc" id="f-city" value="${e.city||''}" placeholder="Yerevan"></div>
+        <div class="fg"><label class="fl">ZIP / Postal code</label><input class="fc" id="f-zip" value="${e.zip||''}" placeholder="0010"></div>
         <div class="fg"><label class="fl">Country</label><input class="fc" id="f-country" value="${e.country||'Armenia'}"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Phone</label><input class="fc" id="f-phone" data-phone value="${e.phone||''}" placeholder="+374 10 ..."></div>
+        <div class="fg"><label class="fl">Website</label><input class="fc" id="f-website" value="${e.website||''}" placeholder="https://"></div>
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Client Category</label><select class="fc" id="f-category"><option value="">— not set —</option>${Object.entries(CAT_RULES).map(([k,v])=>`<option value="${k}" ${e.category===k?'selected':''}>${v.label} (${v.desc})</option>`).join('')}</select></div>
@@ -1902,7 +1922,6 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Annual Equipment Budget ($)</label><input class="fc" id="f-budget" type="number" value="${e.budget||''}" placeholder="0"></div>
         <div class="fg"><label class="fl">Purchase Seasonality</label><select class="fc" id="f-seasonality"><option value="">— not set —</option>${['Q1 (Jan–Mar)','Q2 (Apr–Jun)','Q3 (Jul–Sep)','Q4 (Oct–Dec)','Spring','Autumn','Year-round'].map(s=>`<option ${e.seasonality===s?'selected':''}>${s}</option>`).join('')}</select></div>
       </div>
-      <div class="fg"><label class="fl">Website</label><input class="fc" id="f-website" value="${e.website||''}" placeholder="https://"></div>
       <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="f-notes" rows="2">${e.notes||''}</textarea></div>`,
     contact:`
       <div class="fg"><label class="fl">Company *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coSel()}</div>
@@ -2065,7 +2084,7 @@ async function _saveM(){
   if(mtype==='company'){
     const name=(g('f-name')||'').trim();if(!name)return alert('Enter a name');
     const prev=ex?{...ex}:null;
-    row={...row,name,industry:g('f-industry'),status:g('f-status'),city:g('f-city'),country:g('f-country'),website:g('f-website'),notes:g('f-notes'),category:g('f-category')||'',assigned_agent:g('f-assigned')||'',budget:g('f-budget')||'',seasonality:g('f-seasonality')||'',created:row.created||today()};
+    row={...row,name,industry:g('f-industry'),status:g('f-status'),address:g('f-address')||'',city:g('f-city'),zip:g('f-zip')||'',country:g('f-country'),phone:g('f-phone')||'',website:g('f-website'),notes:g('f-notes'),category:g('f-category')||'',assigned_agent:g('f-assigned')||'',budget:g('f-budget')||'',seasonality:g('f-seasonality')||'',created:row.created||today()};
     const s=await persist('companies',row);
     if(!eid)db.companies.push(s);else Object.assign(db.companies.find(x=>x.id===eid),s);
     // Log change history
@@ -2211,12 +2230,11 @@ function renderAgents(){
 }
 function globalSearch(q){
   if(!q||q.length<2){$('search-results')&&$('search-results').remove();return;}
-  const ql=q.toLowerCase();
   const results=[];
-  db.companies.filter(c=>(c.name||'').toLowerCase().includes(ql)||(c.industry||'').toLowerCase().includes(ql)||(c.city||'').toLowerCase().includes(ql)).forEach(c=>results.push({type:'Company',icon:'ti-building',label:c.name,sub:c.industry||'',action:`openCompanyDetail('${c.id}')`}));
-  db.contacts.filter(c=>((c.first_name||'')+' '+(c.last_name||'')).toLowerCase().includes(ql)||(c.phone||'').includes(q)||(c.email||'').toLowerCase().includes(ql)||(c.position||'').toLowerCase().includes(ql)).forEach(c=>results.push({type:'Contact',icon:'ti-user',label:c.first_name+' '+c.last_name,sub:c.company||'',action:`openCompanyDetail('${c.company_id}')`}));
-  db.deals.filter(d=>(d.company||'').toLowerCase().includes(ql)||(d.model||'').toLowerCase().includes(ql)||(d.agent||'').toLowerCase().includes(ql)).forEach(d=>results.push({type:'Deal',icon:'ti-versions',label:d.company+(d.model?' — '+d.model:''),sub:d.stage+' · '+fmtUSD(d.amount),action:`openDealDetail('${d.id}')`}));
-  db.fleet.filter(f=>(f.company||'').toLowerCase().includes(ql)||(f.brand||'').toLowerCase().includes(ql)||(f.model||'').toLowerCase().includes(ql)||(f.serial||'').toLowerCase().includes(ql)).forEach(f=>results.push({type:'Equipment',icon:'ti-tractor',label:f.brand+' '+f.model,sub:f.company||'',action:`openCompanyDetail('${f.company_id}')`}));
+  db.companies.filter(c=>multiSearch(c.name,q)||multiSearch(c.industry,q)||multiSearch(c.city,q)).forEach(c=>results.push({type:'Company',icon:'ti-building',label:c.name,sub:c.industry||'',action:`openCompanyDetail('${c.id}')`}));
+  db.contacts.filter(c=>multiSearch((c.first_name||'')+' '+(c.last_name||''),q)||multiSearch(c.phone,q)||multiSearch(c.email,q)||multiSearch(c.position,q)||multiSearch(c.company,q)).forEach(c=>results.push({type:'Contact',icon:'ti-user',label:c.first_name+' '+c.last_name,sub:c.company||'',action:`openCompanyDetail('${c.company_id}')`}));
+  db.deals.filter(d=>multiSearch(d.company,q)||multiSearch(d.model,q)||multiSearch(d.agent,q)).forEach(d=>results.push({type:'Deal',icon:'ti-versions',label:d.company+(d.model?' — '+d.model:''),sub:d.stage+' · '+fmtUSD(d.amount),action:`openDealDetail('${d.id}')`}));
+  db.fleet.filter(f=>multiSearch(f.company,q)||multiSearch(f.brand,q)||multiSearch(f.model,q)||multiSearch(f.serial,q)).forEach(f=>results.push({type:'Equipment',icon:'ti-tractor',label:f.brand+' '+f.model,sub:f.company||'',action:`openCompanyDetail('${f.company_id}')`}));
 
   let el=$('search-results');
   if(!el){el=document.createElement('div');el.id='search-results';el.style.cssText='position:fixed;top:54px;left:224px;right:0;background:var(--sur);border-bottom:1px solid var(--bdr);box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:200;max-height:420px;overflow-y:auto';document.body.appendChild(el);}
@@ -3677,7 +3695,177 @@ async function saveAutomation(){
   }finally{saving=false;}
 }
 
-// ─── NOTIFICATIONS ─────────────────────────────────────────────────────────
+// ─── LOCATIONS ─────────────────────────────────────────────────────────────
+function getLocations(coId){
+  try{const raw=localStorage.getItem('locs_'+coId);return raw?JSON.parse(raw):[];}catch{return[];}
+}
+function saveLocations(coId,locs){
+  try{localStorage.setItem('locs_'+coId,JSON.stringify(locs));}catch{}
+  // Also persist to activities as a note for cross-device sync
+}
+
+function renderLocations(coId){
+  const locs=getLocations(coId);
+  if(!locs.length)return`<div style="font-size:12px;color:var(--text-m);text-align:center;padding:12px 0">No locations added yet.<br>Add a quarry, site or plant.</div>`;
+  const colors=['#185FA5','#1D9E75','#f59e0b','#e53e3e','#7F77DD'];
+  return`
+    <!-- Map -->
+    <div style="height:140px;border-radius:8px;overflow:hidden;margin-bottom:10px;background:#e8f0fe;position:relative">
+      <iframe
+        src="https://maps.google.com/maps?q=${locs[0].lat},${locs[0].lng}&z=10&output=embed&markers=${locs.map(l=>l.lat+','+l.lng).join('|')}"
+        style="width:100%;height:100%;border:none" loading="lazy" title="Site locations map"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+    <!-- Location list -->
+    ${locs.map((l,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-100);font-size:12px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${colors[i%colors.length]};flex-shrink:0"></div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:600">${l.name}</div>
+        <div style="font-size:11px;color:var(--text-m)">${l.type||''} · ${l.lat.toFixed(4)}, ${l.lng.toFixed(4)}</div>
+      </div>
+      <button onclick="deleteLocation('${coId}',${i})" style="background:none;border:none;cursor:pointer;color:var(--text-l);font-size:14px" title="Remove"><i class="ti ti-x"></i></button>
+    </div>`).join('')}
+    <button class="btn btn-sm" style="width:100%;margin-top:8px;justify-content:center" onclick="openAddLocation('${coId}')"><i class="ti ti-plus"></i>Add location</button>`;
+}
+
+function deleteLocation(coId,idx){
+  const locs=getLocations(coId);locs.splice(idx,1);saveLocations(coId,locs);
+  const el=document.getElementById('co-locations-'+coId);if(el)el.innerHTML=renderLocations(coId);
+}
+
+function openAddLocation(coId){
+  const co=db.companies.find(x=>x.id===coId);
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML=`
+    <div style="background:var(--sur);border-radius:12px;padding:24px;width:400px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="font-size:16px;font-weight:700;margin-bottom:16px">Add Site Location — ${co?.name||''}</div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:4px">📸 Upload photo with GPS (EXIF)</label>
+        <input type="file" accept="image/*" id="loc-photo" onchange="extractGPS(this,'loc-lat','loc-lng','loc-name-auto')" style="font-size:12px;width:100%">
+        <div style="font-size:11px;color:var(--text-m);margin-top:4px">GPS coordinates will be extracted automatically from photo metadata</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div><label style="font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:4px">Latitude</label>
+          <input class="fc" id="loc-lat" placeholder="40.1234" type="number" step="0.0001"></div>
+        <div><label style="font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:4px">Longitude</label>
+          <input class="fc" id="loc-lng" placeholder="44.5678" type="number" step="0.0001"></div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:4px">Location name</label>
+        <input class="fc" id="loc-name-auto" placeholder="Quarry A, Construction site...">
+      </div>
+      <div style="margin-bottom:16px">
+        <label style="font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:4px">Type</label>
+        <select class="fc" id="loc-type">
+          ${['Quarry','Construction site','Processing plant','Warehouse','Office','Other'].map(t=>`<option>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div id="loc-gps-status" style="font-size:12px;color:var(--green);margin-bottom:12px;min-height:16px"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveNewLocation('${coId}',this)"><i class="ti ti-map-pin"></i>Save Location</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+}
+
+function extractGPS(input,latId,lngId,nameId){
+  const file=input.files[0];if(!file)return;
+  const status=$('loc-gps-status');if(status)status.textContent='Reading GPS from photo...';
+  const reader=new FileReader();
+  reader.onload=function(e){
+    const view=new DataView(e.target.result);
+    if(view.getUint16(0,false)!==0xFFD8){if(status)status.textContent='⚠ Not a JPEG file';return;}
+    let offset=2;let gpsLat=null,gpsLng=null;
+    while(offset<view.byteLength-2){
+      const marker=view.getUint16(offset,false);offset+=2;
+      const len=view.getUint16(offset,false);
+      if(marker===0xFFE1){
+        const exif=new Uint8Array(e.target.result,offset+2,len-2);
+        const txt=String.fromCharCode(...exif.slice(0,4));
+        if(txt==='Exif'){
+          try{
+            const result=parseEXIFGPS(e.target.result,offset+2,len-2);
+            if(result){
+              gpsLat=result.lat;gpsLng=result.lng;
+              const latEl=document.getElementById(latId);const lngEl=document.getElementById(lngId);
+              if(latEl)latEl.value=gpsLat.toFixed(6);
+              if(lngEl)lngEl.value=gpsLng.toFixed(6);
+              // Auto-name from filename
+              const nameEl=document.getElementById(nameId);
+              if(nameEl&&!nameEl.value)nameEl.value=file.name.replace(/\.[^.]+$/,'').replace(/[_-]/g,' ');
+              if(status)status.innerHTML=`✓ GPS found: ${gpsLat.toFixed(4)}, ${gpsLng.toFixed(4)}`;
+            }else{if(status)status.textContent='⚠ No GPS data in this photo. Enter coordinates manually.';}
+          }catch(err){if(status)status.textContent='⚠ Could not read GPS. Enter manually.';}
+        }
+        break;
+      }
+      offset+=len;
+    }
+    if(gpsLat===null&&status&&!status.textContent.includes('✓'))
+      status.textContent='⚠ No GPS data found. Please enter coordinates manually.';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseEXIFGPS(buffer,exifStart,exifLen){
+  const view=new DataView(buffer,exifStart+6);
+  const littleEndian=view.getUint16(0)===0x4949;
+  const ifdOffset=view.getUint32(4,littleEndian);
+  const entries=view.getUint16(ifdOffset,littleEndian);
+  let gpsIFDOffset=null;
+  for(let i=0;i<entries;i++){
+    const off=ifdOffset+2+i*12;
+    const tag=view.getUint16(off,littleEndian);
+    if(tag===0x8825){gpsIFDOffset=view.getUint32(off+8,littleEndian);break;}
+  }
+  if(!gpsIFDOffset)return null;
+  const gpsEntries=view.getUint16(gpsIFDOffset,littleEndian);
+  const gpsData={};
+  for(let i=0;i<gpsEntries;i++){
+    const off=gpsIFDOffset+2+i*12;
+    const tag=view.getUint16(off,littleEndian);
+    const type=view.getUint16(off+2,littleEndian);
+    const count=view.getUint32(off+4,littleEndian);
+    const valueOff=view.getUint32(off+8,littleEndian);
+    if(type===5&&count===3){
+      const vals=[];
+      for(let j=0;j<3;j++){
+        const n=view.getUint32(valueOff+j*8,littleEndian);
+        const d=view.getUint32(valueOff+j*8+4,littleEndian);
+        vals.push(d?n/d:0);
+      }
+      gpsData[tag]=vals[0]+vals[1]/60+vals[2]/3600;
+    }
+    if(type===2&&count===2){
+      gpsData[tag]=String.fromCharCode(view.getUint8(off+8));
+    }
+  }
+  if(gpsData[2]===undefined)return null;
+  let lat=gpsData[2];let lng=gpsData[4];
+  if(gpsData[1]==='S')lat=-lat;
+  if(gpsData[3]==='W')lng=-lng;
+  return{lat,lng};
+}
+
+function saveNewLocation(coId,btn){
+  const lat=parseFloat(document.getElementById('loc-lat')?.value);
+  const lng=parseFloat(document.getElementById('loc-lng')?.value);
+  const name=(document.getElementById('loc-name-auto')?.value||'').trim();
+  const type=document.getElementById('loc-type')?.value||'';
+  if(!lat||!lng){alert('Please enter coordinates or upload a photo with GPS');return;}
+  if(!name){alert('Please enter a location name');return;}
+  const locs=getLocations(coId);
+  locs.push({lat,lng,name,type,added:today()});
+  saveLocations(coId,locs);
+  btn.closest('div[style*=fixed]').remove();
+  const el=document.getElementById('co-locations-'+coId);
+  if(el)el.innerHTML=renderLocations(coId);
+}
+
+
 const NOTIF_STALE_DAYS=30;
 const NOTIF_CAT_DAYS={A:30,B:90,C:180};
 
