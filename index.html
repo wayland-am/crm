@@ -986,6 +986,8 @@ function renderPipeline(){
 
 // ─── Companies ─────────────────────────────────────────────────────────────
 let selectedCompanies=new Set();
+let coSort={col:'name',dir:1};
+let coFilter='';
 
 function toggleSelectCompany(id,cb){
   if(cb.checked)selectedCompanies.add(id);else selectedCompanies.delete(id);
