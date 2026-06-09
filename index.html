@@ -703,6 +703,11 @@ function normalizeDb(){
     if(t.created&&t.created.includes('T'))t.created=t.created.slice(0,10);
   });
   db.leads.forEach(l=>{l.created=l.created||today();l.phone=clean(l.phone);l.email=clean(l.email);});
+  // Clean ISO timestamps from all activity dates
+  db.activities.forEach(a=>{
+    if(a.date&&a.date.includes('T'))a.date=a.date.slice(0,10);
+    if(a.created&&a.created.includes('T'))a.created=a.created.slice(0,10);
+  });
   if(!db.contracts)db.contracts=[];
   if(!db.locations)db.locations=[];
   db.contacts.forEach(c=>{c.phone=clean(c.phone);c.email=clean(c.email);});
@@ -899,18 +904,15 @@ function renderDashboard(){
     db.deals.some(d=>d.company_id===c.id&&d.agent===currentUser.name)
   );
 
-  // Last activity per company
   function lastActDate(coId){
     const acts=db.activities.filter(a=>a.company_id===coId);
-    const dates=acts.map(a=>a.date||String(a.created||'').slice(0,10)).filter(Boolean).sort();
+    const dates=acts.map(a=>String(a.date||a.created||'').slice(0,10)).filter(d=>d.match(/^\d{4}-\d{2}-\d{2}$/)).sort();
     return dates[dates.length-1]||null;
   }
-  // Next scheduled task per company
   function nextTask(coId){
-    return myT.filter(t=>!t.done&&t.company_id===coId&&t.due).sort((a,b)=>a.due.localeCompare(b.due))[0]||null;
+    return myT.filter(t=>!t.done&&t.company_id===coId&&t.due&&t.due>=todayStr).sort((a,b)=>a.due.localeCompare(b.due))[0]||null;
   }
 
-  // Categorise companies
   const hot=[],wakingSoon=[],dormant=[];
   const twoWeeksLater=new Date();twoWeeksLater.setDate(twoWeeksLater.getDate()+14);
   const twoWeeksStr=twoWeeksLater.toISOString().slice(0,10);
@@ -920,16 +922,23 @@ function renderDashboard(){
     const daysSince=last?Math.floor((new Date()-new Date(last))/(1000*60*60*24)):999;
     const nt=nextTask(c.id);
     const hasActiveDeal=db.deals.some(d=>d.company_id===c.id&&d.stage!=='Won'&&d.stage!=='Lost');
+    // If next task is far in future (>14 days) and no active deal → dormant/waking
+    const nextTaskFar=nt&&nt.due>twoWeeksStr;
 
-    if(hasActiveDeal||daysSince<30){
+    if(hasActiveDeal){
+      // Always hot if has active deal
       hot.push({...c,daysSince,lastDate:last,nextTask:nt});
     }else if(nt&&nt.due<=twoWeeksStr){
+      // Task coming up soon → waking up
       wakingSoon.push({...c,daysSince,lastDate:last,nextTask:nt});
-    }else if(nt&&nt.due>twoWeeksStr){
+    }else if(nextTaskFar){
+      // Task scheduled far away → dormant
       dormant.push({...c,daysSince,lastDate:last,nextTask:nt});
-    }else if(daysSince<90){
+    }else if(daysSince<30){
+      // Recent contact, no deal, no future task → hot
       hot.push({...c,daysSince,lastDate:last,nextTask:nt});
     }else{
+      // No deal, no task, silent → dormant
       dormant.push({...c,daysSince,lastDate:last,nextTask:nt});
     }
   });
@@ -938,11 +947,16 @@ function renderDashboard(){
   wakingSoon.sort((a,b)=>(a.nextTask?.due||'').localeCompare(b.nextTask?.due||''));
   dormant.sort((a,b)=>(a.nextTask?.due||'zzz').localeCompare(b.nextTask?.due||'zzz'));
 
-  // ── My recent activity ───────────────────────────────────────────────────
+  // ── My recent activity — only real client interactions ───────────────────
+  const REAL_ACTIVITY_TYPES=['Call','Meeting','WhatsApp','Email','Proposal','Demo','Documents'];
   const myActs=db.activities
     .filter(a=>!currentUser||currentUser.role==='manager'||a.agent===currentUser.name)
-    .filter(a=>a.type!=='stage')
-    .sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''))
+    .filter(a=>REAL_ACTIVITY_TYPES.includes(a.type))
+    .sort((a,b)=>{
+      const da=String(a.date||a.created||'').slice(0,10);
+      const db_=String(b.date||b.created||'').slice(0,10);
+      return db_.localeCompare(da);
+    })
     .slice(0,8);
 
   $('content').innerHTML=`
@@ -1011,7 +1025,7 @@ function renderDashboard(){
         const actIcons={Call:'ti-phone',Meeting:'ti-calendar-event',WhatsApp:'ti-brand-whatsapp',Email:'ti-mail',Proposal:'ti-file-text',Demo:'ti-eye',note:'ti-note'};
         const actColors={Call:'#3b82f6',Meeting:'#8b5cf6',WhatsApp:'#22c55e',Email:'#14b8a6',Proposal:'#f59e0b',note:'#6b7280'};
         const col=actColors[a.type]||'#6b7280';
-        const d=a.date||String(a.created||'').slice(0,10);
+        const d=String(a.date||a.created||'').slice(0,10);
         return`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="${co?`openCompanyDetail('${co.id}')`:''}">
           <div style="width:24px;height:24px;border-radius:50%;background:${col}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
             <i class="ti ${actIcons[a.type]||'ti-dots'}" style="font-size:11px;color:${col}"></i>
