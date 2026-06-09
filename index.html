@@ -1388,7 +1388,11 @@ function openCompanyDetail(id){
   const deals=db.deals.filter(x=>x.company_id===id);
   const fleet=db.fleet.filter(x=>x.company_id===id);
   const tasks=db.tasks.filter(x=>x.company_id===id&&!x.done);
-  const acts=db.activities.filter(x=>x.company_id===id).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
+  const REAL_ACT_TYPES=['Call','Meeting','WhatsApp','Email','Proposal','Demo','Documents','Other'];
+  const acts=db.activities
+    .filter(x=>x.company_id===id)
+    .filter(x=>REAL_ACT_TYPES.includes(x.type)||(x.type==='note'&&x.note&&!x.note.startsWith('✏️')&&!x.note.startsWith('Updated:')&&!x.note.startsWith('Stage changed')&&!x.note.startsWith('🎯 Lead converted')))
+    .sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
   const hitachi=fleet.filter(f=>f.brand==='Hitachi').length;
   const pipeVal=deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').reduce((s,d)=>s+d.amount,0);
   const wonVal=deals.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0);
@@ -1633,12 +1637,14 @@ function renderActFeedItems(acts, coId){
   }).join('');
 }
 
-function filterActFeed(types, el){
+function filterActFeed(types,el){
   document.querySelectorAll('.act-tab').forEach(t=>t.classList.remove('on'));
   el.classList.add('on');
   const feed=document.getElementById('act-feed-'+window._curCoId);
   if(!feed)return;
-  const acts=types==='all'?window._curCoActs:window._curCoActs.filter(a=>types.split(',').includes(a.type));
+  const REAL_ACT_TYPES=['Call','Meeting','WhatsApp','Email','Proposal','Demo','Documents','Other'];
+  let acts=window._curCoActs; // already filtered of technical
+  if(types!=='all')acts=acts.filter(a=>types.split(',').includes(a.type));
   feed.innerHTML=renderActFeedItems(acts,window._curCoId);
 }
 
@@ -1658,7 +1664,11 @@ function openDealDetail(id){
   $('breadcrumb').innerHTML=`<span style="cursor:pointer;color:var(--blue)" onclick="go('pipeline',null)">Pipeline</span><i class="ti ti-chevron-right" style="font-size:12px;margin:0 4px"></i>`;
   $('topbar-right').innerHTML=`<button class="btn" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-message-circle"></i>Log Activity</button>${d.stage==='Won'?`<button class="btn btn-primary" onclick="cur.company='${d.company_id}';cur.deal='${id}';openM('contract')"><i class="ti ti-file-invoice"></i>Create Contract</button>`:''}`;
   const tasks=db.tasks.filter(t=>t.deal_id===id);
-  const acts=db.activities.filter(a=>a.deal_id===id||a.company_id===d.company_id).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
+  const REAL_TYPES=['Call','Meeting','WhatsApp','Email','Proposal','Demo','Documents','Other'];
+  const acts=db.activities
+    .filter(x=>x.company_id===id)
+    .filter(x=>REAL_TYPES.includes(x.type)||(x.type==='note'&&x.note&&!x.note.startsWith('✏️')&&!x.note.startsWith('Updated:')&&!x.note.startsWith('Stage changed')))
+    .sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
   const stageHistory=db.activities.filter(a=>a.deal_id===id&&a.type==='stage').sort((a,b)=>(a.date||a.created||'').localeCompare(b.date||b.created||''));
   const stageIdx=STAGES.indexOf(d.stage);
   const staleDays=dealStaleDays(d);
