@@ -3563,10 +3563,15 @@ function renderLeadsRows(leads){
     const isConverted=l.status==='Converted';
     const isLost=l.status==='Lost';
     const nextStatus=leadStatusNext(l.status);
+    const linkedCo=l.company_id?db.companies.find(c=>c.id===l.company_id):null;
     return`<tr style="${isLost?'opacity:.6':''}" onclick="openLeadDetail('${l.id}')">
       <td>
-        <div style="font-weight:700">${l.company||l.contact||'—'}</div>
-        ${l.contact&&l.company?`<div style="font-size:12px;color:var(--text-m)">${l.contact}</div>`:''}
+        <div style="font-weight:700">
+          ${linkedCo
+            ?`<span style="color:var(--blue);cursor:pointer" onclick="event.stopPropagation();openCompanyDetail('${linkedCo.id}')">${linkedCo.name}</span>`
+            :(l.company||l.contact||'—')}
+        </div>
+        ${l.contact?`<div style="font-size:12px;color:var(--text-m)">${l.contact}</div>`:''}
         ${l.phone?`<div style="font-size:12px;color:var(--blue)"><a href="tel:${l.phone}" onclick="event.stopPropagation()">${l.phone}</a></div>`:''}
       </td>
       <td class="hide-xs"><span class="b b-gray" style="font-size:11px">${l.source||'—'}</span></td>
@@ -3592,7 +3597,11 @@ function renderLeadsRows(leads){
             ${!isConverted&&!isLost?`<button class="btn btn-sm" style="flex:1;justify-content:center;background:#fef2f2;color:#b91c1c;border-color:#fca5a5" onclick="disqualifyLead('${l.id}',event)">
               <i class="ti ti-user-off"></i> Disqualify
             </button>`:''}
-            ${isConverted?`<span style="font-size:12px;color:var(--green);font-weight:600"><i class="ti ti-check-circle"></i> Converted</span>`:''}
+            ${isConverted?`<div style="display:flex;flex-direction:column;gap:4px">
+              <span style="font-size:12px;color:var(--green);font-weight:600"><i class="ti ti-check-circle"></i> Converted</span>
+              ${l.company_id?`<button class="btn btn-sm" style="font-size:11px" onclick="event.stopPropagation();openCompanyDetail('${l.company_id}')"><i class="ti ti-building"></i>Open Company</button>`:''}
+              ${l.converted_deal?`<button class="btn btn-sm" style="font-size:11px" onclick="event.stopPropagation();openDealDetail('${l.converted_deal}')"><i class="ti ti-versions"></i>Open Deal</button>`:''}
+            </div>`:''}
             ${isLost?`<span style="font-size:12px;color:var(--red);font-weight:600"><i class="ti ti-circle-x"></i> Lost</span>`:''}
           </div>
         </div>
@@ -3672,7 +3681,18 @@ async function convertLead(id){
   db.activities.push(act);await persist('activities',act);
 
   updateCounts();filterLeads();
-  showToast(`🎉 Deal created: ${coName} — ${l.product||'Deal'}`);
+
+  // Clickable toast — navigate to company
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a2332;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);display:flex;align-items:center;gap:12px;cursor:pointer';
+  t.innerHTML=`<i class="ti ti-circle-check" style="color:#4ade80;font-size:18px"></i>
+    <div>
+      <div>🎉 Deal created: ${coName} — ${l.product||'Deal'}</div>
+      <div style="font-size:11px;opacity:.7;margin-top:2px">Click to open company →</div>
+    </div>`;
+  t.onclick=()=>{t.remove();openCompanyDetail(coId);};
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),6000);
 
   // Auto-create first tasks
   const task={id:uid(),deal_id:deal.id,company_id:coId,company:coName,
