@@ -457,6 +457,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div class="nav-sec">Planning</div>
       <div class="ni" onclick="go('calendar',this)"><i class="ti ti-calendar"></i>Calendar</div>
       <div class="nav-sec">Service</div>
+      <div class="ni" onclick="go('contracts',this)"><i class="ti ti-file-invoice"></i>Contracts<span class="count" id="nc-contracts">0</span></div>
       <div class="ni" onclick="go('parts',this)"><i class="ti ti-tool"></i>Parts</div>
       <div class="ni" onclick="go('operations',this)"><i class="ti ti-database-import"></i>Operations</div>
       <div class="ni manager-only" onclick="go('users',this)"><i class="ti ti-shield-lock"></i>Users</div>
@@ -688,6 +689,7 @@ function normalizeDb(){
     if(t.created&&t.created.includes('T'))t.created=t.created.slice(0,10);
   });
   db.leads.forEach(l=>{l.created=l.created||today();l.phone=clean(l.phone);l.email=clean(l.email);});
+  if(!db.contracts)db.contracts=[];
   // Clean #ERROR! values caused by + prefix being treated as formula in Sheets
   db.contacts.forEach(c=>{c.phone=clean(c.phone);c.email=clean(c.email);});
   db.agents.forEach(a=>{a.phone=clean(a.phone);a.email=clean(a.email);});
@@ -714,7 +716,7 @@ function loadCache(){
 async function loadFromSheets(){
   setSS('spin','Syncing...');
   try{
-    const sheets=['companies','contacts','deals','fleet','tasks','activities','agents','users','leads','automations'];
+    const sheets=['companies','contacts','deals','fleet','tasks','activities','agents','users','leads','automations','contracts'];
     const res=await Promise.all(sheets.map(s=>apiCall({action:'read',sheet:s})));
     sheets.forEach((s,i)=>{db[s]=res[i]||[];});
     normalizeDb();
@@ -770,6 +772,7 @@ function updateCounts(){
   $('nc-fleet').textContent=db.fleet.length;
   $('nc-tasks').textContent=db.tasks.filter(t=>!t.done).length;
   const lel=$('nc-leads');if(lel)lel.textContent=db.leads.filter(l=>l.status!=='Converted'&&l.status!=='Lost').length;
+  const cel=$('nc-contracts');if(cel)cel.textContent=(db.contracts||[]).filter(c=>c.status==='Active').length;
 }
 
 // ─── Setup ─────────────────────────────────────────────────────────────────
@@ -799,7 +802,7 @@ function go(sec,el){
 function render(sec){
   const tr=$('topbar-right');tr.innerHTML='';
   $('breadcrumb').innerHTML='';
-  const titles={dashboard:'Dashboard',pipeline:'Pipeline',leads:'Leads',companies:'Companies',contacts:'Contacts',fleet:'Fleet',tasks:'Tasks',reports:'Reports',segments:'Segmentation',automation:'Automation',calendar:'Calendar',agents:'Sales Team',parts:'Parts',operations:'Operations',users:'Users'};
+  const titles={dashboard:'Dashboard',pipeline:'Pipeline',leads:'Leads',companies:'Companies',contacts:'Contacts',fleet:'Fleet',tasks:'Tasks',reports:'Reports',segments:'Segmentation',automation:'Automation',calendar:'Calendar',agents:'Sales Team',parts:'Parts',operations:'Operations',users:'Users',contracts:'Contracts'};
   $('ptitle').textContent=titles[sec]||sec;
   if(sec==='pipeline')tr.innerHTML=mkBtn('deal','Add Deal');
   if(sec==='leads')tr.innerHTML=mkBtn('lead','Add Lead');
@@ -810,7 +813,7 @@ function render(sec){
   if(sec==='agents')tr.innerHTML=mkBtn('agent','Add Member');
   if(sec==='automation')tr.innerHTML=mkBtn('automation','New Rule');
   if(sec==='calendar')tr.innerHTML=`<button class="btn" onclick="generateVisitPlan()"><i class="ti ti-refresh"></i>Refresh Plan</button>`;
-  const fns={dashboard:renderDashboard,pipeline:renderPipeline,leads:renderLeads,companies:renderCompanies,contacts:renderContacts,fleet:renderFleet,tasks:renderTasks,reports:renderReports,agents:renderAgents,calendar:renderCalendar,parts:renderParts,operations:renderOperations,users:renderUsers,segments:renderSegments,automation:renderAutomation};
+  const fns={dashboard:renderDashboard,pipeline:renderPipeline,leads:renderLeads,companies:renderCompanies,contacts:renderContacts,fleet:renderFleet,tasks:renderTasks,reports:renderReports,agents:renderAgents,calendar:renderCalendar,parts:renderParts,operations:renderOperations,users:renderUsers,segments:renderSegments,automation:renderAutomation,contracts:renderContracts};
   if(fns[sec])fns[sec]();
 }
 function mkBtn(type,label){return`<button class="btn btn-primary" onclick="openM('${type}')"><i class="ti ti-plus"></i>${label}</button>`;}
@@ -1345,6 +1348,29 @@ function openCompanyDetail(id){
         }).join(''):`<div class="empty" style="padding:20px"><i class="ti ti-versions"></i><div class="empty-title" style="font-size:12px">No deals yet</div><button class="btn btn-sm btn-primary" onclick="openM('deal',null,'${id}')"><i class="ti ti-plus"></i>Add Deal</button></div>`}
       </div>
 
+      <!-- Contracts -->
+      <div class="cd-sec" style="padding:0">
+        <div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-m)">Contracts <span style="color:var(--text)">${(db.contracts||[]).filter(x=>x.company_id===id).length}</span></span>
+          <button class="btn btn-xs" onclick="cur.company='${id}';openM('contract')"><i class="ti ti-plus"></i>Add</button>
+        </div>
+        ${(db.contracts||[]).filter(x=>x.company_id===id).length?
+          (db.contracts||[]).filter(x=>x.company_id===id)
+            .sort((a,b)=>(b.signed_date||'').localeCompare(a.signed_date||''))
+            .map(ct=>`<div style="padding:8px 14px;border-bottom:1px solid var(--bdr);font-size:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <span style="font-weight:700;color:var(--blue)">${ct.number}</span>
+              <span class="b ${({Active:'b-green',Executed:'b-blue',Cancelled:'b-red',Draft:'b-gray'}[ct.status]||'b-gray')}" style="font-size:10px">${ct.status}</span>
+            </div>
+            <div style="color:var(--text-m);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${ct.subject||ct.type||'—'}</div>
+            <div style="display:flex;justify-content:space-between;margin-top:3px">
+              <span style="font-weight:600">${fmtUSD(Number(ct.amount||0))} ${ct.currency||''}</span>
+              <span style="color:var(--text-m)">${ct.signed_date||'—'}</span>
+            </div>
+          </div>`).join('')
+          :`<div style="padding:12px 14px;font-size:12px;color:var(--text-m)">No contracts yet</div>`}
+      </div>
+
       <!-- Contacts -->
       <div class="cd-sec" style="padding:0">
         <div style="padding:12px 14px;display:flex;align-items:center;justify-content:space-between">
@@ -1439,7 +1465,7 @@ function openDealDetail(id){
   cur.deal=id;
   $('ptitle').textContent=d.company+' — '+(d.model||'Deal');
   $('breadcrumb').innerHTML=`<span style="cursor:pointer;color:var(--blue)" onclick="go('pipeline',null)">Pipeline</span><i class="ti ti-chevron-right" style="font-size:12px;margin:0 4px"></i>`;
-  $('topbar-right').innerHTML=`<button class="btn" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-message-circle"></i>Log Activity</button><button class="btn" onclick="openM('deal','${id}')"><i class="ti ti-edit"></i>Edit</button>`;
+  $('topbar-right').innerHTML=`<button class="btn" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-message-circle"></i>Log Activity</button>${d.stage==='Won'?`<button class="btn btn-primary" onclick="cur.company='${d.company_id}';cur.deal='${id}';openM('contract')"><i class="ti ti-file-invoice"></i>Create Contract</button>`:''}<button class="btn" onclick="openM('deal','${id}')"><i class="ti ti-edit"></i>Edit</button>`;
   const tasks=db.tasks.filter(t=>t.deal_id===id);
   const acts=db.activities.filter(a=>a.deal_id===id||a.company_id===d.company_id).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
   const stageIdx=STAGES.indexOf(d.stage);
@@ -2043,7 +2069,30 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Next Step</label><input class="fc" id="f-next-step" placeholder="Send proposal, call back, arrange demo..."></div>
         <div class="fg"><label class="fl">Follow-up Date</label><input class="fc" id="f-next-date" type="date"></div>
       </div>
-      <div class="fg"><label class="fl">Assigned To</label><select class="fc" id="f-agent">${(db.agents.length?db.agents.map(a=>a.name):(currentUser?[currentUser.name]:[])).map(a=>`<option ${a===(currentUser?.name||'')?'selected':''}>${a}</option>`).join('')}</select></div>`
+      <div class="fg"><label class="fl">Assigned To</label><select class="fc" id="f-agent">${(db.agents.length?db.agents.map(a=>a.name):(currentUser?[currentUser.name]:[])).map(a=>`<option ${a===(currentUser?.name||'')?'selected':''}>${a}</option>`).join('')}</select></div>`,
+    contract:`
+      <div class="fr">
+        <div class="fg"><label class="fl">Contract № *</label><input class="fc" id="f-con-number" value="${e.number||''}" placeholder="ДП-2026-047"></div>
+        <div class="fg"><label class="fl">Type</label><select class="fc" id="f-con-type">${['Equipment supply','Spare parts','Service contract','Lease','Other'].map(t=>`<option ${e.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      </div>
+      <div class="fg"><label class="fl">Company *</label>${cur.company?`<input class="fc" value="${db.companies.find(x=>x.id===cur.company)?.name||''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-con-co" value="${cur.company}">`:
+        `<select class="fc" id="f-con-co"><option value="">— select —</option>${db.companies.map(c=>`<option value="${c.id}" ${e.company_id===c.id?'selected':''}>${c.name}</option>`).join('')}</select>`}
+      </div>
+      <div class="fg"><label class="fl">Subject / Equipment</label><input class="fc" id="f-con-subject" value="${e.subject||''}" placeholder="ZX330-5A × 2 шт, запчасти к ZX470..."></div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Amount *</label><input class="fc" id="f-con-amount" type="number" value="${e.amount||''}"></div>
+        <div class="fg"><label class="fl">Currency</label><select class="fc" id="f-con-currency">${['USD','EUR','AMD','RUB'].map(c=>`<option ${(e.currency||'USD')===c?'selected':''}>${c}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Status</label><select class="fc" id="f-con-status">${['Active','Executed','Cancelled','Draft'].map(s=>`<option ${(e.status||'Active')===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Signing date</label><input class="fc" id="f-con-signed" type="date" value="${e.signed_date||today()}"></div>
+        <div class="fg"><label class="fl">Delivery / completion</label><input class="fc" id="f-con-delivery" type="date" value="${e.delivery_date||''}"></div>
+      </div>
+      <div class="fr">
+        <div class="fg"><label class="fl">Payment terms</label><input class="fc" id="f-con-payment" value="${e.payment_terms||''}" placeholder="50% prepayment, 50% on delivery"></div>
+        <div class="fg"><label class="fl">Warranty</label><input class="fc" id="f-con-warranty" value="${e.warranty||''}" placeholder="12 months"></div>
+      </div>
+      <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="f-con-notes" rows="2">${e.notes||''}</textarea></div>`
   };
   $('mbody').innerHTML=bodies[type]||'';
   $('overlay').classList.add('open');
@@ -2145,6 +2194,22 @@ async function _saveM(){
     const s=await persist('agents',row);
     if(!eid)db.agents.push(s);else Object.assign(db.agents.find(x=>x.id===eid),s);
     renderAgents();
+  }else if(mtype==='contract'){
+    const num=(g('f-con-number')||'').trim();if(!num)return alert('Enter contract number');
+    const coId=g('f-con-co')||cur.company||'';
+    const coName=db.companies.find(x=>x.id===coId)?.name||'';
+    row={...row,number:num,type:g('f-con-type')||'',company_id:coId,company:coName,
+      deal_id:cur.deal||'',subject:g('f-con-subject')||'',
+      amount:Number(g('f-con-amount'))||0,currency:g('f-con-currency')||'USD',
+      status:g('f-con-status')||'Active',signed_date:g('f-con-signed')||today(),
+      delivery_date:g('f-con-delivery')||'',payment_terms:g('f-con-payment')||'',
+      warranty:g('f-con-warranty')||'',notes:g('f-con-notes')||'',
+      agent:currentUser?.name||'',created:row.created||today()};
+    const s=await persist('contracts',row);
+    if(!db.contracts)db.contracts=[];
+    if(!eid)db.contracts.push(s);else Object.assign(db.contracts.find(x=>x.id===eid),s);
+    updateCounts();
+    if(cur.company)openCompanyDetail(cur.company);else renderContracts();
   }else if(mtype==='activity'){
     const coId=cur.company||null;const coName=coId?(db.companies.find(x=>x.id===coId)?.name||''):'';
     const nextStep=g('f-next-step')||'';const nextDate=g('f-next-date')||'';const agent=g('f-agent')||currentUser?.name||'';
@@ -3695,7 +3760,46 @@ async function saveAutomation(){
   }finally{saving=false;}
 }
 
-// ─── LOCATIONS ─────────────────────────────────────────────────────────────
+// ─── Contracts ─────────────────────────────────────────────────────────────
+function renderContracts(){
+  if(!db.contracts)db.contracts=[];
+  $('topbar-right').innerHTML=`<button class="btn btn-primary" onclick="openM('contract')"><i class="ti ti-plus"></i>New Contract</button>`;
+  const contracts=db.contracts.sort((a,b)=>(b.signed_date||b.created||'').localeCompare(a.signed_date||a.created||''));
+  const statusBadgeC=s=>({Active:'b-green',Executed:'b-blue',Cancelled:'b-red',Draft:'b-gray'}[s]||'b-gray');
+  const totActive=contracts.filter(c=>c.status==='Active').reduce((s,c)=>s+Number(c.amount||0),0);
+  const totAll=contracts.reduce((s,c)=>s+Number(c.amount||0),0);
+
+  $('content').innerHTML=`
+  <div class="metrics" style="margin-bottom:18px">
+    <div class="metric"><div class="metric-label">Total contracts</div><div class="metric-value">${contracts.length}</div></div>
+    <div class="metric"><div class="metric-label">Active</div><div class="metric-value" style="color:var(--green)">${contracts.filter(c=>c.status==='Active').length}</div></div>
+    <div class="metric"><div class="metric-label">Active value</div><div class="metric-value" style="color:var(--blue)">${fmtUSD(totActive)}</div></div>
+    <div class="metric"><div class="metric-label">Total value</div><div class="metric-value">${fmtUSD(totAll)}</div></div>
+  </div>
+  <div class="tbl-wrap"><table class="tbl">
+    <thead><tr>
+      <th>Number</th><th>Company</th><th>Type</th><th>Subject</th>
+      <th>Amount</th><th>Signed</th><th>Delivery</th><th>Status</th><th></th>
+    </tr></thead>
+    <tbody>${contracts.length?contracts.map(c=>`<tr onclick="openCompanyDetail('${c.company_id}')">
+      <td style="font-weight:700;color:var(--blue)">${c.number||'—'}</td>
+      <td style="font-weight:600">${c.company||'—'}</td>
+      <td style="font-size:12px;color:var(--text-m)">${c.type||'—'}</td>
+      <td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.subject||'—'}</td>
+      <td style="font-weight:700">${fmtUSD(Number(c.amount||0))} <span style="font-size:11px;color:var(--text-m)">${c.currency||''}</span></td>
+      <td style="font-size:12px;color:var(--text-m)">${c.signed_date||'—'}</td>
+      <td style="font-size:12px;color:var(--text-m)">${c.delivery_date||'—'}</td>
+      <td><span class="b ${statusBadgeC(c.status)}">${c.status||'—'}</span></td>
+      <td onclick="event.stopPropagation()"><div class="actions">
+        <button class="btn btn-sm btn-ghost" onclick="openM('contract','${c.id}')"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-sm btn-ghost btn-danger" onclick="delRecord('contracts','${c.id}')"><i class="ti ti-trash"></i></button>
+      </div></td>
+    </tr>`).join(''):`<tr><td colspan="9"><div class="empty"><i class="ti ti-file-invoice"></i><div class="empty-title">No contracts yet</div><button class="btn btn-primary btn-sm" onclick="openM('contract')"><i class="ti ti-plus"></i>Add First</button></div></td></tr>`}
+    </tbody>
+  </table></div>`;
+}
+
+
 function getLocations(coId){
   try{const raw=localStorage.getItem('locs_'+coId);return raw?JSON.parse(raw):[];}catch{return[];}
 }
