@@ -290,19 +290,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   .p-col{min-width:170px;width:170px}
   .p-head{font-size:11px;padding:6px 10px}
 
-  /* ── COMPANY DETAIL — 3 columns → 1 column stack ── */
-  .cd-wrap{grid-template-columns:1fr!important;grid-template-rows:auto!important}
-  .cd-col{border-right:none!important;border-bottom:1px solid var(--bdr);max-height:none!important;overflow-y:visible!important}
-  .kpi-strip-co{grid-template-columns:repeat(3,1fr)!important;overflow-x:auto}
-  .kpi-cell{padding:8px 10px}
-  .kpi-v{font-size:15px}
+  /* ── COMPANY DETAIL — stack to 1 column on mobile ── */
+  .cd-wrap{display:flex!important;flex-direction:column!important;gap:0}
+  .cd-col{border-right:none!important;border-bottom:1px solid var(--bdr);max-height:none!important;overflow-y:visible!important;overflow-x:hidden!important;width:100%!important;min-width:0!important}
+  .cd-col:last-child{border-bottom:none}
+  .kpi-strip-co{grid-template-columns:repeat(3,1fr)!important}
+  .kpi-cell{padding:8px 6px}
+  .kpi-v{font-size:14px}
   .kpi-l{font-size:9px}
-  .hero-co{flex-wrap:wrap;gap:8px;padding:12px}
+  .hero-co{flex-wrap:wrap;gap:8px;padding:10px 12px}
   .hero-co > div[style*="max-width:200px"]{max-width:100%!important;width:100%}
-
-  /* ── Company detail act tabs — scrollable ── */
-  .act-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap!important}
-  .act-tab{white-space:nowrap;flex-shrink:0}
+  .deal-row{flex-wrap:nowrap}
+  .ctc-row{overflow:hidden}
+  .act-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap!important;scrollbar-width:none}
+  .act-tabs::-webkit-scrollbar{display:none}
+  .act-tab{white-space:nowrap;flex-shrink:0;padding:8px 10px;font-size:11px}
+  .fleet-row{grid-template-columns:1fr 50px 40px!important}
 
   /* Modal */
   .overlay{padding-top:0;align-items:flex-end}
@@ -690,6 +693,8 @@ function normalizeDb(){
     d.amount=Number(d.amount)||0;d.days=Number(d.days)||0;
     const stageMap={'Proposal Sent':'Proposal','Prospecting':'Lead','prospecting':'Lead','proposal sent':'Proposal','proposal':'Proposal','negotiation':'Negotiation','won':'Won','lost':'Lost','qualified':'Qualified','lead':'Lead'};
     if(d.stage&&stageMap[d.stage])d.stage=stageMap[d.stage];
+    if(d.next_date&&d.next_date.includes('T'))d.next_date=d.next_date.slice(0,10);
+    if(d.created&&d.created.includes('T'))d.created=d.created.slice(0,10);
   });
   db.fleet.forEach(f=>{f.year=Number(f.year)||0;});
   db.tasks.forEach(t=>{
@@ -1268,7 +1273,7 @@ function openCompanyDetail(id){
       </div>
       <div style="font-size:12px;color:var(--text-m);margin-top:4px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">
         ${c.industry?`<span><i class="ti ti-building" style="font-size:11px"></i> ${c.industry}</span>`:''}
-        ${c.city||c.address?`<span><i class="ti ti-map-pin" style="font-size:11px"></i> ${[c.address,c.city,c.zip,c.country].filter(Boolean).join(', ')}</span>`:''}
+        ${c.city||c.address?`<span><i class="ti ti-map-pin" style="font-size:11px"></i> ${[c.address,c.city,c.zip,c.country].filter(v=>v&&v.trim()&&!['Active','Prospect','Inactive','Negotiating','Partner','A','B','C','D'].includes(v.trim())).join(', ')}</span>`:''}
         ${c.phone?`<a href="tel:${c.phone}" style="color:var(--text-m)"><i class="ti ti-phone" style="font-size:11px"></i> ${c.phone}</a>`:''}
         ${c.website?`<a href="${c.website}" target="_blank" style="color:var(--blue)"><i class="ti ti-world" style="font-size:11px"></i> ${c.website}</a>`:''}
         ${c.assigned_agent?`<span><i class="ti ti-user" style="font-size:11px"></i> ${c.assigned_agent}</span>`:''}
@@ -1378,10 +1383,12 @@ function openCompanyDetail(id){
         </div>
         ${deals.length?deals.map(d=>{
           const stale=dealStaleDays(d);
+          const nd=d.next_date?fmtDate(d.next_date):'';
           return`<div class="deal-row" onclick="openDealDetail('${d.id}')">
-            <div style="flex:1;min-width:0">
+            <div style="flex:1;min-width:0;overflow:hidden">
               <div style="font-weight:600;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.model||'Deal'}</div>
-              <div style="font-size:11px;color:var(--text-m);margin-top:1px">${d.next_action||'—'}</div>
+              ${d.next_action?`<div style="font-size:11px;color:var(--text-m);margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.next_action}</div>`:''}
+              ${nd?`<div style="font-size:10px;color:var(--text-l);margin-top:1px">${nd}</div>`:''}
               ${d.competitor?`<div style="font-size:10px;color:var(--red);margin-top:1px"><i class="ti ti-sword" style="font-size:10px"></i> ${d.competitor}</div>`:''}
             </div>
             <div style="text-align:right;flex-shrink:0;margin-left:8px">
@@ -1513,6 +1520,7 @@ function openDealDetail(id){
   $('topbar-right').innerHTML=`<button class="btn" onclick="openM('activity',null,'${d.company_id}','${id}')"><i class="ti ti-message-circle"></i>Log Activity</button>${d.stage==='Won'?`<button class="btn btn-primary" onclick="cur.company='${d.company_id}';cur.deal='${id}';openM('contract')"><i class="ti ti-file-invoice"></i>Create Contract</button>`:''}<button class="btn" onclick="openM('deal','${id}')"><i class="ti ti-edit"></i>Edit</button>`;
   const tasks=db.tasks.filter(t=>t.deal_id===id);
   const acts=db.activities.filter(a=>a.deal_id===id||a.company_id===d.company_id).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
+  const stageHistory=db.activities.filter(a=>a.deal_id===id&&a.type==='stage').sort((a,b)=>(a.date||a.created||'').localeCompare(b.date||b.created||''));
   const stageIdx=STAGES.indexOf(d.stage);
   const staleDays=dealStaleDays(d);
   const isStale=staleDays>=30;
@@ -1567,6 +1575,21 @@ function openDealDetail(id){
           <span style="font-size:11px">${dueFmt(t.due)}</span>
         </div>`).join(''):`<div style="font-size:13px;color:var(--text-m);padding:8px 0">No tasks</div>`}
       </div>
+
+      <!-- STAGE HISTORY -->
+      ${stageHistory.length?`<div class="card" style="margin-top:14px">
+        <div class="card-title">Stage History</div>
+        ${stageHistory.map((s,i)=>{
+          const next=stageHistory[i+1];
+          const daysInStage=next?Math.round((new Date(next.date||next.created)-new Date(s.date||s.created))/(1000*60*60*24)):null;
+          return`<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--gray-100);font-size:12px">
+            <i class="ti ti-arrow-right" style="color:var(--blue);font-size:14px;flex-shrink:0"></i>
+            <div style="flex:1">${s.note||s.text||''}</div>
+            ${daysInStage!==null?`<span style="color:var(--text-m);flex-shrink:0">${daysInStage}d</span>`:''}
+            <span style="color:var(--text-l);flex-shrink:0">${s.date||''}</span>
+          </div>`;
+        }).join('')}
+      </div>`:''}
     </div>
 
     <!-- ACTIVITY HISTORY -->
@@ -1604,18 +1627,68 @@ function openDealDetail(id){
   </div>`;
 }
 
+// Stage change task templates
+const STAGE_TASK_TEMPLATES={
+  Proposal:[
+    {title:'Send commercial proposal (КП)',days:0,priority:'high'},
+    {title:'Follow up — did they receive the КП?',days:3,priority:'medium'},
+    {title:'Call to discuss КП details',days:7,priority:'medium'},
+  ],
+  Negotiation:[
+    {title:'Prepare final price offer',days:1,priority:'high'},
+    {title:'Send contract draft',days:3,priority:'high'},
+    {title:'Follow up on contract signing',days:7,priority:'medium'},
+  ],
+  Won:[
+    {title:'Issue invoice',days:0,priority:'high'},
+    {title:'Confirm delivery timeline with client',days:1,priority:'high'},
+    {title:'Post-sale follow up',days:30,priority:'low'},
+  ],
+};
+
 async function moveDeal(id,stage){
   const d=db.deals.find(x=>x.id===id);if(!d)return;
   const prevStage=d.stage;
+  if(prevStage===stage)return;
   d.stage=stage;
+  d.probability={Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[stage]||0;
   await persist('deals',{...d});
-  // Log activity
-  const act={id:uid(),company_id:d.company||'',type:'stage',text:`Deal stage changed: ${prevStage} → ${stage}`,date:today(),agent:currentUser?.name||''};
+
+  // Log stage change to activities with timestamp
+  const act={id:uid(),company_id:d.company_id,company:d.company,deal_id:id,
+    type:'stage',note:`Stage changed: ${prevStage} → ${stage}`,
+    date:today(),agent:currentUser?.name||'',created:new Date().toISOString()};
   db.activities.push(act);await persist('activities',act);
-  // Run automations
-  await runAutomations('deal_stage_change',{newStage:stage,deal_id:id,company_id:d.company,agent:d.agent,amount:d.amount,message:`Deal moved to ${stage}`});
-  if(Number(d.amount)>0)await runAutomations('deal_amount',{amount:d.amount,deal_id:id,company_id:d.company,agent:d.agent,message:`Deal worth $${fmt(d.amount)}`});
+
+  // Auto-create task templates for key stages
+  const templates=STAGE_TASK_TEMPLATES[stage];
+  if(templates&&templates.length){
+    const due0=new Date();
+    const created=[];
+    for(const tmpl of templates){
+      const dueDate=new Date(due0);dueDate.setDate(dueDate.getDate()+tmpl.days);
+      const task={id:uid(),deal_id:id,company_id:d.company_id,company:d.company,
+        title:tmpl.title,agent:d.agent||currentUser?.name||'',
+        due:dueDate.toISOString().slice(0,10),priority:tmpl.priority,
+        type:'follow-up',done:false,auto_scheduled:true,created:today()};
+      db.tasks.push(task);await persist('tasks',task);
+      created.push(tmpl.title);
+    }
+    updateCounts();
+    // Show brief toast
+    showToast(`📋 ${created.length} tasks created for ${stage} stage`,3000);
+  }
+
+  await runAutomations('deal_stage_change',{newStage:stage,deal_id:id,company_id:d.company_id,agent:d.agent,amount:d.amount,message:`Deal moved to ${stage}`});
+  if(Number(d.amount)>0)await runAutomations('deal_amount',{amount:d.amount,deal_id:id,company_id:d.company_id,agent:d.agent,message:`Deal worth $${fmt(d.amount)}`});
   updateCounts();openDealDetail(id);
+}
+
+function showToast(msg,duration=2500){
+  const t=document.createElement('div');
+  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a2332;color:#fff;padding:10px 20px;border-radius:24px;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);white-space:nowrap';
+  t.textContent=msg;document.body.appendChild(t);
+  setTimeout(()=>t.remove(),duration);
 }
 
 // ─── Contacts ──────────────────────────────────────────────────────────────
@@ -1823,14 +1896,11 @@ function renderReports(){
   const wonVal=wonDeals.reduce((s,d)=>s+d.amount,0);
   const avgDeal=allDeals.length?Math.round(allDeals.reduce((s,d)=>s+d.amount,0)/allDeals.length):0;
 
-  // Avg days to close (Won deals with days field)
   const closedWithDays=wonDeals.filter(d=>Number(d.days)>0);
   const avgClose=closedWithDays.length?Math.round(closedWithDays.reduce((s,d)=>s+Number(d.days),0)/closedWithDays.length):null;
-
-  // Stage conversion funnel
   const stageCounts=STAGES.map(s=>({s,cnt:allDeals.filter(d=>d.stage===s).length,val:allDeals.filter(d=>d.stage===s).reduce((a,d)=>a+d.amount,0)}));
 
-  // Agent activity (last 30 days)
+  // Agent activity last 30 days
   const cutoff=new Date();cutoff.setDate(cutoff.getDate()-30);
   const cutoffStr=cutoff.toISOString().slice(0,10);
   const recentActs=db.activities.filter(a=>(a.date||a.created||'')>=cutoffStr);
@@ -1845,20 +1915,61 @@ function renderReports(){
     return{name:a,calls,meetings,proposals,total:acts.length,deals,won};
   }).filter(a=>a.total>0||a.deals>0).sort((a,b)=>b.total-a.total);
 
-  // Lost reason breakdown
-  const lostReasons={};
-  lostDeals.forEach(d=>{const r=d.lost_reason||'Unknown';lostReasons[r]=(lostReasons[r]||0)+1;});
+  // Lost reasons + competitors
+  const lostReasons={};lostDeals.forEach(d=>{const r=d.lost_reason||'Unknown';lostReasons[r]=(lostReasons[r]||0)+1;});
   const lostArr=Object.entries(lostReasons).sort(([,a],[,b])=>b-a);
-
-  // Competitor breakdown
-  const compMap={};
-  allDeals.filter(d=>d.competitor).forEach(d=>{const c=d.competitor;compMap[c]=(compMap[c]||0)+1;});
+  const compMap={};allDeals.filter(d=>d.competitor).forEach(d=>{const c=d.competitor;compMap[c]=(compMap[c]||0)+1;});
   const compArr=Object.entries(compMap).sort(([,a],[,b])=>b-a);
-
-  // Brand fleet breakdown
-  const brandCount={};
-  db.fleet.filter(u=>u.brand!=='Hitachi').forEach(u=>{brandCount[u.brand]=(brandCount[u.brand]||0)+1});
+  const brandCount={};db.fleet.filter(u=>u.brand!=='Hitachi').forEach(u=>{brandCount[u.brand]=(brandCount[u.brand]||0)+1});
   const brands=Object.keys(brandCount).sort((a,b)=>brandCount[b]-brandCount[a]);
+
+  // ── NEW: Activity by day of week ──
+  const DOW=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const actByDow=[0,0,0,0,0,0,0];
+  const callsByDow=[0,0,0,0,0,0,0];
+  db.activities.filter(a=>a.date).forEach(a=>{
+    try{const d=new Date(a.date);const dow=(d.getDay()+6)%7; // Mon=0
+      actByDow[dow]++;
+      if(a.type==='Call'||a.type==='WhatsApp')callsByDow[dow]++;
+    }catch(e){}
+  });
+  const maxDow=Math.max(...actByDow,1);
+
+  // ── NEW: Avg days in each stage (from stage history in activities) ──
+  const stageHistory=db.activities.filter(a=>a.type==='stage'&&a.deal_id);
+  const stageTimes={};const stageCounts2={};
+  // Group by deal, sort by date, compute time between stages
+  const byDeal={};
+  stageHistory.forEach(a=>{
+    if(!byDeal[a.deal_id])byDeal[a.deal_id]=[];
+    byDeal[a.deal_id].push(a);
+  });
+  Object.values(byDeal).forEach(arr=>{
+    arr.sort((a,b)=>(a.date||a.created||'').localeCompare(b.date||b.created||''));
+    for(let i=0;i<arr.length-1;i++){
+      const note=arr[i].note||arr[i].text||'';
+      const stageMatch=note.match(/→\s*(\w+)/);
+      if(!stageMatch)continue;
+      const stage=stageMatch[1];
+      const days=Math.round((new Date(arr[i+1].date||arr[i+1].created)-new Date(arr[i].date||arr[i].created))/(1000*60*60*24));
+      if(days>=0&&days<365){
+        stageTimes[stage]=(stageTimes[stage]||0)+days;
+        stageCounts2[stage]=(stageCounts2[stage]||0)+1;
+      }
+    }
+  });
+
+  // ── NEW: Agent funnel (deals by stage per agent) ──
+  const agentFunnel=AGENTS().map(a=>{
+    const agentDeals=allDeals.filter(d=>d.agent===a);
+    const total=agentDeals.length;
+    const w=agentDeals.filter(d=>d.stage==='Won').length;
+    const l=agentDeals.filter(d=>d.stage==='Lost').length;
+    const active=agentDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').length;
+    const winRate=total?Math.round(w/total*100):0;
+    const avgSize=total?Math.round(agentDeals.reduce((s,d)=>s+d.amount,0)/total):0;
+    return{name:a,total,active,won:w,lost:l,winRate,avgSize,revenue:wonDeals.filter(d=>d.agent===a).reduce((s,d)=>s+d.amount,0)};
+  }).filter(a=>a.total>0);
 
   $('content').innerHTML=`
   <!-- KPI METRICS -->
@@ -1875,24 +1986,98 @@ function renderReports(){
   <div class="card" style="margin-bottom:18px">
     <div class="card-title">Team Activity — Last 30 Days</div>
     ${agentActivity.length?`<div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Manager</th><th style="text-align:center">📞 Calls</th><th style="text-align:center">🤝 Meetings</th><th style="text-align:center">📋 Proposals</th><th style="text-align:center">Total Activities</th><th style="text-align:center">Active Deals</th><th style="text-align:right">Won</th></tr></thead>
+      <thead><tr><th>Manager</th><th style="text-align:center">📞 Calls</th><th style="text-align:center">🤝 Meetings</th><th style="text-align:center">📋 Proposals</th><th style="text-align:center">Total</th><th style="text-align:center">Active Deals</th><th style="text-align:right">Won</th></tr></thead>
       <tbody>${agentActivity.map((a,i)=>`<tr>
         <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:28px;height:28px;font-size:10px">${ini(a.name)}</div>${a.name}</div></td>
         <td style="text-align:center"><strong>${a.calls||'—'}</strong></td>
         <td style="text-align:center"><strong>${a.meetings||'—'}</strong></td>
         <td style="text-align:center"><strong>${a.proposals||'—'}</strong></td>
-        <td style="text-align:center">
-          <div style="display:flex;align-items:center;justify-content:center;gap:6px">
-            <div style="width:60px;height:6px;background:var(--gray-100);border-radius:3px;overflow:hidden">
-              <div style="width:${Math.min(100,Math.round(a.total/Math.max(...agentActivity.map(x=>x.total),1)*100))}%;height:100%;background:var(--blue);border-radius:3px"></div>
-            </div>
-            <strong>${a.total}</strong>
-          </div>
-        </td>
+        <td style="text-align:center"><div style="display:flex;align-items:center;justify-content:center;gap:6px">
+          <div style="width:60px;height:6px;background:var(--gray-100);border-radius:3px;overflow:hidden"><div style="width:${Math.min(100,Math.round(a.total/Math.max(...agentActivity.map(x=>x.total),1)*100))}%;height:100%;background:var(--blue);border-radius:3px"></div></div>
+          <strong>${a.total}</strong></div></td>
         <td style="text-align:center">${a.deals}</td>
         <td style="text-align:right;color:var(--green);font-weight:700">${a.won?fmtUSD(a.won):'—'}</td>
       </tr>`).join('')}</tbody>
     </table></div>`:`<div class="empty" style="padding:24px"><i class="ti ti-chart-bar"></i><div class="empty-title">No activity logged in last 30 days</div></div>`}
+  </div>
+
+  <!-- NEW: AGENT FUNNEL -->
+  ${agentFunnel.length?`<div class="card" style="margin-bottom:18px">
+    <div class="card-title">Agent Sales Funnel</div>
+    <div class="tbl-wrap"><table class="tbl">
+      <thead><tr><th>Manager</th><th style="text-align:center">Total Deals</th><th style="text-align:center">Active</th><th style="text-align:center">Won</th><th style="text-align:center">Lost</th><th style="text-align:center">Win Rate</th><th style="text-align:right">Avg Size</th><th style="text-align:right">Revenue</th></tr></thead>
+      <tbody>${agentFunnel.map((a,i)=>`<tr>
+        <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:28px;height:28px;font-size:10px">${ini(a.name)}</div>${a.name}</div></td>
+        <td style="text-align:center">${a.total}</td>
+        <td style="text-align:center"><span class="b b-blue">${a.active}</span></td>
+        <td style="text-align:center"><span class="b b-green">${a.won}</span></td>
+        <td style="text-align:center"><span class="b b-red">${a.lost}</span></td>
+        <td style="text-align:center">
+          <div style="display:flex;align-items:center;justify-content:center;gap:6px">
+            <div style="width:50px;height:6px;background:var(--gray-100);border-radius:3px;overflow:hidden"><div style="width:${a.winRate}%;height:100%;background:${a.winRate>=50?'var(--green)':a.winRate>=25?'var(--amber)':'var(--red)'};border-radius:3px"></div></div>
+            <strong style="color:${a.winRate>=50?'var(--green)':a.winRate>=25?'var(--amber)':'var(--red)'}">${a.winRate}%</strong>
+          </div>
+        </td>
+        <td style="text-align:right">${fmtUSD(a.avgSize)}</td>
+        <td style="text-align:right;font-weight:700;color:var(--green)">${a.revenue?fmtUSD(a.revenue):'—'}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div>`:''}
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+    <!-- ACTIVITY BY DAY OF WEEK -->
+    <div class="card">
+      <div class="card-title">📅 Best Days to Call</div>
+      <div style="font-size:11px;color:var(--text-m);margin-bottom:12px">Based on all logged activities</div>
+      ${DOW.map((day,i)=>{
+        const pct=Math.round(actByDow[i]/maxDow*100);
+        const callPct=Math.round(callsByDow[i]/Math.max(...callsByDow,1)*100);
+        const isTop=actByDow[i]===Math.max(...actByDow);
+        return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <span style="width:28px;font-size:12px;font-weight:${isTop?700:400};color:${isTop?'var(--blue)':'var(--text)'}">${day}</span>
+          <div style="flex:1;position:relative">
+            <div style="height:18px;background:var(--gray-100);border-radius:4px;overflow:hidden">
+              <div style="width:${pct}%;height:100%;background:${isTop?'var(--blue)':'#93c5fd'};border-radius:4px;transition:width .4s"></div>
+            </div>
+            <div style="height:6px;background:transparent;border-radius:4px;overflow:hidden;margin-top:2px">
+              <div style="width:${callPct}%;height:100%;background:#22c55e;border-radius:4px"></div>
+            </div>
+          </div>
+          <div style="text-align:right;min-width:60px">
+            <span style="font-size:12px;font-weight:600">${actByDow[i]}</span>
+            <span style="font-size:10px;color:var(--text-m)"> acts</span>
+            ${callsByDow[i]?`<span style="font-size:10px;color:var(--green);margin-left:4px">${callsByDow[i]} calls</span>`:''}
+          </div>
+          ${isTop?`<span style="font-size:10px;font-weight:700;color:var(--blue)">🔥</span>`:''}
+        </div>`;
+      }).join('')}
+      <div style="margin-top:10px;font-size:11px;color:var(--text-m);display:flex;gap:12px">
+        <span><span style="display:inline-block;width:10px;height:6px;background:#93c5fd;border-radius:2px"></span> Activities</span>
+        <span><span style="display:inline-block;width:10px;height:6px;background:#22c55e;border-radius:2px"></span> Calls</span>
+      </div>
+    </div>
+
+    <!-- AVG TIME IN STAGE -->
+    <div class="card">
+      <div class="card-title">⏱ Avg. Time in Stage</div>
+      <div style="font-size:11px;color:var(--text-m);margin-bottom:12px">Based on stage change history</div>
+      ${STAGES.filter(s=>s!=='Won'&&s!=='Lost').map(s=>{
+        const avg=stageCounts2[s]?Math.round(stageTimes[s]/stageCounts2[s]):null;
+        const pct=avg?Math.min(100,Math.round(avg/60*100)):0;
+        const color=avg===null?'var(--gray-200)':avg>30?'var(--red)':avg>14?'var(--amber)':'var(--green)';
+        return`<div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span style="font-size:13px;font-weight:600;color:${STAGE_COLOR[s]}">${s}</span>
+            <span style="font-size:13px;font-weight:700;color:${color}">${avg!==null?avg+'d':'no data'}</span>
+          </div>
+          <div style="height:6px;background:var(--gray-100);border-radius:3px;overflow:hidden">
+            <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;transition:width .5s"></div>
+          </div>
+          ${stageCounts2[s]?`<div style="font-size:10px;color:var(--text-m);margin-top:2px">${stageCounts2[s]} transitions tracked</div>`:''}
+        </div>`;
+      }).join('')}
+      ${!Object.keys(stageCounts2).length?`<div class="empty" style="padding:20px"><i class="ti ti-clock"></i><div class="empty-title" style="font-size:12px">Move deals between stages to build history</div></div>`:''}
+    </div>
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
@@ -3304,28 +3489,122 @@ function renderLeads(){
     </select>
   </div>
   <div class="tbl-wrap"><table class="tbl">
-    <thead><tr><th>Company / Contact</th><th class="hide-xs">Source</th><th class="hide-xs">Product</th><th>Budget</th><th>Status</th><th class="hide-sm">Assigned To</th><th class="hide-sm">Created</th><th></th></tr></thead>
+    <thead><tr><th>Company / Contact</th><th class="hide-xs">Source</th><th class="hide-xs">Product</th><th>Budget</th><th>Status</th><th>Quick Actions</th><th></th></tr></thead>
     <tbody id="leads-tbody">${renderLeadsRows(db.leads)}</tbody>
   </table></div>`;
   $('content').innerHTML=html;
 }
 
+const LEAD_STATUS_FLOW=['New','Contacted','Qualified','Proposal','Converted','Lost'];
+
+function leadStatusNext(status){
+  const i=LEAD_STATUS_FLOW.indexOf(status);
+  if(i<0||i>=3)return null; // Can't auto-advance Converted/Lost/Proposal via button
+  return LEAD_STATUS_FLOW[i+1];
+}
+
+async function quickLeadStatus(id,status,e){
+  e?.stopPropagation();
+  const l=db.leads.find(x=>x.id===id);if(!l)return;
+  l.status=status;
+  await persist('leads',{...l});
+  updateCounts();filterLeads();
+  showToast(`Lead marked: ${status}`);
+}
+
+function disqualifyLead(id,e){
+  e?.stopPropagation();
+  const l=db.leads.find(x=>x.id===id);if(!l)return;
+  // Show inline reason picker
+  const reasons=['No budget','Not our product','Chose competitor','No response','Too early','Other'];
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML=`<div style="background:var(--sur);border-radius:12px;padding:24px;width:360px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="font-size:16px;font-weight:700;margin-bottom:6px">Disqualify Lead</div>
+    <div style="font-size:13px;color:var(--text-m);margin-bottom:16px">${l.company||l.contact} — ${l.product||'no product'}</div>
+    <div style="font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:8px">Reason:</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
+      ${reasons.map(r=>`<button class="btn btn-sm" style="border-radius:20px" onclick="this.classList.toggle('btn-primary');document.querySelectorAll('#dq-reasons .btn').forEach(b=>b!==this&&b.classList.remove('btn-primary'));document.getElementById('dq-selected').value='${r}'">${r}</button>`).join('')}
+    </div>
+    <div id="dq-reasons" style="display:none"></div>
+    <input type="hidden" id="dq-selected" value="">
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDisqualify('${id}',this)"><i class="ti ti-user-off"></i>Disqualify</button>
+    </div>
+  </div>`;
+  // Fix: set reasons on button click inline
+  overlay.querySelectorAll&&setTimeout(()=>{
+    overlay.querySelectorAll('.btn.btn-sm').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        overlay.querySelectorAll('.btn.btn-sm').forEach(b=>b.classList.remove('btn-primary'));
+        btn.classList.add('btn-primary');
+        overlay.querySelector('#dq-selected').value=btn.textContent;
+      });
+    });
+  },10);
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',ev=>{if(ev.target===overlay)overlay.remove();});
+}
+
+async function confirmDisqualify(id,btn){
+  const l=db.leads.find(x=>x.id===id);if(!l)return;
+  const reason=document.getElementById('dq-selected')?.value||'Not specified';
+  l.status='Lost';l.notes=(l.notes?l.notes+'\n':'')+'Disqualified: '+reason;
+  await persist('leads',{...l});
+  btn.closest('div[style*=fixed]').remove();
+  updateCounts();filterLeads();
+  showToast(`Lead disqualified: ${reason}`);
+}
+
 function renderLeadsRows(leads){
   if(!leads.length)return`<tr><td colspan="8"><div class="empty"><i class="ti ti-user-plus"></i><div class="empty-title">No leads</div><button class="btn btn-primary btn-sm" onclick="openM('lead')">Add first</button></div></td></tr>`;
-  return leads.map(l=>`<tr onclick="openLeadDetail('${l.id}')">
-    <td><strong>${l.company||l.contact||'—'}</strong>${l.contact&&l.company?`<div style="font-size:12px;color:var(--text-m)">${l.contact}</div>`:''}</td>
-    <td class="hide-xs"><span class="b b-gray">${l.source||'—'}</span></td>
-    <td class="hide-xs" style="color:var(--text-m);font-size:12px">${l.product||'—'}</td>
-    <td style="font-weight:700">${l.budget?'$'+fmt(l.budget):'—'}</td>
-    <td><span class="b ${leadStatusBadge(l.status)}">${l.status||'New'}</span></td>
-    <td class="hide-sm" style="font-size:12px;color:var(--text-m)">${l.agent||'—'}</td>
-    <td class="hide-sm" style="font-size:12px;color:var(--text-m)">${l.created||'—'}</td>
-    <td><div class="actions">
-      <button class="btn btn-sm btn-ghost" onclick="event.stopPropagation();openM('lead','${l.id}')"><i class="ti ti-edit"></i></button>
-      ${l.status!=='Converted'?`<button class="btn btn-sm btn-ghost" title="Convert to Deal" onclick="event.stopPropagation();convertLead('${l.id}')"><i class="ti ti-arrow-right-circle" style="color:var(--green)"></i></button>`:''}
-      <button class="btn btn-sm btn-ghost btn-danger" onclick="event.stopPropagation();delRecord('leads','${l.id}')"><i class="ti ti-trash"></i></button>
-    </div></td>
-  </tr>`).join('');
+  return leads.map(l=>{
+    const isConverted=l.status==='Converted';
+    const isLost=l.status==='Lost';
+    const nextStatus=leadStatusNext(l.status);
+    return`<tr style="${isLost?'opacity:.6':''}" onclick="openLeadDetail('${l.id}')">
+      <td>
+        <div style="font-weight:700">${l.company||l.contact||'—'}</div>
+        ${l.contact&&l.company?`<div style="font-size:12px;color:var(--text-m)">${l.contact}</div>`:''}
+        ${l.phone?`<div style="font-size:12px;color:var(--blue)"><a href="tel:${l.phone}" onclick="event.stopPropagation()">${l.phone}</a></div>`:''}
+      </td>
+      <td class="hide-xs"><span class="b b-gray" style="font-size:11px">${l.source||'—'}</span></td>
+      <td class="hide-xs" style="color:var(--text-m);font-size:12px">${l.product||'—'}</td>
+      <td style="font-weight:700">${l.budget?'$'+fmt(l.budget):'—'}</td>
+      <td>
+        <span class="b ${leadStatusBadge(l.status)}">${l.status||'New'}</span>
+        <div style="font-size:11px;color:var(--text-m);margin-top:2px">${l.agent||''}</div>
+      </td>
+      <td onclick="event.stopPropagation()">
+        <div style="display:flex;flex-direction:column;gap:4px;min-width:160px">
+          <!-- Quick status advance -->
+          ${!isConverted&&!isLost&&nextStatus?`
+          <button class="btn btn-sm btn-primary" style="justify-content:center" onclick="quickLeadStatus('${l.id}','${nextStatus}',event)">
+            <i class="ti ti-arrow-right"></i> Mark ${nextStatus}
+          </button>`:''}
+          <div style="display:flex;gap:4px">
+            <!-- Convert to Deal -->
+            ${!isConverted&&!isLost?`<button class="btn btn-sm" style="flex:1;justify-content:center;background:#f0fdf4;color:#15803d;border-color:#86efac" onclick="event.stopPropagation();convertLead('${l.id}')">
+              <i class="ti ti-circle-check"></i> Convert
+            </button>`:''}
+            <!-- Disqualify -->
+            ${!isConverted&&!isLost?`<button class="btn btn-sm" style="flex:1;justify-content:center;background:#fef2f2;color:#b91c1c;border-color:#fca5a5" onclick="disqualifyLead('${l.id}',event)">
+              <i class="ti ti-user-off"></i> Disqualify
+            </button>`:''}
+            ${isConverted?`<span style="font-size:12px;color:var(--green);font-weight:600"><i class="ti ti-check-circle"></i> Converted</span>`:''}
+            ${isLost?`<span style="font-size:12px;color:var(--red);font-weight:600"><i class="ti ti-circle-x"></i> Lost</span>`:''}
+          </div>
+        </div>
+      </td>
+      <td onclick="event.stopPropagation()" style="width:40px">
+        <div class="actions">
+          <button class="btn btn-sm btn-ghost" onclick="openM('lead','${l.id}')"><i class="ti ti-edit"></i></button>
+          <button class="btn btn-sm btn-ghost btn-danger" onclick="delRecord('leads','${l.id}')"><i class="ti ti-trash"></i></button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 function filterLeads(status='',search=''){
@@ -3349,20 +3628,58 @@ function openLeadDetail(id){
 
 async function convertLead(id){
   const l=db.leads.find(x=>x.id===id);if(!l)return;
-  if(!confirm(`Convert lead "${l.company||l.contact}" to a deal?`))return;
+
+  // Find matching company in DB
+  let coId=l.company_id||'';
+  let coName=l.company||'';
+  if(!coId&&coName){
+    const match=db.companies.find(c=>c.name.toLowerCase()===coName.toLowerCase());
+    if(match){coId=match.id;}
+  }
+
+  // If no company found — create one
+  if(!coId&&coName){
+    const newCo={id:uid(),name:coName,status:'Prospect',phone:l.phone||'',created:today()};
+    db.companies.push(newCo);
+    await persist('companies',newCo);
+    coId=newCo.id;
+    showToast(`✅ New company created: ${coName}`);
+  }
+
   // Create deal from lead
-  const deal={id:uid(),company:l.company_id||'',model:l.product||'',stage:'Qualified',amount:l.budget||0,agent:l.agent||'',days:0,prob:30,created:today(),notes:`Converted from lead. ${l.notes||''}`};
+  const deal={
+    id:uid(),company_id:coId,company:coName,
+    model:l.product||'',stage:'Qualified',
+    amount:Number(l.budget)||0,currency:'USD',
+    agent:l.agent||currentUser?.name||'',
+    probability:25,days:0,
+    next_action:'Follow up after lead conversion',
+    next_date:'',
+    notes:`Converted from lead. Contact: ${l.contact||''}. Source: ${l.source||''}. ${l.notes||''}`.trim(),
+    created:today()
+  };
   db.deals.push(deal);
   await persist('deals',deal);
+
   // Mark lead converted
   l.status='Converted';l.converted_deal=deal.id;
   await persist('leads',{...l});
+
   // Log activity
-  const act={id:uid(),company_id:l.company_id||'',type:'note',text:`Lead converted to deal (${l.product||'no product'})`,date:today(),agent:currentUser?.name||''};
+  const act={id:uid(),company_id:coId,company:coName,deal_id:deal.id,
+    type:'note',note:`🎯 Lead converted to deal (${l.product||'no product'}) at Qualified stage`,
+    date:today(),agent:currentUser?.name||''};
   db.activities.push(act);await persist('activities',act);
+
+  updateCounts();filterLeads();
+  showToast(`🎉 Deal created: ${coName} — ${l.product||'Deal'}`);
+
+  // Auto-create first tasks
+  const task={id:uid(),deal_id:deal.id,company_id:coId,company:coName,
+    title:`Follow up with ${l.contact||coName} after lead conversion`,
+    agent:deal.agent,due:today(),priority:'high',done:false,created:today()};
+  db.tasks.push(task);await persist('tasks',task);
   updateCounts();
-  renderLeads();
-  alert('Lead converted! Deal created at Qualified stage.');
 }
 
 // ─── SEGMENTS ──────────────────────────────────────────────────────────────
