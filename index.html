@@ -1391,20 +1391,7 @@ function openCompanyDetail(id){
   const REAL_ACT_TYPES=['Call','Meeting','WhatsApp','Email','Proposal','Demo','Documents','Other'];
   const acts=db.activities
     .filter(x=>x.company_id===id)
-    .filter(x=>{
-      if(REAL_ACT_TYPES.includes(x.type))return true;
-      if(x.type==='note'||x.type==='note'){
-        const n=x.note||x.text||'';
-        // Hide auto-generated technical notes
-        if(n.startsWith('✏️'))return false;
-        if(n.startsWith('Updated:'))return false;
-        if(n.startsWith('Stage changed'))return false;
-        if(n.startsWith('🎯 Lead converted'))return false;
-        if(n.startsWith('🔔 Re-engage'))return false;
-        return n.length>0; // show manual notes
-      }
-      return false;
-    })
+    .filter(x=>REAL_ACT_TYPES.includes(x.type)||(x.type==='note'&&x.note&&!x.note.startsWith('✏️')&&!x.note.startsWith('Updated:')&&!x.note.startsWith('Stage changed')&&!x.note.startsWith('🎯 Lead converted')))
     .sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
   const hitachi=fleet.filter(f=>f.brand==='Hitachi').length;
   const pipeVal=deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').reduce((s,d)=>s+d.amount,0);
@@ -4654,15 +4641,7 @@ async function saveApiKey(btn){
 
 
 function getLocations(coId){
-  const fromSheets=(db.locations||[]).filter(l=>l.company_id===coId);
-  // Also check localStorage backup
-  try{
-    const lsLocs=JSON.parse(localStorage.getItem('locs_'+coId)||'[]');
-    // Merge - prefer Sheets, add any localStorage items not in Sheets
-    const sheetsIds=new Set(fromSheets.map(l=>l.id));
-    const extra=lsLocs.filter(l=>!sheetsIds.has(l.id));
-    return[...fromSheets,...extra];
-  }catch(e){return fromSheets;}
+  return(db.locations||[]).filter(l=>l.company_id===coId);
 }
 
 function renderLocations(coId){
@@ -4693,11 +4672,21 @@ function renderLocations(coId){
 }
 
 async function deleteLocation(locId,coId){
+  // Remove from db
   db.locations=(db.locations||[]).filter(l=>l.id!==locId);
   saveCache();
-  await remove('locations',locId);
+  // Remove from localStorage backup
+  try{
+    const lsKey='locs_'+coId;
+    const existing=JSON.parse(localStorage.getItem(lsKey)||'[]');
+    const filtered=existing.filter(l=>l.id!==locId);
+    localStorage.setItem(lsKey,JSON.stringify(filtered));
+  }catch(e){}
+  // Remove from Sheets
+  try{await remove('locations',locId);}catch(e){}
   const el=document.getElementById('co-locations-'+coId);
   if(el)el.innerHTML=renderLocations(coId);
+  showToast('📍 Location removed');
 }
 
 function openAddLocation(coId){
@@ -4828,23 +4817,11 @@ async function saveNewLocation(coId,btn){
   if(!db.locations)db.locations=[];
   db.locations.push(loc);
   saveCache();
-  // Also save to localStorage as backup
-  try{
-    const lsKey='locs_'+coId;
-    const existing=JSON.parse(localStorage.getItem(lsKey)||'[]');
-    existing.push(loc);
-    localStorage.setItem(lsKey,JSON.stringify(existing));
-  }catch(e){}
-  // Save to Sheets
-  try{
-    await persist('locations',loc);
-    showToast(`📍 Saved: ${name}`);
-  }catch(e){
-    showToast(`📍 Saved locally: ${name} (will sync when Sheets is ready)`);
-  }
+  await persist('locations',loc);
   btn.closest('div[style*=fixed]').remove();
   const el=document.getElementById('co-locations-'+coId);
   if(el)el.innerHTML=renderLocations(coId);
+  showToast(`📍 Saved: ${name}`);
 }
 
 
