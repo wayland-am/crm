@@ -653,7 +653,7 @@ const coDatalist=()=>db.companies.map(c=>`<option>${c.name}</option>`).join('');
 
 // ─── API ───────────────────────────────────────────────────────────────────
 const CACHE_KEY='wcrm_cache_v3';
-const SHEETS=['companies','contacts','deals','fleet','tasks','activities','agents','users','leads','automations','contracts'];
+const SHEETS=['companies','contacts','deals','fleet','tasks','activities','agents','users','leads','automations','contracts','locations'];
 let pendingSync=false;
 
 // ── Fetch with timeout + exponential retry ──────────────────────────────────
@@ -704,6 +704,7 @@ function normalizeDb(){
   });
   db.leads.forEach(l=>{l.created=l.created||today();l.phone=clean(l.phone);l.email=clean(l.email);});
   if(!db.contracts)db.contracts=[];
+  if(!db.locations)db.locations=[];
   db.contacts.forEach(c=>{c.phone=clean(c.phone);c.email=clean(c.email);});
   db.agents.forEach(a=>{a.phone=clean(a.phone);a.email=clean(a.email);});
   const STATUS_VALS=['Active','Prospect','Inactive','Negotiating','Partner'];
@@ -889,62 +890,163 @@ function renderDashboard(){
   const pipeVal=active.reduce((s,d)=>s+d.amount,0);
   const wonVal=won.reduce((s,d)=>s+d.amount,0);
   const openTasks=myT.filter(t=>!t.done);
-  const hitachi=db.fleet.filter(f=>f.brand==='Hitachi').length;
-  const fleetTotal=db.fleet.length;
-  const replOpp=db.fleet.filter(u=>u.condition==='Poor'||u.condition==='Fair').length;
+  const todayStr=today();
+
+  // ── Company status intelligence ──────────────────────────────────────────
+  const myCos=db.companies.filter(c=>
+    !currentUser||currentUser.role==='manager'||
+    c.assigned_agent===currentUser.name||
+    db.deals.some(d=>d.company_id===c.id&&d.agent===currentUser.name)
+  );
+
+  // Last activity per company
+  function lastActDate(coId){
+    const acts=db.activities.filter(a=>a.company_id===coId);
+    const dates=acts.map(a=>a.date||String(a.created||'').slice(0,10)).filter(Boolean).sort();
+    return dates[dates.length-1]||null;
+  }
+  // Next scheduled task per company
+  function nextTask(coId){
+    return myT.filter(t=>!t.done&&t.company_id===coId&&t.due).sort((a,b)=>a.due.localeCompare(b.due))[0]||null;
+  }
+
+  // Categorise companies
+  const hot=[],wakingSoon=[],dormant=[];
+  const twoWeeksLater=new Date();twoWeeksLater.setDate(twoWeeksLater.getDate()+14);
+  const twoWeeksStr=twoWeeksLater.toISOString().slice(0,10);
+
+  myCos.forEach(c=>{
+    const last=lastActDate(c.id);
+    const daysSince=last?Math.floor((new Date()-new Date(last))/(1000*60*60*24)):999;
+    const nt=nextTask(c.id);
+    const hasActiveDeal=db.deals.some(d=>d.company_id===c.id&&d.stage!=='Won'&&d.stage!=='Lost');
+
+    if(hasActiveDeal||daysSince<30){
+      hot.push({...c,daysSince,lastDate:last,nextTask:nt});
+    }else if(nt&&nt.due<=twoWeeksStr){
+      wakingSoon.push({...c,daysSince,lastDate:last,nextTask:nt});
+    }else if(nt&&nt.due>twoWeeksStr){
+      dormant.push({...c,daysSince,lastDate:last,nextTask:nt});
+    }else if(daysSince<90){
+      hot.push({...c,daysSince,lastDate:last,nextTask:nt});
+    }else{
+      dormant.push({...c,daysSince,lastDate:last,nextTask:nt});
+    }
+  });
+
+  hot.sort((a,b)=>a.daysSince-b.daysSince);
+  wakingSoon.sort((a,b)=>(a.nextTask?.due||'').localeCompare(b.nextTask?.due||''));
+  dormant.sort((a,b)=>(a.nextTask?.due||'zzz').localeCompare(b.nextTask?.due||'zzz'));
+
+  // ── My recent activity ───────────────────────────────────────────────────
+  const myActs=db.activities
+    .filter(a=>!currentUser||currentUser.role==='manager'||a.agent===currentUser.name)
+    .filter(a=>a.type!=='stage')
+    .sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''))
+    .slice(0,8);
 
   $('content').innerHTML=`
-  <div class="metrics">
-    <div class="metric"><div class="metric-label"><i class="ti ti-building" style="font-size:13px"></i>Companies</div><div class="metric-value">${db.companies.length}</div><div class="metric-sub">${db.contacts.length} contacts</div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-versions" style="font-size:13px"></i>Active Deals</div><div class="metric-value">${active.length}</div><div class="metric-sub">Pipeline: ${fmtUSD(pipeVal)}</div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-trophy" style="font-size:13px"></i>Closed (Won)</div><div class="metric-value">${fmtUSD(wonVal)}</div><div class="metric-sub up">${won.length} deals</div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-tractor" style="font-size:13px"></i>Fleet</div><div class="metric-value">${fleetTotal}</div><div class="metric-sub">${fleetTotal?Math.round(hitachi/fleetTotal*100):0}% Hitachi · <span class="dn">${replOpp} for replacement</span></div></div>
-    <div class="metric"><div class="metric-label"><i class="ti ti-checkbox" style="font-size:13px"></i>Open Tasks</div><div class="metric-value">${openTasks.length}</div><div class="metric-sub dn">${openTasks.filter(t=>t.priority==='high').length} urgent</div></div>
+  <!-- KPI STRIP -->
+  <div class="metrics" style="margin-bottom:18px">
+    <div class="metric"><div class="metric-label">Companies</div><div class="metric-value">${db.companies.length}</div><div class="metric-sub">${db.contacts.length} contacts</div></div>
+    <div class="metric"><div class="metric-label">Active Deals</div><div class="metric-value">${active.length}</div><div class="metric-sub">${fmtUSD(pipeVal)}</div></div>
+    <div class="metric"><div class="metric-label">Won Revenue</div><div class="metric-value" style="color:var(--green)">${fmtUSD(wonVal)}</div><div class="metric-sub">${won.length} deals</div></div>
+    <div class="metric"><div class="metric-label">Open Tasks</div><div class="metric-value" style="color:${openTasks.filter(t=>t.due<todayStr).length?'var(--red)':'var(--text)'}">${openTasks.length}</div><div class="metric-sub">${openTasks.filter(t=>t.due&&t.due<todayStr).length} overdue</div></div>
+    <div class="metric"><div class="metric-label">Fleet</div><div class="metric-value">${db.fleet.length}</div><div class="metric-sub">${db.fleet.filter(u=>u.brand==='Hitachi').length} Hitachi</div></div>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-bottom:18px">
-    <div class="card">
-      <div class="card-title">Hot Deals <span style="font-weight:400;font-size:12px;color:var(--text-m)">Negotiation + Proposal</span></div>
-      ${active.filter(d=>d.stage==='Negotiation'||d.stage==='Proposal').slice(0,6).map(d=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="openDealDetail('${d.id}')">
-          <div><div style="font-weight:700;font-size:13px">${d.company}</div><div style="font-size:12px;color:var(--text-m)">${d.model||'—'} · ${d.agent||'—'}</div></div>
-          <div style="text-align:right;flex-shrink:0;margin-left:12px"><div style="font-weight:800;font-size:14px">${fmtUSD(d.amount)}</div><span class="b ${stageBadge(d.stage)}">${d.stage}</span></div>
-        </div>`).join('') || '<div class="empty" style="padding:20px"><i class="ti ti-versions"></i>No hot deals</div>'}
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:18px">
+
+    <!-- 🔥 HOT — active / recent contact -->
+    <div class="card" style="border-top:3px solid #ef4444">
+      <div class="card-title" style="color:#b91c1c">🔥 Hot <span style="font-weight:400;font-size:11px;color:var(--text-m)">${hot.length} companies</span></div>
+      ${hot.slice(0,6).map(c=>`<div style="padding:8px 0;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="openCompanyDetail('${c.id}')">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:600;font-size:13px">${c.name}</span>
+          <span style="font-size:11px;color:${c.daysSince>14?'var(--amber)':'var(--green)'};font-weight:600">${c.daysSince===999?'—':c.daysSince+'d ago'}</span>
+        </div>
+        ${c.nextTask?`<div style="font-size:11px;color:var(--blue);margin-top:2px"><i class="ti ti-checkbox" style="font-size:10px"></i> ${c.nextTask.title} · ${dueFmt(c.nextTask.due)}</div>`:''}
+        ${db.deals.filter(d=>d.company_id===c.id&&d.stage!=='Won'&&d.stage!=='Lost').map(d=>`<span class="b ${stageBadge(d.stage)}" style="font-size:10px;margin-top:2px">${d.stage} · ${fmtUSD(d.amount)}</span>`).join('')}
+      </div>`).join('')||'<div class="empty" style="padding:16px"><i class="ti ti-flame"></i><div class="empty-title" style="font-size:12px">No active companies</div></div>'}
     </div>
-    <div class="card">
-      ${isManager?`<div class="card-title">Team</div>
-      ${AGENTS().slice(0,8).map((a,i)=>{
-        const ad=db.deals.filter(d=>d.agent===a);
-        const w=ad.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0);
-        return`<div style="display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--gray-100)">
-          <div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:28px;height:28px;font-size:10px">${ini(a)}</div><span style="font-size:13px;font-weight:500">${a}</span></div>
-          <div style="font-size:12px;color:var(--text-m)">${ad.length} deals${w?' · '+fmtUSD(w):''}</div>
-        </div>`;
-      }).join('')}`:`<div class="card-title">My Performance</div>
-      <div style="display:flex;flex-direction:column;gap:10px;padding:8px 0">
-        <div class="info-row"><span class="info-label">My Deals</span><strong>${myD.length}</strong></div>
-        <div class="info-row"><span class="info-label">Active Pipeline</span><strong>${fmtUSD(pipeVal)}</strong></div>
-        <div class="info-row"><span class="info-label">Won</span><strong style="color:var(--green)">${fmtUSD(wonVal)}</strong></div>
-        <div class="info-row"><span class="info-label">Open Tasks</span><strong>${openTasks.length}</strong></div>
+
+    <!-- 💤 WAKING SOON — task in next 2 weeks -->
+    <div class="card" style="border-top:3px solid #f59e0b">
+      <div class="card-title" style="color:#b45309">🌅 Waking up soon <span style="font-weight:400;font-size:11px;color:var(--text-m)">${wakingSoon.length} companies</span></div>
+      ${wakingSoon.slice(0,6).map(c=>`<div style="padding:8px 0;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="openCompanyDetail('${c.id}')">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:600;font-size:13px">${c.name}</span>
+          <span class="b b-amber" style="font-size:10px">${c.nextTask?.due||''}</span>
+        </div>
+        <div style="font-size:11px;color:var(--text-m);margin-top:2px"><i class="ti ti-bell" style="font-size:10px;color:var(--amber)"></i> ${c.nextTask?.title||''}</div>
+        <div style="font-size:10px;color:var(--text-l)">Silent ${c.daysSince}d · ${c.industry||''}</div>
+      </div>`).join('')||`<div style="text-align:center;padding:24px;color:var(--text-m)">
+        <div style="font-size:28px;margin-bottom:8px">😴</div>
+        <div style="font-size:12px">No companies waking up soon</div>
+        <div style="font-size:11px;color:var(--text-l);margin-top:4px">Schedule follow-ups to see them here</div>
       </div>`}
     </div>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px">
-    <div class="card">
-      <div class="card-title">Urgent Tasks</div>
-      ${openTasks.filter(t=>t.priority==='high').slice(0,5).map(t=>`
-        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100)">
-          <div class="cb" onclick="quickDoneTask('${t.id}')"></div>
-          <div style="flex:1"><div style="font-size:13px;font-weight:500">${t.title}</div><div style="font-size:11px;color:var(--text-m)">${t.company||''} · ${t.agent||''}</div></div>
-          <span style="font-size:11px">${dueFmt(t.due)}</span>
-        </div>`).join('') || '<div style="text-align:center;padding:16px;color:var(--text-m);font-size:13px">No urgent tasks</div>'}
+
+    <!-- 😴 DORMANT — sleeping clients -->
+    <div class="card" style="border-top:3px solid #6b7280">
+      <div class="card-title" style="color:var(--text-m)">😴 Dormant <span style="font-weight:400;font-size:11px;color:var(--text-m)">${dormant.length} companies</span></div>
+      ${dormant.slice(0,6).map(c=>`<div style="padding:8px 0;border-bottom:1px solid var(--gray-100);cursor:pointer;opacity:.8" onclick="openCompanyDetail('${c.id}')">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:600;font-size:13px">${c.name}</span>
+          <span style="font-size:11px;color:var(--text-l)">${c.nextTask?c.nextTask.due:'no follow-up'}</span>
+        </div>
+        <div style="font-size:10px;color:var(--text-l);margin-top:2px">${c.nextTask?`⏰ ${c.nextTask.title}`:`Silent ${c.daysSince===999?'always':c.daysSince+'d'} · ${c.industry||''}`}</div>
+      </div>`).join('')||'<div style="text-align:center;padding:24px;color:var(--text-m);font-size:12px">All clients are active 🎉</div>'}
     </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+    <!-- My recent activity -->
     <div class="card">
-      <div class="card-title">Recent Companies</div>
-      ${db.companies.slice(-5).reverse().map((c,i)=>`
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="openCompanyDetail('${c.id}')">
-          <div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:28px;height:28px;font-size:10px">${ini(c.name)}</div><div><div style="font-size:13px;font-weight:600">${c.name}</div><div style="font-size:11px;color:var(--text-m)">${c.industry||'—'}</div></div></div>
-          <span class="b ${statusBadge(c.status)}">${c.status||'—'}</span>
-        </div>`).join('') || '<div style="text-align:center;padding:16px;color:var(--text-m);font-size:13px">No companies</div>'}
+      <div class="card-title">Recent Activity
+        <span style="font-weight:400;font-size:11px;color:var(--text-m)">My last interactions</span>
+      </div>
+      ${myActs.length?myActs.map(a=>{
+        const co=db.companies.find(x=>x.id===a.company_id);
+        const actIcons={Call:'ti-phone',Meeting:'ti-calendar-event',WhatsApp:'ti-brand-whatsapp',Email:'ti-mail',Proposal:'ti-file-text',Demo:'ti-eye',note:'ti-note'};
+        const actColors={Call:'#3b82f6',Meeting:'#8b5cf6',WhatsApp:'#22c55e',Email:'#14b8a6',Proposal:'#f59e0b',note:'#6b7280'};
+        const col=actColors[a.type]||'#6b7280';
+        const d=a.date||String(a.created||'').slice(0,10);
+        return`<div style="display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="${co?`openCompanyDetail('${co.id}')`:''}">
+          <div style="width:24px;height:24px;border-radius:50%;background:${col}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
+            <i class="ti ${actIcons[a.type]||'ti-dots'}" style="font-size:11px;color:${col}"></i>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;justify-content:space-between">
+              <span style="font-size:12px;font-weight:600">${a.company||'—'}</span>
+              <span style="font-size:11px;color:var(--text-l);flex-shrink:0;margin-left:8px">${d}</span>
+            </div>
+            <div style="font-size:11px;color:var(--text-m);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.type}${a.note?' — '+a.note:''}</div>
+            ${a.sentiment?`<span style="font-size:11px">${{Positive:'😊',Neutral:'😐',Negative:'😟',Interested:'🔥',Hesitant:'🤔'}[a.sentiment]||''}</span>`:''}
+          </div>
+        </div>`;
+      }).join(''):`<div class="empty" style="padding:24px"><i class="ti ti-clock"></i><div class="empty-title">No recent activity</div></div>`}
+    </div>
+
+    <!-- Urgent tasks + Hot deals -->
+    <div style="display:flex;flex-direction:column;gap:18px">
+      <div class="card">
+        <div class="card-title">Urgent Tasks</div>
+        ${openTasks.filter(t=>t.priority==='high').slice(0,4).map(t=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--gray-100)">
+            <div class="cb" onclick="quickDoneTask('${t.id}')"></div>
+            <div style="flex:1;min-width:0"><div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</div><div style="font-size:11px;color:var(--text-m)">${t.company||''}</div></div>
+            <span style="font-size:11px;flex-shrink:0">${dueFmt(t.due)}</span>
+          </div>`).join('')||'<div style="text-align:center;padding:12px;color:var(--text-m);font-size:12px">✓ No urgent tasks</div>'}
+      </div>
+      <div class="card">
+        <div class="card-title">Hot Deals</div>
+        ${active.filter(d=>d.stage==='Negotiation'||d.stage==='Proposal').slice(0,4).map(d=>`
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--gray-100);cursor:pointer" onclick="openDealDetail('${d.id}')">
+            <div><div style="font-size:12px;font-weight:600">${d.company}</div><div style="font-size:11px;color:var(--text-m)">${d.model||'—'}</div></div>
+            <div style="text-align:right"><div style="font-weight:700;font-size:13px">${fmtUSD(d.amount)}</div><span class="b ${stageBadge(d.stage)}" style="font-size:10px">${d.stage}</span></div>
+          </div>`).join('')||'<div style="text-align:center;padding:12px;color:var(--text-m);font-size:12px">No hot deals</div>'}
+      </div>
     </div>
   </div>`;
 }
@@ -2316,7 +2418,13 @@ function openM(type,id=null,coId=null,dealId=null){
           </div>
         </div>
       </div>
-      <div class="fg"><label class="fl">Summary — what was discussed</label><textarea class="fc" id="f-note" rows="3" placeholder="Topics covered, client's situation, questions raised..."></textarea></div>
+      <div class="fg"><label class="fl">Summary — what was discussed</label>
+        <textarea class="fc" id="f-note" rows="3" placeholder="Topics covered, client's situation, questions raised..."></textarea>
+        <button type="button" class="btn btn-sm" style="margin-top:6px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none" onclick="aiAnalyzeNote()">
+          <i class="ti ti-sparkles"></i> AI: Parse note → create tasks
+        </button>
+        <div id="ai-note-result" style="margin-top:8px"></div>
+      </div>
       <div class="fg"><label class="fl">Outcome / Agreement</label><textarea class="fc" id="f-outcome" rows="2" placeholder="What was agreed, client's decision, objections..."></textarea></div>
       <div class="fg"><label class="fl">Client Sentiment</label>
         <div style="display:flex;gap:8px;margin-top:4px">
@@ -3177,6 +3285,21 @@ function renderUsers(){
   const inviteUrl=`${location.origin}${location.pathname}?api=${encodeURIComponent(API)}`;
 
   $('content').innerHTML=`
+  <!-- AI API KEY -->
+  <div class="card" style="margin-bottom:16px;background:#f5f3ff;border-color:#c4b5fd">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <div style="font-weight:700;font-size:14px;color:#7c3aed;margin-bottom:4px"><i class="ti ti-sparkles"></i> Claude AI Integration</div>
+        <div style="font-size:12px;color:#6d28d9;margin-bottom:4px">Enables AI note analysis — automatically creates tasks and contacts from your sales notes.</div>
+        <div style="font-size:11px;color:#7c3aed">Key stored securely in Google Apps Script. Never visible in code or Sheets.</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+        <button class="btn" style="background:#7c3aed;color:#fff;border:none" onclick="openApiKeySetup()"><i class="ti ti-key"></i>Set API Key</button>
+        <a href="https://console.anthropic.com" target="_blank" class="btn btn-sm" style="text-align:center">Get key →</a>
+      </div>
+    </div>
+  </div>
+
   <!-- INVITE LINK -->
   <div class="card" style="margin-bottom:16px;background:var(--blue-lt);border-color:#93c5fd">
     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
@@ -3667,68 +3790,93 @@ function openLeadDetail(id){
 async function convertLead(id){
   const l=db.leads.find(x=>x.id===id);if(!l)return;
 
-  // Find matching company in DB
+  // Find or create company
   let coId=l.company_id||'';
   let coName=l.company||'';
   if(!coId&&coName){
-    const match=db.companies.find(c=>c.name.toLowerCase()===coName.toLowerCase());
-    if(match){coId=match.id;}
+    const match=db.companies.find(c=>multiSearch(c.name,coName)&&c.name.toLowerCase()===coName.toLowerCase());
+    if(match)coId=match.id;
   }
-
-  // If no company found — create one
   if(!coId&&coName){
-    const newCo={id:uid(),name:coName,status:'Prospect',phone:l.phone||'',created:today()};
+    // Create company WITHOUT the contact's phone
+    const newCo={id:uid(),name:coName,status:'Prospect',created:today()};
     db.companies.push(newCo);
     await persist('companies',newCo);
     coId=newCo.id;
     showToast(`✅ New company created: ${coName}`);
   }
 
-  // Create deal from lead
+  // Create contact person if name provided
+  let contactId='';
+  if(l.contact&&coId){
+    const parts=l.contact.trim().split(' ');
+    const newContact={
+      id:uid(),company_id:coId,company:coName,
+      first_name:parts[0]||'',
+      last_name:parts.slice(1).join(' ')||'',
+      phone:l.phone||'',
+      email:l.email||'',
+      created:today()
+    };
+    // Check not duplicate
+    const existing=db.contacts.find(c=>
+      c.company_id===coId&&
+      c.first_name.toLowerCase()===newContact.first_name.toLowerCase()
+    );
+    if(!existing){
+      db.contacts.push(newContact);
+      await persist('contacts',newContact);
+      contactId=newContact.id;
+    } else {
+      contactId=existing.id;
+    }
+  }
+
+  // Create deal
   const deal={
     id:uid(),company_id:coId,company:coName,
+    contact_id:contactId,
+    contact:l.contact||'',
     model:l.product||'',stage:'Qualified',
     amount:Number(l.budget)||0,currency:'USD',
     agent:l.agent||currentUser?.name||'',
     probability:25,days:0,
     next_action:'Follow up after lead conversion',
-    next_date:'',
-    notes:`Converted from lead. Contact: ${l.contact||''}. Source: ${l.source||''}. ${l.notes||''}`.trim(),
+    notes:`Converted from lead. Source: ${l.source||''}. ${l.notes||''}`.trim(),
     created:today()
   };
   db.deals.push(deal);
   await persist('deals',deal);
 
   // Mark lead converted
-  l.status='Converted';l.converted_deal=deal.id;
+  l.status='Converted';l.converted_deal=deal.id;l.company_id=coId;
   await persist('leads',{...l});
 
   // Log activity
   const act={id:uid(),company_id:coId,company:coName,deal_id:deal.id,
-    type:'note',note:`🎯 Lead converted to deal (${l.product||'no product'}) at Qualified stage`,
+    type:'note',note:`🎯 Lead converted to deal (${l.product||'no product'}) at Qualified stage${l.contact?' · Contact: '+l.contact:''}`,
     date:today(),agent:currentUser?.name||''};
   db.activities.push(act);await persist('activities',act);
 
-  updateCounts();filterLeads();
+  // Create follow-up task
+  const task={id:uid(),deal_id:deal.id,company_id:coId,company:coName,
+    title:`Call ${l.contact||coName} — follow up after lead conversion`,
+    agent:deal.agent,due:today(),priority:'high',done:false,created:today()};
+  db.tasks.push(task);await persist('tasks',task);
 
-  // Clickable toast — navigate to company
+  updateCounts();filterLeads();saveCache();
+
+  // Clickable toast
   const t=document.createElement('div');
-  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a2332;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);display:flex;align-items:center;gap:12px;cursor:pointer';
+  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a2332;color:#fff;padding:12px 20px;border-radius:12px;font-size:13px;font-weight:500;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,.3);display:flex;align-items:center;gap:12px;cursor:pointer;white-space:nowrap';
   t.innerHTML=`<i class="ti ti-circle-check" style="color:#4ade80;font-size:18px"></i>
     <div>
-      <div>🎉 Deal created: ${coName} — ${l.product||'Deal'}</div>
+      <div>🎉 Converted: ${coName}${l.contact?' · '+l.contact+' added as contact':''}</div>
       <div style="font-size:11px;opacity:.7;margin-top:2px">Click to open company →</div>
     </div>`;
   t.onclick=()=>{t.remove();openCompanyDetail(coId);};
   document.body.appendChild(t);
   setTimeout(()=>t.remove(),6000);
-
-  // Auto-create first tasks
-  const task={id:uid(),deal_id:deal.id,company_id:coId,company:coName,
-    title:`Follow up with ${l.contact||coName} after lead conversion`,
-    agent:deal.agent,due:today(),priority:'high',done:false,created:today()};
-  db.tasks.push(task);await persist('tasks',task);
-  updateCounts();
 }
 
 // ─── SEGMENTS ──────────────────────────────────────────────────────────────
@@ -4261,41 +4409,250 @@ function renderContracts(){
 }
 
 
-function getLocations(coId){
-  try{const raw=localStorage.getItem('locs_'+coId);return raw?JSON.parse(raw):[];}catch{return[];}
+// ─── AI NOTE ANALYSIS ──────────────────────────────────────────────────────
+async function aiAnalyzeNote(){
+  const note=document.getElementById('f-note')?.value?.trim();
+  if(!note||note.length<10){alert('Write a note first (at least a few words)');return;}
+  const resultEl=document.getElementById('ai-note-result');
+  if(!resultEl)return;
+
+  // Check API key configured
+  const hasKey=await apiCall({action:'hasApiKey'}).catch(()=>null);
+  if(!hasKey?.has){
+    resultEl.innerHTML=`<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:12px;font-size:12px">
+      <div style="font-weight:700;color:#b45309;margin-bottom:6px">⚙️ Anthropic API key not set</div>
+      <div style="color:#92400e;margin-bottom:10px">To use AI note analysis, add your API key once in Settings.</div>
+      <button class="btn btn-sm btn-primary" onclick="openApiKeySetup()"><i class="ti ti-key"></i>Set API Key</button>
+    </div>`;
+    return;
+  }
+
+  const coId=cur.company;
+  const co=coId?db.companies.find(x=>x.id===coId):null;
+  const contacts=coId?db.contacts.filter(c=>c.company_id===coId):[];
+
+  resultEl.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:10px;background:var(--blue-lt);border-radius:8px;font-size:12px;color:var(--blue)">
+    <div style="width:16px;height:16px;border:2px solid var(--blue);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;flex-shrink:0"></div>
+    Claude is reading your note...
+  </div>`;
+
+  const prompt=`You are a CRM assistant for a heavy equipment dealer (Hitachi, Epiroc, Normet).
+Analyze this sales note and extract actionable items.
+
+Company: ${co?.name||'Unknown'}
+Industry: ${co?.industry||''}
+Known contacts: ${contacts.map(c=>c.first_name+' '+c.last_name+(c.position?' ('+c.position+')':'')).join(', ')||'none'}
+Today: ${today()}
+
+Note: "${note}"
+
+Respond with ONLY valid JSON, no markdown, no explanation:
+{
+  "tasks": [
+    {"title": "task title", "due": "YYYY-MM-DD or null", "priority": "high|medium|low", "note": "why"}
+  ],
+  "next_action": "what to do next (one line)",
+  "next_date": "YYYY-MM-DD or null",
+  "sentiment": "Positive|Neutral|Negative|Interested|Hesitant",
+  "new_contacts": [
+    {"name": "full name", "position": "role if mentioned"}
+  ],
+  "snooze_until": "YYYY-MM-DD or null",
+  "snooze_reason": "why dormant if applicable",
+  "key_insight": "one sentence summary of the most important thing"
+}`;
+
+  try{
+    // Call through Apps Script proxy — API key stays on server
+    const result=await apiCall({action:'claude',prompt});
+    const text=result?.text||'{}';
+    let parsed;
+    try{parsed=JSON.parse(text.replace(/```json|```/g,'').trim());}
+    catch(e){parsed={key_insight:text.slice(0,200),tasks:[]};}
+
+    resultEl.innerHTML=`<div style="background:var(--sur);border:1px solid #c4b5fd;border-radius:10px;padding:14px;font-size:12px">
+      <div style="font-weight:700;color:#7c3aed;margin-bottom:10px"><i class="ti ti-sparkles"></i> AI Analysis</div>
+
+      ${parsed.key_insight?`<div style="background:#f5f3ff;border-left:3px solid #7c3aed;padding:8px 12px;border-radius:0 6px 6px 0;margin-bottom:10px;font-size:13px;color:#4c1d95">${parsed.key_insight}</div>`:''}
+
+      ${parsed.tasks?.length?`<div style="margin-bottom:10px">
+        <div style="font-weight:600;margin-bottom:6px">📋 Suggested Tasks:</div>
+        ${parsed.tasks.map((t,i)=>`<div style="display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-100)">
+          <input type="checkbox" checked id="ai-task-${i}" style="margin-top:2px;flex-shrink:0">
+          <div style="flex:1">
+            <div style="font-weight:500">${t.title}</div>
+            <div style="color:var(--text-m);font-size:11px">${t.due?'📅 '+t.due+' · ':''} ${t.priority==='high'?'🔴 High':t.priority==='medium'?'🟡 Medium':'🟢 Low'}</div>
+            ${t.note?`<div style="color:var(--text-l);font-style:italic;font-size:11px">${t.note}</div>`:''}
+          </div>
+        </div>`).join('')}
+      </div>`:''}
+
+      ${parsed.sentiment?`<div style="margin-bottom:8px"><span style="font-weight:600">Sentiment:</span> <span>${{Positive:'😊 Positive',Neutral:'😐 Neutral',Negative:'😟 Negative',Interested:'🔥 Interested',Hesitant:'🤔 Hesitant'}[parsed.sentiment]||parsed.sentiment}</span></div>`:''}
+
+      ${parsed.next_action?`<div style="margin-bottom:8px"><span style="font-weight:600">→ Next:</span> ${parsed.next_action}${parsed.next_date?' · <strong>'+parsed.next_date+'</strong>':''}</div>`:''}
+
+      ${parsed.snooze_until?`<div style="background:#fef3c7;border-radius:6px;padding:8px 10px;margin-bottom:8px">
+        <span style="font-weight:600;color:#b45309">💤 Snooze until ${parsed.snooze_until}</span>
+        ${parsed.snooze_reason?`<div style="color:#92400e;font-size:11px">${parsed.snooze_reason}</div>`:''}
+      </div>`:''}
+
+      ${parsed.new_contacts?.length?`<div style="margin-bottom:8px">
+        <span style="font-weight:600">👤 New contacts:</span>
+        ${parsed.new_contacts.map(c=>`<span style="background:var(--gray-100);padding:2px 8px;border-radius:12px;margin-left:4px;font-size:11px">${c.name}${c.position?' ('+c.position+')':''}</span>`).join('')}
+      </div>`:''}
+
+      <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;margin-top:10px"
+        onclick="applyAiResults('${encodeURIComponent(JSON.stringify(parsed))}')">
+        <i class="ti ti-check"></i> Apply selected tasks & suggestions
+      </button>
+    </div>`;
+
+    // Pre-fill form fields
+    if(parsed.sentiment){
+      const sentEl=document.getElementById('f-sentiment');
+      if(sentEl)sentEl.value=parsed.sentiment;
+      document.querySelectorAll('#mbody label[onclick^="setSentiment"]').forEach(l=>{
+        const s=l.getAttribute('onclick').match(/setSentiment\('(\w+)'/)?.[1];
+        if(s===parsed.sentiment){l.style.borderColor='var(--blue)';l.style.background='var(--blue-lt)';l.style.fontWeight='700';}
+      });
+    }
+    if(parsed.next_action){const el=document.getElementById('f-next-step');if(el)el.value=parsed.next_action;}
+    if(parsed.next_date){const el=document.getElementById('f-next-date');if(el)el.value=parsed.next_date;}
+
+  }catch(e){
+    resultEl.innerHTML=`<div style="color:var(--red);font-size:12px;padding:8px;background:#fef2f2;border-radius:6px">
+      ⚠ ${e.message}
+    </div>`;
+  }
 }
-function saveLocations(coId,locs){
-  try{localStorage.setItem('locs_'+coId,JSON.stringify(locs));}catch{}
-  // Also persist to activities as a note for cross-device sync
+
+async function applyAiResults(encodedJson){
+  try{
+    const parsed=JSON.parse(decodeURIComponent(encodedJson));
+    const coId=cur.company;
+    const co=coId?db.companies.find(x=>x.id===coId):null;
+    let created=0;
+
+    if(parsed.tasks){
+      for(let i=0;i<parsed.tasks.length;i++){
+        const chk=document.getElementById('ai-task-'+i);
+        if(chk&&!chk.checked)continue;
+        const t=parsed.tasks[i];
+        const task={id:uid(),company_id:coId||'',company:co?.name||'',deal_id:cur.deal||'',
+          title:t.title,agent:currentUser?.name||'',due:t.due||'',
+          priority:t.priority||'medium',done:false,created:today()};
+        db.tasks.push(task);await persist('tasks',task);created++;
+      }
+    }
+
+    if(parsed.new_contacts?.length&&coId){
+      for(const nc of parsed.new_contacts){
+        const parts=nc.name.trim().split(' ');
+        const newC={id:uid(),company_id:coId,company:co?.name||'',
+          first_name:parts[0]||'',last_name:parts.slice(1).join(' ')||'',
+          position:nc.position||'',created:today()};
+        db.contacts.push(newC);await persist('contacts',newC);
+      }
+    }
+
+    if(parsed.snooze_until&&coId){
+      const snoozeTask={id:uid(),company_id:coId,company:co?.name||'',
+        title:`🔔 Re-engage: ${parsed.snooze_reason||'Scheduled follow-up'}`,
+        agent:currentUser?.name||'',due:parsed.snooze_until,
+        priority:'medium',done:false,created:today()};
+      db.tasks.push(snoozeTask);await persist('tasks',snoozeTask);created++;
+    }
+
+    updateCounts();saveCache();
+    document.getElementById('ai-note-result').innerHTML=`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:10px;font-size:12px;color:#15803d;font-weight:600">
+      ✅ Applied: ${created} task${created!==1?'s':''} created${parsed.new_contacts?.length?' · '+parsed.new_contacts.length+' contact(s) added':''}${parsed.snooze_until?' · 💤 Snooze scheduled':''}
+    </div>`;
+  }catch(e){alert('Error: '+e.message);}
+}
+
+// API Key setup modal
+function openApiKeySetup(){
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML=`<div style="background:var(--sur);border-radius:12px;padding:28px;width:440px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="font-size:17px;font-weight:700;margin-bottom:6px">🔑 Anthropic API Key</div>
+    <div style="font-size:13px;color:var(--text-m);margin-bottom:20px">
+      Key is stored securely in Google Apps Script — never in the code or Sheets.
+      Get your key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--blue)">console.anthropic.com</a>
+    </div>
+    <div style="margin-bottom:16px">
+      <label style="font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:6px">API Key</label>
+      <input class="fc" id="api-key-input" type="password" placeholder="sk-ant-api03-..." style="font-family:monospace;font-size:13px">
+      <div style="font-size:11px;color:var(--text-m);margin-top:4px">Starts with <code>sk-ant-</code></div>
+    </div>
+    <div id="api-key-status" style="min-height:20px;margin-bottom:12px;font-size:12px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveApiKey(this)"><i class="ti ti-key"></i>Save Key</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+  setTimeout(()=>document.getElementById('api-key-input')?.focus(),100);
+}
+
+async function saveApiKey(btn){
+  const key=(document.getElementById('api-key-input')?.value||'').trim();
+  if(!key.startsWith('sk-ant-')){
+    document.getElementById('api-key-status').innerHTML='<span style="color:var(--red)">⚠ Key must start with sk-ant-</span>';
+    return;
+  }
+  btn.disabled=true;btn.textContent='Saving...';
+  const status=document.getElementById('api-key-status');
+  try{
+    await apiCall({action:'setApiKey',key});
+    status.innerHTML='<span style="color:var(--green)">✅ Key saved! AI analysis is now available.</span>';
+    btn.textContent='Saved';
+    setTimeout(()=>btn.closest('div[style*=fixed]').remove(),1500);
+  }catch(e){
+    status.innerHTML=`<span style="color:var(--red)">⚠ Error: ${e.message}</span>`;
+    btn.disabled=false;btn.textContent='Save Key';
+  }
+}
+
+
+function getLocations(coId){
+  return(db.locations||[]).filter(l=>l.company_id===coId);
 }
 
 function renderLocations(coId){
   const locs=getLocations(coId);
-  if(!locs.length)return`<div style="font-size:12px;color:var(--text-m);text-align:center;padding:12px 0">No locations added yet.<br>Add a quarry, site or plant.</div>`;
-  const colors=['#185FA5','#1D9E75','#f59e0b','#e53e3e','#7F77DD'];
+  const typeIcon={Quarry:'⛏','Construction site':'🏗','Processing plant':'🏭',Warehouse:'📦',Office:'🏢',Other:'📍'};
   return`
-    <!-- Map -->
-    <div style="height:140px;border-radius:8px;overflow:hidden;margin-bottom:10px;background:#e8f0fe;position:relative">
-      <iframe
-        src="https://maps.google.com/maps?q=${locs[0].lat},${locs[0].lng}&z=10&output=embed&markers=${locs.map(l=>l.lat+','+l.lng).join('|')}"
-        style="width:100%;height:100%;border:none" loading="lazy" title="Site locations map"
-        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    ${locs.length?`
+    <div style="height:150px;border-radius:8px;overflow:hidden;margin-bottom:10px;background:var(--gray-100)">
+      <iframe src="https://maps.google.com/maps?q=${locs[0].lat},${locs[0].lng}&z=${locs.length>1?9:13}&output=embed"
+        style="width:100%;height:100%;border:none" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="Site map"></iframe>
     </div>
-    <!-- Location list -->
-    ${locs.map((l,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-100);font-size:12px">
-      <div style="width:10px;height:10px;border-radius:50%;background:${colors[i%colors.length]};flex-shrink:0"></div>
+    ${locs.map(l=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--gray-100);font-size:12px">
+      <span style="font-size:16px">${typeIcon[l.type]||'📍'}</span>
       <div style="flex:1;min-width:0">
         <div style="font-weight:600">${l.name}</div>
-        <div style="font-size:11px;color:var(--text-m)">${l.type||''} · ${l.lat.toFixed(4)}, ${l.lng.toFixed(4)}</div>
+        <div style="font-size:11px;color:var(--text-m)">${l.type||''} · ${Number(l.lat).toFixed(4)}, ${Number(l.lng).toFixed(4)}</div>
+        ${l.notes?`<div style="font-size:11px;color:var(--text-m);font-style:italic">${l.notes}</div>`:''}
       </div>
-      <button onclick="deleteLocation('${coId}',${i})" style="background:none;border:none;cursor:pointer;color:var(--text-l);font-size:14px" title="Remove"><i class="ti ti-x"></i></button>
+      <a href="https://maps.google.com/?q=${l.lat},${l.lng}" target="_blank" class="btn btn-xs btn-ghost" title="Open in Google Maps"><i class="ti ti-map-2"></i></a>
+      <button onclick="deleteLocation('${l.id}','${coId}')" style="background:none;border:none;cursor:pointer;color:var(--text-l);font-size:14px;padding:2px"><i class="ti ti-x"></i></button>
     </div>`).join('')}
-    <button class="btn btn-sm" style="width:100%;margin-top:8px;justify-content:center" onclick="openAddLocation('${coId}')"><i class="ti ti-plus"></i>Add location</button>`;
+    <button class="btn btn-sm" style="width:100%;margin-top:8px;justify-content:center" onclick="openAddLocation('${coId}')">
+      <i class="ti ti-plus"></i>Add location
+    </button>`
+    :`<div style="font-size:12px;color:var(--text-m);text-align:center;padding:12px 0">
+      No locations added yet.<br>Add a quarry, site or plant.
+    </div>`}`;
 }
 
-function deleteLocation(coId,idx){
-  const locs=getLocations(coId);locs.splice(idx,1);saveLocations(coId,locs);
-  const el=document.getElementById('co-locations-'+coId);if(el)el.innerHTML=renderLocations(coId);
+async function deleteLocation(locId,coId){
+  db.locations=(db.locations||[]).filter(l=>l.id!==locId);
+  saveCache();
+  await remove('locations',locId);
+  const el=document.getElementById('co-locations-'+coId);
+  if(el)el.innerHTML=renderLocations(coId);
 }
 
 function openAddLocation(coId){
@@ -4303,132 +4660,136 @@ function openAddLocation(coId){
   const overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:center;justify-content:center';
   overlay.innerHTML=`
-    <div style="background:var(--sur);border-radius:12px;padding:24px;width:400px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-      <div style="font-size:16px;font-weight:700;margin-bottom:16px">Add Site Location — ${co?.name||''}</div>
-      <div style="margin-bottom:12px">
-        <label style="font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:4px">📸 Upload photo with GPS (EXIF)</label>
-        <input type="file" accept="image/*" id="loc-photo" onchange="extractGPS(this,'loc-lat','loc-lng','loc-name-auto')" style="font-size:12px;width:100%">
-        <div style="font-size:11px;color:var(--text-m);margin-top:4px">GPS coordinates will be extracted automatically from photo metadata</div>
+    <div style="background:var(--sur);border-radius:12px;padding:24px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto">
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px">Add Site Location</div>
+      <div style="font-size:12px;color:var(--text-m);margin-bottom:16px">${co?.name||''}</div>
+      <div style="background:var(--blue-lt);border:1.5px dashed #93c5fd;border-radius:8px;padding:14px;margin-bottom:14px;text-align:center;cursor:pointer" onclick="document.getElementById('loc-photo-inp').click()">
+        <i class="ti ti-camera" style="font-size:24px;color:var(--blue);display:block;margin-bottom:6px"></i>
+        <div style="font-size:13px;font-weight:600;color:var(--blue)">Upload photo with GPS</div>
+        <div style="font-size:11px;color:var(--text-m);margin-top:2px">Coordinates extracted automatically from photo</div>
+        <input type="file" accept="image/*" id="loc-photo-inp" style="display:none" onchange="extractGPS(this,'loc-lat','loc-lng','loc-gps-status')">
       </div>
+      <div id="loc-gps-status" style="font-size:12px;margin-bottom:12px;min-height:16px;text-align:center"></div>
+      <div style="font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:6px">Or enter coordinates manually</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-        <div><label style="font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:4px">Latitude</label>
-          <input class="fc" id="loc-lat" placeholder="40.1234" type="number" step="0.0001"></div>
-        <div><label style="font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:4px">Longitude</label>
-          <input class="fc" id="loc-lng" placeholder="44.5678" type="number" step="0.0001"></div>
+        <div><label style="font-size:11px;color:var(--text-m);display:block;margin-bottom:3px">Latitude</label>
+          <input class="fc" id="loc-lat" placeholder="40.1234" type="number" step="any"></div>
+        <div><label style="font-size:11px;color:var(--text-m);display:block;margin-bottom:3px">Longitude</label>
+          <input class="fc" id="loc-lng" placeholder="44.5678" type="number" step="any"></div>
       </div>
-      <div style="margin-bottom:12px">
-        <label style="font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:4px">Location name</label>
-        <input class="fc" id="loc-name-auto" placeholder="Quarry A, Construction site...">
+      <div style="margin-bottom:10px">
+        <label style="font-size:11px;color:var(--text-m);display:block;margin-bottom:3px">Location name *</label>
+        <input class="fc" id="loc-name" placeholder="Quarry A, Construction site...">
       </div>
-      <div style="margin-bottom:16px">
-        <label style="font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:4px">Type</label>
-        <select class="fc" id="loc-type">
-          ${['Quarry','Construction site','Processing plant','Warehouse','Office','Other'].map(t=>`<option>${t}</option>`).join('')}
-        </select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+        <div><label style="font-size:11px;color:var(--text-m);display:block;margin-bottom:3px">Type</label>
+          <select class="fc" id="loc-type">${['Quarry','Construction site','Processing plant','Warehouse','Office','Other'].map(t=>`<option>${t}</option>`).join('')}</select></div>
+        <div><label style="font-size:11px;color:var(--text-m);display:block;margin-bottom:3px">Notes</label>
+          <input class="fc" id="loc-notes" placeholder="Access road, gate code..."></div>
       </div>
-      <div id="loc-gps-status" style="font-size:12px;color:var(--green);margin-bottom:12px;min-height:16px"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
         <button class="btn" onclick="this.closest('div[style*=fixed]').remove()">Cancel</button>
-        <button class="btn btn-primary" onclick="saveNewLocation('${coId}',this)"><i class="ti ti-map-pin"></i>Save Location</button>
+        <button class="btn btn-primary" id="loc-save-btn" onclick="saveNewLocation('${coId}',this)"><i class="ti ti-map-pin"></i>Save Location</button>
       </div>
     </div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
 }
 
-function extractGPS(input,latId,lngId,nameId){
+function extractGPS(input,latId,lngId,statusId){
   const file=input.files[0];if(!file)return;
-  const status=$('loc-gps-status');if(status)status.textContent='Reading GPS from photo...';
+  const status=document.getElementById(statusId);
+  if(status){status.textContent='📷 Reading GPS...';status.style.color='var(--blue)';}
   const reader=new FileReader();
-  reader.onload=function(e){
-    const view=new DataView(e.target.result);
-    if(view.getUint16(0,false)!==0xFFD8){if(status)status.textContent='⚠ Not a JPEG file';return;}
-    let offset=2;let gpsLat=null,gpsLng=null;
-    while(offset<view.byteLength-2){
-      const marker=view.getUint16(offset,false);offset+=2;
-      const len=view.getUint16(offset,false);
-      if(marker===0xFFE1){
-        const exif=new Uint8Array(e.target.result,offset+2,len-2);
-        const txt=String.fromCharCode(...exif.slice(0,4));
-        if(txt==='Exif'){
-          try{
-            const result=parseEXIFGPS(e.target.result,offset+2,len-2);
-            if(result){
-              gpsLat=result.lat;gpsLng=result.lng;
-              const latEl=document.getElementById(latId);const lngEl=document.getElementById(lngId);
-              if(latEl)latEl.value=gpsLat.toFixed(6);
-              if(lngEl)lngEl.value=gpsLng.toFixed(6);
-              // Auto-name from filename
-              const nameEl=document.getElementById(nameId);
-              if(nameEl&&!nameEl.value)nameEl.value=file.name.replace(/\.[^.]+$/,'').replace(/[_-]/g,' ');
-              if(status)status.innerHTML=`✓ GPS found: ${gpsLat.toFixed(4)}, ${gpsLng.toFixed(4)}`;
-            }else{if(status)status.textContent='⚠ No GPS data in this photo. Enter coordinates manually.';}
-          }catch(err){if(status)status.textContent='⚠ Could not read GPS. Enter manually.';}
-        }
-        break;
+  reader.onload=function(ev){
+    try{
+      const view=new DataView(ev.target.result);
+      if(view.getUint16(0,false)!==0xFFD8){
+        if(status){status.textContent='⚠ Not a JPEG. Enter coordinates manually.';status.style.color='var(--amber)';}return;
       }
-      offset+=len;
+      let offset=2;
+      while(offset<view.byteLength-2){
+        const marker=view.getUint16(offset,false);offset+=2;
+        const len=view.getUint16(offset,false);
+        if(marker===0xFFE1){
+          const exif=new Uint8Array(ev.target.result,offset+2,len-2);
+          if(String.fromCharCode(...exif.slice(0,4))==='Exif'){
+            const result=parseEXIFGPS(ev.target.result,offset+2,len-2);
+            if(result){
+              document.getElementById(latId).value=result.lat.toFixed(6);
+              document.getElementById(lngId).value=result.lng.toFixed(6);
+              // Auto-fill name from filename
+              const nameEl=document.getElementById('loc-name');
+              if(nameEl&&!nameEl.value)nameEl.value=file.name.replace(/\.[^.]+$/,'').replace(/[_\-]/g,' ');
+              if(status){status.innerHTML=`✅ GPS found: ${result.lat.toFixed(5)}, ${result.lng.toFixed(5)}`;status.style.color='var(--green)';}
+            }else{
+              if(status){status.textContent='⚠ No GPS data in photo. Enter coordinates manually.';status.style.color='var(--amber)';}
+            }
+          }
+          break;
+        }
+        offset+=len;
+      }
+    }catch(e){
+      if(status){status.textContent='⚠ Could not read photo. Enter coordinates manually.';status.style.color='var(--amber)';}
     }
-    if(gpsLat===null&&status&&!status.textContent.includes('✓'))
-      status.textContent='⚠ No GPS data found. Please enter coordinates manually.';
   };
   reader.readAsArrayBuffer(file);
 }
 
-function parseEXIFGPS(buffer,exifStart,exifLen){
+function parseEXIFGPS(buffer,exifStart){
   const view=new DataView(buffer,exifStart+6);
-  const littleEndian=view.getUint16(0)===0x4949;
-  const ifdOffset=view.getUint32(4,littleEndian);
-  const entries=view.getUint16(ifdOffset,littleEndian);
-  let gpsIFDOffset=null;
-  for(let i=0;i<entries;i++){
-    const off=ifdOffset+2+i*12;
-    const tag=view.getUint16(off,littleEndian);
-    if(tag===0x8825){gpsIFDOffset=view.getUint32(off+8,littleEndian);break;}
+  const le=view.getUint16(0)===0x4949;
+  const ifdOff=view.getUint32(4,le);
+  const n=view.getUint16(ifdOff,le);
+  let gpsOff=null;
+  for(let i=0;i<n;i++){
+    const o=ifdOff+2+i*12;
+    if(view.getUint16(o,le)===0x8825){gpsOff=view.getUint32(o+8,le);break;}
   }
-  if(!gpsIFDOffset)return null;
-  const gpsEntries=view.getUint16(gpsIFDOffset,littleEndian);
-  const gpsData={};
-  for(let i=0;i<gpsEntries;i++){
-    const off=gpsIFDOffset+2+i*12;
-    const tag=view.getUint16(off,littleEndian);
-    const type=view.getUint16(off+2,littleEndian);
-    const count=view.getUint32(off+4,littleEndian);
-    const valueOff=view.getUint32(off+8,littleEndian);
-    if(type===5&&count===3){
-      const vals=[];
-      for(let j=0;j<3;j++){
-        const n=view.getUint32(valueOff+j*8,littleEndian);
-        const d=view.getUint32(valueOff+j*8+4,littleEndian);
-        vals.push(d?n/d:0);
-      }
-      gpsData[tag]=vals[0]+vals[1]/60+vals[2]/3600;
+  if(!gpsOff)return null;
+  const gn=view.getUint16(gpsOff,le);
+  const g={};
+  for(let i=0;i<gn;i++){
+    const o=gpsOff+2+i*12;
+    const tag=view.getUint16(o,le);
+    const type=view.getUint16(o+2,le);
+    const cnt=view.getUint32(o+4,le);
+    const vOff=view.getUint32(o+8,le);
+    if(type===5&&cnt===3){
+      const v=[];
+      for(let j=0;j<3;j++){const n=view.getUint32(vOff+j*8,le);const d=view.getUint32(vOff+j*8+4,le);v.push(d?n/d:0);}
+      g[tag]=v[0]+v[1]/60+v[2]/3600;
     }
-    if(type===2&&count===2){
-      gpsData[tag]=String.fromCharCode(view.getUint8(off+8));
-    }
+    if(type===2)g[tag]=String.fromCharCode(view.getUint8(o+8));
   }
-  if(gpsData[2]===undefined)return null;
-  let lat=gpsData[2];let lng=gpsData[4];
-  if(gpsData[1]==='S')lat=-lat;
-  if(gpsData[3]==='W')lng=-lng;
+  if(g[2]===undefined)return null;
+  let lat=g[2],lng=g[4]||0;
+  if(g[1]==='S')lat=-lat;if(g[3]==='W')lng=-lng;
   return{lat,lng};
 }
 
-function saveNewLocation(coId,btn){
+async function saveNewLocation(coId,btn){
   const lat=parseFloat(document.getElementById('loc-lat')?.value);
   const lng=parseFloat(document.getElementById('loc-lng')?.value);
-  const name=(document.getElementById('loc-name-auto')?.value||'').trim();
-  const type=document.getElementById('loc-type')?.value||'';
-  if(!lat||!lng){alert('Please enter coordinates or upload a photo with GPS');return;}
-  if(!name){alert('Please enter a location name');return;}
-  const locs=getLocations(coId);
-  locs.push({lat,lng,name,type,added:today()});
-  saveLocations(coId,locs);
+  const name=(document.getElementById('loc-name')?.value||'').trim();
+  const type=document.getElementById('loc-type')?.value||'Other';
+  const notes=document.getElementById('loc-notes')?.value||'';
+  if(isNaN(lat)||isNaN(lng)||!lat||!lng){alert('Please enter valid coordinates or upload a GPS photo');return;}
+  if(!name){document.getElementById('loc-name').focus();return alert('Please enter a location name');}
+  const co=db.companies.find(x=>x.id===coId);
+  btn.disabled=true;btn.innerHTML='<i class="ti ti-loader-2"></i> Saving...';
+  const loc={id:uid(),company_id:coId,company:co?.name||'',name,type,lat,lng,notes,added:today()};
+  if(!db.locations)db.locations=[];
+  db.locations.push(loc);
+  saveCache();
+  await persist('locations',loc);
   btn.closest('div[style*=fixed]').remove();
   const el=document.getElementById('co-locations-'+coId);
   if(el)el.innerHTML=renderLocations(coId);
+  showToast(`📍 Saved: ${name}`);
 }
+
 
 
 const NOTIF_STALE_DAYS=30;
