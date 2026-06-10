@@ -2179,259 +2179,158 @@ async function quickDoneTask(id){
 
 // ─── Reports ───────────────────────────────────────────────────────────────
 function renderReports(){
-  const allDeals=currentUser?.role==='manager'?db.deals:myDeals();
-  const wonDeals=allDeals.filter(d=>d.stage==='Won');
-  const activeDeals=allDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost');
-  const lostDeals=allDeals.filter(d=>d.stage==='Lost');
-  const convRate=allDeals.length?Math.round(wonDeals.length/allDeals.length*100):0;
-  const pipeVal=activeDeals.reduce((s,d)=>s+d.amount,0);
-  const wonVal=wonDeals.reduce((s,d)=>s+d.amount,0);
-  const avgDeal=allDeals.length?Math.round(allDeals.reduce((s,d)=>s+d.amount,0)/allDeals.length):0;
+  const repFilter=document.getElementById('rep-filter')?.value||'';
+  const isManager=currentUser?.role==='manager';
+  const baseDeals=isManager?db.deals:myDeals();
+  const filtered=repFilter?baseDeals.filter(d=>d.agent===repFilter):baseDeals;
 
-  const closedWithDays=wonDeals.filter(d=>Number(d.days)>0);
-  const avgClose=closedWithDays.length?Math.round(closedWithDays.reduce((s,d)=>s+Number(d.days),0)/closedWithDays.length):null;
-  const stageCounts=STAGES.map(s=>({s,cnt:allDeals.filter(d=>d.stage===s).length,val:allDeals.filter(d=>d.stage===s).reduce((a,d)=>a+d.amount,0)}));
+  const won=filtered.filter(d=>d.stage==='Won');
+  const lost=filtered.filter(d=>d.stage==='Lost');
+  const disq=filtered.filter(d=>d.stage==='Disqualified');
+  const active=filtered.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified');
+  const wonVal=won.reduce((s,d)=>s+d.amount,0);
+  const lostVal=lost.reduce((s,d)=>s+d.amount,0);
+  const pipeVal=active.reduce((s,d)=>s+d.amount,0);
+  const winRate=won.length+lost.length>0?Math.round(won.length/(won.length+lost.length)*100):0;
+  const avgDeal=filtered.length?Math.round(filtered.reduce((s,d)=>s+d.amount,0)/filtered.length):0;
 
-  // Agent activity last 30 days
+  const compMap={};
+  lost.forEach(d=>{if(d.competitor){if(!compMap[d.competitor])compMap[d.competitor]={count:0,val:0};compMap[d.competitor].count++;compMap[d.competitor].val+=d.amount;}});
+  const compList=Object.entries(compMap).sort((a,b)=>b[1].val-a[1].val);
+
+  const reasonMap={};
+  lost.forEach(d=>{const r=d.lost_reason||'Unknown';reasonMap[r]=(reasonMap[r]||0)+1;});
+  const reasonList=Object.entries(reasonMap).sort((a,b)=>b[1]-a[1]);
+
+  const agents=AGENTS();
+  const agentRows=agents.map(name=>{
+    const ad=baseDeals.filter(d=>d.agent===name);
+    const aw=ad.filter(d=>d.stage==='Won');
+    const al=ad.filter(d=>d.stage==='Lost');
+    const adq=ad.filter(d=>d.stage==='Disqualified');
+    const aact=ad.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified');
+    const awr=aw.length+al.length>0?Math.round(aw.length/(aw.length+al.length)*100):0;
+    const awv=aw.reduce((s,d)=>s+d.amount,0);
+    const apv=aact.reduce((s,d)=>s+d.amount,0);
+    const u=db.users&&db.users.find(x=>x.name===name);
+    return{name,total:ad.length,active:aact.length,won:aw.length,lost:al.length,disq:adq.length,winRate:awr,wonVal:awv,pipeline:apv,avgSize:ad.length?Math.round(ad.reduce((s,d)=>s+d.amount,0)/ad.length):0,role:u&&u.role};
+  });
+
   const cutoff=new Date();cutoff.setDate(cutoff.getDate()-30);
-  const cutoffStr=cutoff.toISOString().slice(0,10);
-  const recentActs=db.activities.filter(a=>(a.date||a.created||'')>=cutoffStr);
+  const cutStr=cutoff.toISOString().slice(0,10);
+  const recentActs=db.activities.filter(a=>(a.date||a.created||'')>=cutStr);
 
-  const agentActivity=AGENTS().map(a=>{
-    const acts=recentActs.filter(x=>x.agent===a);
-    const calls=acts.filter(x=>x.type==='Call'||x.type==='WhatsApp').length;
-    const meetings=acts.filter(x=>x.type==='Meeting').length;
-    const proposals=acts.filter(x=>x.type==='Proposal').length;
-    const deals=allDeals.filter(d=>d.agent===a&&d.stage!=='Lost').length;
-    const won=wonDeals.filter(d=>d.agent===a).reduce((s,d)=>s+d.amount,0);
-    return{name:a,calls,meetings,proposals,total:acts.length,deals,won};
-  }).filter(a=>a.total>0||a.deals>0).sort((a,b)=>b.total-a.total);
-
-  // Lost reasons + competitors
-  const lostReasons={};lostDeals.forEach(d=>{const r=d.lost_reason||'Unknown';lostReasons[r]=(lostReasons[r]||0)+1;});
-  const lostArr=Object.entries(lostReasons).sort(([,a],[,b])=>b-a);
-  const compMap={};allDeals.filter(d=>d.competitor).forEach(d=>{const c=d.competitor;compMap[c]=(compMap[c]||0)+1;});
-  const compArr=Object.entries(compMap).sort(([,a],[,b])=>b-a);
-  const brandCount={};db.fleet.filter(u=>u.brand!=='Hitachi').forEach(u=>{brandCount[u.brand]=(brandCount[u.brand]||0)+1});
-  const brands=Object.keys(brandCount).sort((a,b)=>brandCount[b]-brandCount[a]);
-
-  // ── NEW: Activity by day of week ──
-  const DOW=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-  const actByDow=[0,0,0,0,0,0,0];
-  const callsByDow=[0,0,0,0,0,0,0];
-  db.activities.filter(a=>a.date).forEach(a=>{
-    try{const d=new Date(a.date);const dow=(d.getDay()+6)%7; // Mon=0
-      actByDow[dow]++;
-      if(a.type==='Call'||a.type==='WhatsApp')callsByDow[dow]++;
-    }catch(e){}
+  const fmap={};
+  active.forEach(d=>{
+    if(!d.next_date)return;
+    const m=d.next_date.slice(0,7);
+    if(!fmap[m])fmap[m]={val:0,count:0};
+    fmap[m].val+=d.amount*(d.probability||50)/100;
+    fmap[m].count++;
   });
-  const maxDow=Math.max(...actByDow,1);
+  const fmonths=Object.entries(fmap).sort((a,b)=>a[0].localeCompare(b[0])).slice(0,6);
 
-  // ── NEW: Avg days in each stage (from stage history in activities) ──
-  const stageHistory=db.activities.filter(a=>a.type==='stage'&&a.deal_id);
-  const stageTimes={};const stageCounts2={};
-  // Group by deal, sort by date, compute time between stages
-  const byDeal={};
-  stageHistory.forEach(a=>{
-    if(!byDeal[a.deal_id])byDeal[a.deal_id]=[];
-    byDeal[a.deal_id].push(a);
-  });
-  Object.values(byDeal).forEach(arr=>{
-    arr.sort((a,b)=>(a.date||a.created||'').localeCompare(b.date||b.created||''));
-    for(let i=0;i<arr.length-1;i++){
-      const note=arr[i].note||arr[i].text||'';
-      const stageMatch=note.match(/→\s*(\w+)/);
-      if(!stageMatch)continue;
-      const stage=stageMatch[1];
-      const days=Math.round((new Date(arr[i+1].date||arr[i+1].created)-new Date(arr[i].date||arr[i].created))/(1000*60*60*24));
-      if(days>=0&&days<365){
-        stageTimes[stage]=(stageTimes[stage]||0)+days;
-        stageCounts2[stage]=(stageCounts2[stage]||0)+1;
-      }
-    }
-  });
+  const stageOrder=['Lead','Qualified','Proposal','Negotiation','Won'];
+  const stageCnts=stageOrder.map(s=>filtered.filter(d=>d.stage===s).length);
+  const maxStage=Math.max.apply(null,stageCnts.concat([1]));
 
-  // ── NEW: Agent funnel (deals by stage per agent) ──
-  const agentFunnel=AGENTS().map(a=>{
-    const agentDeals=allDeals.filter(d=>d.agent===a);
-    const total=agentDeals.length;
-    const w=agentDeals.filter(d=>d.stage==='Won').length;
-    const l=agentDeals.filter(d=>d.stage==='Lost').length;
-    const active=agentDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').length;
-    const winRate=total?Math.round(w/total*100):0;
-    const avgSize=total?Math.round(agentDeals.reduce((s,d)=>s+d.amount,0)/total):0;
-    return{name:a,total,active,won:w,lost:l,winRate,avgSize,revenue:wonDeals.filter(d=>d.agent===a).reduce((s,d)=>s+d.amount,0)};
-  }).filter(a=>a.total>0);
+  $('content').innerHTML=
+  '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px">'+
+  [
+    {label:'Active Pipeline',val:fmtUSD(pipeVal),sub:active.length+' deals',color:'var(--blue)'},
+    {label:'Won Revenue',val:fmtUSD(wonVal),sub:won.length+' deals',color:'var(--green)'},
+    {label:'Lost Revenue',val:fmtUSD(lostVal),sub:lost.length+' to competitors',color:'var(--red)'},
+    {label:'Win Rate',val:winRate+'%',sub:won.length+' won · '+lost.length+' lost',color:winRate>=30?'var(--green)':winRate>=15?'var(--amber)':'var(--red)'},
+    {label:'Avg Deal Size',val:fmtUSD(avgDeal),sub:'across '+filtered.length+' deals',color:'var(--text)'},
+    {label:'Disqualified',val:disq.length,sub:'not target clients',color:'#6b7280'},
+  ].map(function(m){return'<div class="metric" style="padding:14px 16px;margin:0;border-top:3px solid '+m.color+'"><div class="metric-label">'+m.label+'</div><div class="metric-value" style="font-size:20px;color:'+m.color+'">'+m.val+'</div><div class="metric-sub">'+m.sub+'</div></div>';}).join('')+
+  '</div>'+
 
-  $('content').innerHTML=`
-  <!-- KPI METRICS -->
-  <div class="metrics" style="margin-bottom:20px">
-    <div class="metric"><div class="metric-label">Total Deals</div><div class="metric-value">${allDeals.length}</div><div class="metric-sub">${activeDeals.length} active</div></div>
-    <div class="metric"><div class="metric-label">Win Rate</div><div class="metric-value">${convRate}%</div><div class="metric-sub">${wonDeals.length} won · ${lostDeals.length} lost</div></div>
-    <div class="metric"><div class="metric-label">Revenue Won</div><div class="metric-value">${fmtUSD(wonVal)}</div></div>
-    <div class="metric"><div class="metric-label">Avg. Deal Size</div><div class="metric-value">${fmtUSD(avgDeal)}</div></div>
-    <div class="metric"><div class="metric-label">Avg. Close Time</div><div class="metric-value">${avgClose!==null?avgClose+'d':'—'}</div><div class="metric-sub">days in pipeline</div></div>
-    <div class="metric"><div class="metric-label">Active Pipeline</div><div class="metric-value">${fmtUSD(pipeVal)}</div></div>
-  </div>
+  '<div class="card" style="margin-bottom:16px">'+
+  '<div class="card-title">📊 Manager Performance</div>'+
+  '<table class="tbl"><thead><tr><th>Manager</th><th style="text-align:center">Total</th><th style="text-align:center">Active</th><th style="text-align:center">Won</th><th style="text-align:center">Lost</th><th style="text-align:center">Disq</th><th style="text-align:center">Win Rate</th><th style="text-align:right">Won $</th><th style="text-align:right">Pipeline</th><th style="text-align:right">Avg Size</th></tr></thead><tbody>'+
+  agentRows.map(function(a){
+    return'<tr>'+
+      '<td><div style="display:flex;align-items:center;gap:8px"><div class="av av-blue" style="width:28px;height:28px;font-size:11px">'+ini(a.name)+'</div>'+
+      '<div><div style="font-weight:600">'+a.name+'</div><div style="font-size:11px;color:var(--text-m)">'+(a.role==='manager'?'Sales Manager':'Sales Rep')+'</div></div></div></td>'+
+      '<td style="text-align:center">'+a.total+'</td>'+
+      '<td style="text-align:center"><span style="font-weight:600;color:var(--blue)">'+a.active+'</span></td>'+
+      '<td style="text-align:center"><span style="color:var(--green);font-weight:600">'+a.won+'</span></td>'+
+      '<td style="text-align:center"><span style="color:var(--red);font-weight:600">'+a.lost+'</span></td>'+
+      '<td style="text-align:center"><span style="color:#6b7280">'+a.disq+'</span></td>'+
+      '<td style="text-align:center"><span style="font-weight:700;color:'+(a.winRate>=30?'var(--green)':a.winRate>=15?'var(--amber)':'var(--red)')+'">'+a.winRate+'%</span></td>'+
+      '<td style="text-align:right;font-weight:600;color:var(--green)">'+fmtUSD(a.wonVal)+'</td>'+
+      '<td style="text-align:right;color:var(--blue)">'+fmtUSD(a.pipeline)+'</td>'+
+      '<td style="text-align:right;color:var(--text-m)">'+fmtUSD(a.avgSize)+'</td>'+
+      '</tr>';
+  }).join('')+
+  '</tbody></table></div>'+
 
-  <!-- AGENT ACTIVITY TABLE -->
-  <div class="card" style="margin-bottom:18px">
-    <div class="card-title">Team Activity — Last 30 Days</div>
-    ${agentActivity.length?`<div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Sales Rep</th><th style="text-align:center">📞 Calls</th><th style="text-align:center">🤝 Meetings</th><th style="text-align:center">📋 Proposals</th><th style="text-align:center">Total</th><th style="text-align:center">Active Deals</th><th style="text-align:right">Won</th></tr></thead>
-      <tbody>${agentActivity.map((a,i)=>`<tr>
-        <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:28px;height:28px;font-size:10px">${ini(a.name)}</div>${a.name}</div></td>
-        <td style="text-align:center"><strong>${a.calls||'—'}</strong></td>
-        <td style="text-align:center"><strong>${a.meetings||'—'}</strong></td>
-        <td style="text-align:center"><strong>${a.proposals||'—'}</strong></td>
-        <td style="text-align:center"><div style="display:flex;align-items:center;justify-content:center;gap:6px">
-          <div style="width:60px;height:6px;background:var(--gray-100);border-radius:3px;overflow:hidden"><div style="width:${Math.min(100,Math.round(a.total/Math.max(...agentActivity.map(x=>x.total),1)*100))}%;height:100%;background:var(--blue);border-radius:3px"></div></div>
-          <strong>${a.total}</strong></div></td>
-        <td style="text-align:center">${a.deals}</td>
-        <td style="text-align:right;color:var(--green);font-weight:700">${a.won?fmtUSD(a.won):'—'}</td>
-      </tr>`).join('')}</tbody>
-    </table></div>`:`<div class="empty" style="padding:24px"><i class="ti ti-chart-bar"></i><div class="empty-title">No activity logged in last 30 days</div></div>`}
-  </div>
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'+
+  '<div class="card">'+
+  '<div class="card-title">🔽 Conversion Funnel</div>'+
+  stageOrder.map(function(s,i){
+    const cnt=stageCnts[i];
+    const pct=Math.round(cnt/maxStage*100);
+    const conv=i>0&&stageCnts[i-1]?Math.round(cnt/stageCnts[i-1]*100):100;
+    const val=filtered.filter(d=>d.stage===s).reduce(function(a,d){return a+d.amount;},0);
+    return'<div style="margin-bottom:10px">'+
+      '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">'+
+      '<span style="font-weight:600;color:'+STAGE_COLOR[s]+'">'+s+'</span>'+
+      '<span style="color:var(--text-m)">'+cnt+' deals'+(i>0?' · '+conv+'% from prev':'')+'</span></div>'+
+      '<div style="height:24px;background:var(--gray-100);border-radius:4px;overflow:hidden">'+
+      '<div style="height:100%;width:'+pct+'%;background:'+STAGE_COLOR[s]+';border-radius:4px;display:flex;align-items:center;padding-left:8px">'+
+      (pct>15?'<span style="font-size:11px;color:#fff;font-weight:600">'+fmtUSD(val)+'</span>':'')+
+      '</div></div></div>';
+  }).join('')+
+  '</div>'+
 
-  <!-- NEW: AGENT FUNNEL -->
-  ${agentFunnel.length?`<div class="card" style="margin-bottom:18px">
-    <div class="card-title">Sales Rep Funnel</div>
-    <div class="tbl-wrap"><table class="tbl">
-      <thead><tr><th>Sales Rep</th><th style="text-align:center">Total Deals</th><th style="text-align:center">Active</th><th style="text-align:center">Won</th><th style="text-align:center">Lost</th><th style="text-align:center">Win Rate</th><th style="text-align:right">Avg Size</th><th style="text-align:right">Revenue</th></tr></thead>
-      <tbody>${agentFunnel.map((a,i)=>`<tr>
-        <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:28px;height:28px;font-size:10px">${ini(a.name)}</div>${a.name}</div></td>
-        <td style="text-align:center">${a.total}</td>
-        <td style="text-align:center"><span class="b b-blue">${a.active}</span></td>
-        <td style="text-align:center"><span class="b b-green">${a.won}</span></td>
-        <td style="text-align:center"><span class="b b-red">${a.lost}</span></td>
-        <td style="text-align:center">
-          <div style="display:flex;align-items:center;justify-content:center;gap:6px">
-            <div style="width:50px;height:6px;background:var(--gray-100);border-radius:3px;overflow:hidden"><div style="width:${a.winRate}%;height:100%;background:${a.winRate>=50?'var(--green)':a.winRate>=25?'var(--amber)':'var(--red)'};border-radius:3px"></div></div>
-            <strong style="color:${a.winRate>=50?'var(--green)':a.winRate>=25?'var(--amber)':'var(--red)'}">${a.winRate}%</strong>
-          </div>
-        </td>
-        <td style="text-align:right">${fmtUSD(a.avgSize)}</td>
-        <td style="text-align:right;font-weight:700;color:var(--green)">${a.revenue?fmtUSD(a.revenue):'—'}</td>
-      </tr>`).join('')}</tbody>
-    </table></div>
-  </div>`:''}
+  '<div class="card">'+
+  '<div class="card-title">⚔️ Competitor Analysis</div>'+
+  (compList.length?
+    '<table class="tbl"><thead><tr><th>Competitor</th><th style="text-align:center">Wins vs us</th><th style="text-align:right">Lost $</th></tr></thead><tbody>'+
+    compList.map(function(item){return'<tr><td style="font-weight:600;color:var(--red)">'+item[0]+'</td><td style="text-align:center">'+item[1].count+'</td><td style="text-align:right;color:var(--red)">'+fmtUSD(item[1].val)+'</td></tr>';}).join('')+
+    '</tbody></table>'+
+    '<div style="margin-top:12px;border-top:1px solid var(--bdr);padding-top:10px">'+
+    '<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-m)">Loss reasons</div>'+
+    reasonList.slice(0,5).map(function(r){return'<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0"><span>'+r[0]+'</span><span class="b b-red" style="font-size:11px">'+r[1]+'</span></div>';}).join('')+
+    '</div>'
+    :'<div style="text-align:center;padding:30px;color:var(--text-m)">No lost deals yet</div>')+
+  '</div></div>'+
 
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
-    <!-- ACTIVITY BY DAY OF WEEK -->
-    <div class="card">
-      <div class="card-title">📅 Best Days to Call</div>
-      <div style="font-size:11px;color:var(--text-m);margin-bottom:12px">Based on all logged activities</div>
-      ${DOW.map((day,i)=>{
-        const pct=Math.round(actByDow[i]/maxDow*100);
-        const callPct=Math.round(callsByDow[i]/Math.max(...callsByDow,1)*100);
-        const isTop=actByDow[i]===Math.max(...actByDow);
-        return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-          <span style="width:28px;font-size:12px;font-weight:${isTop?700:400};color:${isTop?'var(--blue)':'var(--text)'}">${day}</span>
-          <div style="flex:1;position:relative">
-            <div style="height:18px;background:var(--gray-100);border-radius:4px;overflow:hidden">
-              <div style="width:${pct}%;height:100%;background:${isTop?'var(--blue)':'#93c5fd'};border-radius:4px;transition:width .4s"></div>
-            </div>
-            <div style="height:6px;background:transparent;border-radius:4px;overflow:hidden;margin-top:2px">
-              <div style="width:${callPct}%;height:100%;background:#22c55e;border-radius:4px"></div>
-            </div>
-          </div>
-          <div style="text-align:right;min-width:60px">
-            <span style="font-size:12px;font-weight:600">${actByDow[i]}</span>
-            <span style="font-size:10px;color:var(--text-m)"> acts</span>
-            ${callsByDow[i]?`<span style="font-size:10px;color:var(--green);margin-left:4px">${callsByDow[i]} calls</span>`:''}
-          </div>
-          ${isTop?`<span style="font-size:10px;font-weight:700;color:var(--blue)">🔥</span>`:''}
-        </div>`;
-      }).join('')}
-      <div style="margin-top:10px;font-size:11px;color:var(--text-m);display:flex;gap:12px">
-        <span><span style="display:inline-block;width:10px;height:6px;background:#93c5fd;border-radius:2px"></span> Activities</span>
-        <span><span style="display:inline-block;width:10px;height:6px;background:#22c55e;border-radius:2px"></span> Calls</span>
-      </div>
-    </div>
+  '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'+
+  '<div class="card">'+
+  '<div class="card-title">📞 Team Activity — Last 30 Days</div>'+
+  '<table class="tbl"><thead><tr><th>Manager</th><th style="text-align:center">Calls</th><th style="text-align:center">Meetings</th><th style="text-align:center">Proposals</th><th style="text-align:center">Total</th></tr></thead><tbody>'+
+  agents.map(function(name){
+    const acts=recentActs.filter(function(a){return a.agent===name;});
+    const calls=acts.filter(function(a){return a.type==='Call';}).length;
+    const meet=acts.filter(function(a){return a.type==='Meeting';}).length;
+    const prop=acts.filter(function(a){return a.type==='Proposal'||a.type==='Email';}).length;
+    return'<tr><td style="font-weight:600">'+name+'</td><td style="text-align:center">'+(calls||'—')+'</td><td style="text-align:center">'+(meet||'—')+'</td><td style="text-align:center">'+(prop||'—')+'</td><td style="text-align:center"><strong>'+(acts.length||'—')+'</strong></td></tr>';
+  }).join('')+
+  '</tbody></table></div>'+
 
-    <!-- AVG TIME IN STAGE -->
-    <div class="card">
-      <div class="card-title">⏱ Avg. Time in Stage</div>
-      <div style="font-size:11px;color:var(--text-m);margin-bottom:12px">Based on stage change history</div>
-      ${STAGES.filter(s=>s!=='Won'&&s!=='Lost').map(s=>{
-        const avg=stageCounts2[s]?Math.round(stageTimes[s]/stageCounts2[s]):null;
-        const pct=avg?Math.min(100,Math.round(avg/60*100)):0;
-        const color=avg===null?'var(--gray-200)':avg>30?'var(--red)':avg>14?'var(--amber)':'var(--green)';
-        return`<div style="margin-bottom:12px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-            <span style="font-size:13px;font-weight:600;color:${STAGE_COLOR[s]}">${s}</span>
-            <span style="font-size:13px;font-weight:700;color:${color}">${avg!==null?avg+'d':'no data'}</span>
-          </div>
-          <div style="height:6px;background:var(--gray-100);border-radius:3px;overflow:hidden">
-            <div style="width:${pct}%;height:100%;background:${color};border-radius:3px;transition:width .5s"></div>
-          </div>
-          ${stageCounts2[s]?`<div style="font-size:10px;color:var(--text-m);margin-top:2px">${stageCounts2[s]} transitions tracked</div>`:''}
-        </div>`;
-      }).join('')}
-      ${!Object.keys(stageCounts2).length?`<div class="empty" style="padding:20px"><i class="ti ti-clock"></i><div class="empty-title" style="font-size:12px">Move deals between stages to build history</div></div>`:''}
-    </div>
-  </div>
-
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
-    <!-- FUNNEL CONVERSION -->
-    <div class="card">
-      <div class="card-title">Sales Funnel — Stage Conversion</div>
-      ${stageCounts.filter(x=>x.cnt>0).map((x,i,arr)=>{
-        const pct=arr[0].cnt?Math.round(x.cnt/arr[0].cnt*100):0;
-        const convFromPrev=i>0&&arr[i-1].cnt?Math.round(x.cnt/arr[i-1].cnt*100):null;
-        return`<div style="margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-            <span style="font-size:13px;font-weight:600;color:${STAGE_COLOR[x.s]}">${x.s}</span>
-            <div style="display:flex;gap:8px;align-items:center">
-              ${convFromPrev!==null?`<span style="font-size:11px;color:var(--text-m)">↓ ${convFromPrev}% from prev</span>`:''}
-              <span style="font-size:13px;font-weight:700">${x.cnt}</span>
-            </div>
-          </div>
-          <div style="height:8px;background:var(--gray-100);border-radius:4px;overflow:hidden">
-            <div style="width:${pct}%;height:100%;background:${STAGE_COLOR[x.s]};border-radius:4px;transition:width .5s"></div>
-          </div>
-          ${x.val?`<div style="font-size:11px;color:var(--text-m);margin-top:2px">${fmtUSD(x.val)}</div>`:''}
-        </div>`;
-      }).join('')}
-    </div>
-
-    <!-- LOST REASONS + COMPETITORS -->
-    <div style="display:flex;flex-direction:column;gap:18px">
-      <div class="card" style="flex:1">
-        <div class="card-title">Why Deals Are Lost</div>
-        ${lostArr.length?lostArr.map(([reason,cnt])=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-100)">
-          <div style="flex:1;font-size:13px">${reason}</div>
-          <span class="b b-red" style="font-size:11px">${cnt}</span>
-          <div style="width:50px;height:5px;background:var(--gray-100);border-radius:3px;overflow:hidden"><div style="width:${Math.round(cnt/lostArr[0][1]*100)}%;height:100%;background:var(--red);border-radius:3px"></div></div>
-        </div>`).join(''):`<div class="empty" style="padding:16px"><i class="ti ti-check"></i><div class="empty-title" style="font-size:13px">No lost deals</div></div>`}
-      </div>
-      <div class="card" style="flex:1">
-        <div class="card-title">Competitors in Deals</div>
-        ${compArr.length?compArr.map(([comp,cnt])=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-100)">
-          <i class="ti ti-sword" style="color:var(--red);font-size:13px"></i>
-          <div style="flex:1;font-size:13px">${comp}</div>
-          <span class="b b-gray" style="font-size:11px">${cnt} deal${cnt>1?'s':''}</span>
-        </div>`).join(''):`<div class="empty" style="padding:16px"><i class="ti ti-shield"></i><div class="empty-title" style="font-size:13px">No competitors logged</div></div>`}
-      </div>
-    </div>
-  </div>
-
-  <!-- COMPETITOR FLEET -->
-  <div class="card">
-    <div class="card-title">Competitor Fleet — Replacement Potential</div>
-    ${brands.length?`<div style="position:relative;width:100%;height:${Math.max(brands.length*44+80,160)}px"><canvas id="compChart"></canvas></div>`:`<div class="empty" style="padding:24px"><i class="ti ti-chart-bar"></i>No competitor data</div>`}
-  </div>`;
-
-  setTimeout(()=>{
-    if(brands.length){
-      if(charts.comp)charts.comp.destroy();
-      const cCtx=$('compChart');
-      if(cCtx)charts.comp=new Chart(cCtx,{type:'bar',data:{labels:brands,datasets:[{label:'Units',data:brands.map(b=>brandCount[b]),backgroundColor:brands.map(b=>BRAND_C[b]||'#888'),borderWidth:0}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1,color:'#6b7280'},grid:{color:'rgba(0,0,0,0.05)'}},y:{grid:{display:false},ticks:{color:'#6b7280'}}}}});
-    }
-  },100);
+  '<div class="card">'+
+  '<div class="card-title">📅 Revenue Forecast (weighted)</div>'+
+  (fmonths.length?
+    fmonths.map(function(item){
+      const m=item[0],data=item[1];
+      const label=new Date(m+'-01').toLocaleString('en',{month:'long',year:'numeric'});
+      const maxVal=Math.max.apply(null,fmonths.map(function(x){return x[1].val;}).concat([1]));
+      const pct=Math.round(data.val/maxVal*100);
+      return'<div style="margin-bottom:12px">'+
+        '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px">'+
+        '<span style="font-weight:600">'+label+'</span>'+
+        '<span style="color:var(--blue);font-weight:600">'+fmtUSD(Math.round(data.val))+'</span></div>'+
+        '<div style="height:20px;background:var(--gray-100);border-radius:4px;overflow:hidden">'+
+        '<div style="height:100%;width:'+pct+'%;background:var(--blue);border-radius:4px"></div></div>'+
+        '<div style="font-size:11px;color:var(--text-m)">'+data.count+' deals</div></div>';
+    }).join('')
+    :'<div style="text-align:center;padding:30px;color:var(--text-m)">Set next action dates on deals to see forecast</div>')+
+  '</div></div>';
 }
 
-// ─── Modals ──────────────────────────────────────────────────────────────────────
 function openM(type,id=null,coId=null,dealId=null){
   mtype=type;eid=id;
   const co=coId?db.companies.find(x=>x.id===coId):null;
