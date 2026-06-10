@@ -5125,6 +5125,8 @@ window.addEventListener('resize',initMobile);
     window.history.replaceState({},'',window.location.pathname);
   }
 
+  const DEFAULT_API='https://script.google.com/macros/s/AKfycbxmQul0IzRTXaMOKgUu4iAvk8JKkF4E5fvgzi7qBUE_EPd_6FqnhhcOX4rz2mFaxa3gTQ/exec';
+  if(!localStorage.getItem('wcrm_url'))localStorage.setItem('wcrm_url',DEFAULT_API);
   const saved=localStorage.getItem('wcrm_url');
   if(saved){
     API=saved;
