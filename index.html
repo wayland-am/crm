@@ -874,7 +874,7 @@ function render(sec){
   $('breadcrumb').innerHTML='';
   const titles={dashboard:'Dashboard',pipeline:'Pipeline',leads:'Leads',companies:'Companies',clientmap:'Client Map',contacts:'Contacts',fleet:'Fleet',tasks:'Tasks',reports:'Reports',segments:'Segmentation',automation:'Automation',calendar:'Calendar',agents:'Sales Team',parts:'Parts',operations:'Operations',users:'Users',contracts:'Contracts'};
   $('ptitle').textContent=titles[sec]||sec;
-  if(sec==='pipeline')tr.innerHTML=mkBtn('deal','Add Deal');
+  if(sec==='pipeline')tr.innerHTML='<button class="btn"'+(window.showLost?' style="background:#fef2f2;color:var(--red);border-color:#fca5a5"':'')+' onclick="window.showLost=!window.showLost;renderPipeline()"><i class="ti ti-'+(window.showLost?'eye-off':'archive')+'" ></i>'+(window.showLost?'Hide Lost':'Show Lost')+'</button>'+mkBtn('deal','Add Deal');
   if(sec==='leads')tr.innerHTML=mkBtn('lead','Add Lead');
   if(sec==='companies')tr.innerHTML=mkBtn('company','Add Company');
   if(sec==='contacts')tr.innerHTML=mkBtn('contact','Add Contact');
@@ -1155,6 +1155,29 @@ function renderPipeline(){
     </div>
   </div>`:''}
 
+  <!-- LOST TABLE -->
+  \${window.showLost?(()=>{
+    const lostDeals=allMyDeals.filter(d=>d.stage==='Lost').sort((a,b)=>(b.created||'').localeCompare(a.created||''));
+    const lostVal=lostDeals.reduce((s,d)=>s+d.amount,0);
+    const rows=lostDeals.map(d=>'<tr style="cursor:pointer" onclick="openDealDetail(\''+d.id+'\')">'+
+      '<td><strong>'+d.company+'</strong></td>'+
+      '<td>'+(d.model||'—')+'</td>'+
+      '<td style="font-weight:600">'+fmtUSD(d.amount)+'</td>'+
+      '<td>'+(d.competitor?'⚔️ '+d.competitor:'—')+'</td>'+
+      '<td>'+(d.competitor_price?((d.competitor_currency||'USD')+' '+Number(d.competitor_price).toLocaleString()):'—')+'</td>'+
+      '<td>'+(d.lost_reason||'—')+'</td>'+
+      '<td style="color:var(--text-m);font-size:12px">'+(d.agent||'—')+'</td>'+
+      '<td style="color:var(--text-m);font-size:12px">'+(d.created||'—')+'</td>'+
+      '</tr>').join('');
+    return '<div style="margin-bottom:20px">'+
+      '<div style="font-size:14px;font-weight:700;color:var(--red);margin-bottom:10px"><i class="ti ti-x-circle"></i> Lost Deals '+
+      '<span style="font-size:12px;font-weight:500;color:var(--text-m)">'+lostDeals.length+' total · '+fmtUSD(lostVal)+' lost</span></div>'+
+      '<div style="background:var(--sur);border:1px solid var(--bdr);border-radius:10px;overflow:hidden">'+
+      '<table class="tbl"><thead><tr><th>Company</th><th>Model</th><th>Amount</th><th>Competitor</th><th>Comp. price</th><th>Reason</th><th>Agent</th><th>Date</th></tr></thead>'+
+      '<tbody>'+rows+'</tbody></table></div></div>';
+  })():''}
+
+  <!-- KANBAN BOARD -->
   <!-- KANBAN BOARD -->
   <div class="pipeline">
     ${visStages.map(stage=>{
