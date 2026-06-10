@@ -466,7 +466,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
         <div class="av av-0" id="user-av">MK</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600" id="user-name-lbl">M. Kalashnikov</div>
-          <div style="font-size:11px;color:var(--text-m)" id="user-role-lbl">Sales Sales Rep</div>
+          <div style="font-size:11px;color:var(--text-m)" id="user-role-lbl">Sales Rep</div>
         </div>
         <i class="ti ti-chevron-up" style="font-size:12px;color:var(--text-l)"></i>
       </div>
@@ -2515,7 +2515,7 @@ function openM(type,id=null,coId=null,dealId=null){
       </div>`,
     user:`
       <div class="fg"><label class="fl">Full Name *</label><input class="fc" id="f-name" value="${e.name||''}" placeholder="J. Smith"></div>
-      <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option value="rep" ${(e.role||'rep')==='rep'?'selected':''}>Sales Representative</option><option value="manager" ${e.role==='manager'?'selected':''}>Sales Rep</option></select></div>
+      <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option value="rep" ${(e.role||'rep')==='rep'?'selected':''}>Sales Rep</option><option value="manager" ${e.role==='manager'?'selected':''}>Sales Manager</option></select></div>
       <div class="fg"><label class="fl">Password ${e.id?'(leave blank to keep unchanged)':'*'}</label><input class="fc" id="f-pass" type="password" placeholder="${e.id?'New password...':'Minimum 4 characters'}"></div>
       <div class="fg"><label class="fl">Status</label><select class="fc" id="f-active"><option value="true" ${String(e.active)!=='false'?'selected':''}>Active</option><option value="false" ${String(e.active)==='false'?'selected':''}>Blocked</option></select></div>`,
     agent:`
@@ -2524,7 +2524,7 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Phone</label><input class="fc" id="f-phone" data-phone value="${e.phone||''}" placeholder="+374 XX XXX XXX"></div>
         <div class="fg"><label class="fl">Email</label><input class="fc" id="f-email" data-email value="${e.email||''}"></div>
       </div>
-      <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option>Sales Manager</option><option ${e.role==='Senior Manager'?'selected':''}>Senior Manager</option><option ${e.role==='Sales Rep'?'selected':''}>Sales Rep</option></select></div>`,
+      <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option value="manager" ${(e.role||'manager')==='manager'?'selected':''}>Sales Manager</option><option value="rep" ${e.role==='rep'?'selected':''}>Sales Rep</option></select></div>`,
     activity:`
       <div class="fr">
         <div class="fg"><label class="fl">Type</label><select class="fc" id="f-type" onchange="updateActivityFields()">${['Call','Meeting','WhatsApp','Email','Proposal','Demo','Documents','Other'].map(t=>`<option>${t}</option>`).join('')}</select></div>
@@ -3611,7 +3611,7 @@ function renderUsers(){
       <thead><tr><th>Name</th><th>Role</th><th>Last Login</th><th>Status</th><th></th></tr></thead>
       <tbody>${db.users.length?db.users.map((u,i)=>`<tr>
         <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:30px;height:30px;font-size:11px">${ini(u.name)}</div><strong>${u.name}</strong></div></td>
-        <td><span class="b ${u.role==='manager'?'b-blue':'b-gray'}">${u.role==='manager'?'Sales Rep':'Sales Rep'}</span></td>
+        <td><span class="b ${u.role==='manager'?'b-blue':'b-gray'}">${u.role==='manager'?'Sales Manager':'Sales Rep'}</span></td>
         <td style="color:var(--text-m);font-size:12px">${u.last_login||'—'}</td>
         <td><span class="b ${String(u.active)==='false'?'b-red':'b-green'}">${String(u.active)==='false'?'Blocked':'Active'}</span></td>
         <td><div class="actions">
@@ -3626,10 +3626,10 @@ function renderUsers(){
   <div class="card">
     <div class="card-title">Access Rights</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px">
-      <div><div style="font-weight:700;color:var(--blue);margin-bottom:8px;font-size:13px">Sales Representative</div>
+      <div><div style="font-weight:700;color:var(--blue);margin-bottom:8px;font-size:13px">Sales Rep</div>
         ${['✓ Own deals and tasks','✓ Own calendar','✓ All companies and contacts','✓ Fleet','✓ Parts forecast','✗ Others\' deals','✗ Team reports','✗ Operations & import','✗ User management'].map(i=>`<div style="font-size:13px;padding:3px 0;color:${i.startsWith('✗')?'var(--text-l)':'var(--text)'}">${i}</div>`).join('')}
       </div>
-      <div><div style="font-weight:700;color:var(--green);margin-bottom:8px;font-size:13px">Sales Rep</div>
+      <div><div style="font-weight:700;color:var(--green);margin-bottom:8px;font-size:13px">Sales Manager</div>
         ${['✓ All deals from all managers','✓ All team tasks','✓ Shared calendar','✓ All companies and contacts','✓ Fleet','✓ Reports across entire team','✓ Operations & import','✓ User management'].map(i=>`<div style="font-size:13px;padding:3px 0">${i}</div>`).join('')}
       </div>
     </div>
