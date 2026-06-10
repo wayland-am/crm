@@ -839,7 +839,7 @@ function updateCounts(){
   $('nc-pipeline').textContent=db.deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').length;
   $('nc-companies').textContent=db.companies.length;
   $('nc-contacts').textContent=db.contacts.length;
-  $('nc-fleet').textContent=db.fleet.length;
+  $('nc-fleet').textContent=db.fleet.filter(u=>u.condition!=='Competitor').length;
   $('nc-tasks').textContent=db.tasks.filter(t=>!t.done).length;
   const lel=$('nc-leads');if(lel)lel.textContent=db.leads.filter(l=>l.status!=='Converted'&&l.status!=='Lost').length;
   const cel=$('nc-contracts');if(cel)cel.textContent=(db.contracts||[]).filter(c=>c.status==='Active').length;
