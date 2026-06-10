@@ -1926,16 +1926,17 @@ async function moveDeal(id,stage){
 function showLostFollowupDialog(deal){
   const overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:flex;align-items:center;justify-content:center';
+  overlay.setAttribute('data-lostdlg','1');
   overlay.innerHTML='<div style="background:var(--sur);border-radius:12px;padding:24px;width:360px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">'+
     '<div style="font-size:16px;font-weight:700;margin-bottom:4px">📅 Schedule return?</div>'+
     '<div style="font-size:12px;color:var(--text-m);margin-bottom:16px">'+deal.company+' · '+(deal.model||'—')+'</div>'+
     '<div style="font-size:13px;margin-bottom:12px">When to follow up?</div>'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">'+
     [['1 month',30],['3 months',90],['6 months',180],['1 year',365]].map(function(o){
-      return '<button class="btn" style="padding:10px;font-size:13px" onclick="createLostFollowup(''+deal.id+'',''+deal.company_id+'',''+deal.company+'',''+(deal.agent||'')+'','+o[1]+');this.closest('div[style*=fixed]').remove()">'+o[0]+'</button>';
+      return '<button class="btn" style="padding:10px;font-size:13px" onclick="createLostFollowup(\''+deal.id+'\',\''+deal.company_id+'\',\''+deal.company+'\',\''+( deal.agent||'')+'\','+o[1]+');this.closest(\'[data-lostdlg]\').remove()">'+o[0]+'</button>';
     }).join('')+
     '</div><div style="display:flex;justify-content:center">'+
-    '<button class="btn btn-ghost" style="font-size:12px;color:var(--text-m)" onclick="this.closest('div[style*=fixed]').remove()">Skip</button>'+
+    '<button class="btn btn-ghost" style="font-size:12px;color:var(--text-m)" onclick="this.closest(\'[data-lostdlg]\').remove()">Skip</button>'+
     '</div></div>';
   document.body.appendChild(overlay);
 }
