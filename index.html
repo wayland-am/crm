@@ -2218,7 +2218,7 @@ function renderReports(){
 
   const cutoff=new Date();cutoff.setDate(cutoff.getDate()-30);
   const cutStr=cutoff.toISOString().slice(0,10);
-  const recentActs=db.activities.filter(a=>(a.date||a.created||'')>=cutStr);
+  const recentActs=db.activities.filter(a=>(a.date||a.created||'')>=cutStr&&a.type!=='stage'&&a.type!=='note'&&a.type!=='auto');
 
   const fmap={};
   active.forEach(d=>{
