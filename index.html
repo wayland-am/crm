@@ -1849,6 +1849,45 @@ async function moveDeal(id,stage){
 
   await runAutomations('deal_stage_change',{newStage:stage,deal_id:id,company_id:d.company_id,agent:d.agent,amount:d.amount,message:`Deal moved to ${stage}`});
   if(Number(d.amount)>0)await runAutomations('deal_amount',{amount:d.amount,deal_id:id,company_id:d.company_id,agent:d.agent,message:`Deal worth $${fmt(d.amount)}`});
+
+  // ── WON: добавить технику в парк + обновить статус компании ──
+  if(stage==='Won' && prevStage!=='Won' && d.model){
+    // Проверяем нет ли уже такой единицы от этой сделки
+    const alreadyInFleet=db.fleet.some(f=>f.company_id===d.company_id&&f.deal_id===id);
+    if(!alreadyInFleet){
+      // Парсим бренд из названия модели
+      const brands=['Hitachi','Epiroc','Normet','Genie','Atlas Copco','Ingersoll Rand'];
+      const detectedBrand=brands.find(b=>d.model.toLowerCase().includes(b.toLowerCase()))||'Hitachi';
+      const fleetUnit={id:uid(),company_id:d.company_id,company:d.company,
+        brand:detectedBrand,model:d.model,type:'',year:new Date().getFullYear(),
+        serial:'',condition:'New',notes:`Auto-added from Won deal #${id.slice(-6)}`,deal_id:id};
+      db.fleet.push(fleetUnit);
+      await persist('fleet',fleetUnit);
+      showToast(`🚜 ${d.model} добавлен в парк ${d.company}`,3500);
+    }
+    // Обновить статус компании на Active если был Prospect
+    const co=db.companies.find(x=>x.id===d.company_id);
+    if(co&&co.status==='Prospect'){
+      co.status='Active';
+      await persist('companies',{...co});
+      showToast(`✅ ${co.name} → Active`,2500);
+    }
+  }
+
+  // ── LOST: записать конкурента в парк клиента ──
+  if(stage==='Lost' && prevStage!=='Lost' && d.competitor){
+    // Проверяем нет ли уже такой записи
+    const alreadyLost=db.fleet.some(f=>f.company_id===d.company_id&&f.brand===d.competitor&&f.model===d.model&&f.condition==='Competitor');
+    if(!alreadyLost){
+      const fleetUnit={id:uid(),company_id:d.company_id,company:d.company,
+        brand:d.competitor,model:d.model||'Unknown model',type:'',year:new Date().getFullYear(),
+        serial:'',condition:'Competitor',notes:`Lost deal — ${d.lost_reason||'reason not specified'}`,deal_id:id};
+      db.fleet.push(fleetUnit);
+      await persist('fleet',fleetUnit);
+      showToast(`⚔️ ${d.competitor} записан в парк ${d.company}`,3500);
+    }
+  }
+
   updateCounts();openDealDetail(id);
 }
 
@@ -2564,8 +2603,37 @@ async function _saveM(){
     if(!coName)return alert('Select a company');
     if(!coId){const s=await persist('companies',{name:coName,status:'Prospect',created:new Date().toISOString().slice(0,10)});db.companies.push(s);coId=s.id;updateCounts();}
     row={...row,company_id:coId,company:coName,model:g('f-model')||'',amount:Number(g('f-amount'))||0,currency:g('f-currency')||'USD',stage:g('f-stage')||'Lead',agent:g('f-agent')||'',next_action:g('f-next')||'',next_date:g('f-ndate')||'',days:Number(g('f-days'))||0,competitor:g('f-competitor')||'',lost_reason:g('f-lost-reason')||'',probability:{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[g('f-stage')]||0,created:row.created||today()};
+    const prevDeal=eid?db.deals.find(x=>x.id===eid):null;
+    const prevStageEdit=prevDeal?.stage;
     const s=await persist('deals',row);
     if(!eid)db.deals.push(s);else Object.assign(db.deals.find(x=>x.id===eid),s);
+    // Won/Lost side-effects (same as moveDeal)
+    if(s.stage!==prevStageEdit){
+      if(s.stage==='Won'&&s.model){
+        const alreadyInFleet=db.fleet.some(f=>f.company_id===s.company_id&&f.deal_id===s.id);
+        if(!alreadyInFleet){
+          const brands=['Hitachi','Epiroc','Normet','Genie','Atlas Copco','Ingersoll Rand'];
+          const detectedBrand=brands.find(b=>s.model.toLowerCase().includes(b.toLowerCase()))||'Hitachi';
+          const fu={id:uid(),company_id:s.company_id,company:s.company,brand:detectedBrand,model:s.model,
+            type:'',year:new Date().getFullYear(),serial:'',condition:'New',
+            notes:`Auto-added from Won deal #${s.id.slice(-6)}`,deal_id:s.id};
+          db.fleet.push(fu);await persist('fleet',fu);
+          showToast(`🚜 ${s.model} добавлен в парк ${s.company}`,3500);
+        }
+        const co=db.companies.find(x=>x.id===s.company_id);
+        if(co&&co.status==='Prospect'){co.status='Active';await persist('companies',{...co});}
+      }
+      if(s.stage==='Lost'&&s.competitor){
+        const alreadyLost=db.fleet.some(f=>f.company_id===s.company_id&&f.brand===s.competitor&&f.condition==='Competitor');
+        if(!alreadyLost){
+          const fu={id:uid(),company_id:s.company_id,company:s.company,brand:s.competitor,
+            model:s.model||'Unknown model',type:'',year:new Date().getFullYear(),serial:'',
+            condition:'Competitor',notes:`Lost deal — ${s.lost_reason||'reason not specified'}`,deal_id:s.id};
+          db.fleet.push(fu);await persist('fleet',fu);
+          showToast(`⚔️ ${s.competitor} записан в парк ${s.company}`,3500);
+        }
+      }
+    }
     updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderPipeline();
   }else if(mtype==='fleet'){
     let {id:coId,name:coName}=getCompanyFromForm();
@@ -4859,11 +4927,11 @@ function openAddLocation(coId){
     <div style="background:var(--sur);border-radius:12px;padding:24px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto">
       <div style="font-size:16px;font-weight:700;margin-bottom:4px">Add Site Location</div>
       <div style="font-size:12px;color:var(--text-m);margin-bottom:16px">${co?.name||''}</div>
-      <div style="background:var(--blue-lt);border:1.5px dashed #93c5fd;border-radius:8px;padding:14px;margin-bottom:14px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s"
+      <div id="loc-drop-zone" style="border:1.5px dashed var(--bdr);border-radius:8px;padding:14px;margin-bottom:14px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s"
            onclick="document.getElementById('loc-photo-inp').click()"
-           ondragover="event.preventDefault();this.style.borderColor='#3b82f6';this.style.background='rgba(59,130,246,.15)'"
+           ondragover="event.preventDefault();this.style.borderColor='#3b82f6';this.style.background='rgba(59,130,246,.1)'"
            ondragleave="this.style.borderColor='';this.style.background=''"
-           ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';extractGPSfile(event.dataTransfer.files[0],'loc-lat','loc-lng','loc-gps-status')">
+           ondrop="event.preventDefault();this.style.borderColor='#3b82f6';this.style.background='var(--blue-lt)';extractGPSfile(event.dataTransfer.files[0],'loc-lat','loc-lng','loc-gps-status')">
         <i class="ti ti-camera" style="font-size:24px;color:var(--blue);display:block;margin-bottom:6px"></i>
         <div style="font-size:13px;font-weight:600;color:var(--blue)">Перетащи фото с GPS или нажми</div>
         <div style="font-size:11px;color:var(--text-m);margin-top:2px">Координаты извлекутся автоматически из EXIF</div>
@@ -4927,6 +4995,9 @@ function extractGPS(input,latId,lngId,statusId){
               const nameEl=document.getElementById('loc-name');
               if(nameEl&&!nameEl.value)nameEl.value=file.name.replace(/\.[^.]+$/,'').replace(/[_\-]/g,' ');
               if(status){status.innerHTML=`✅ GPS found: ${result.lat.toFixed(5)}, ${result.lng.toFixed(5)}`;status.style.color='var(--green)';}
+              // Подсветить зону зелёным
+              const dz=document.getElementById('loc-drop-zone');
+              if(dz){dz.style.background='rgba(22,163,74,.08)';dz.style.borderColor='var(--green)';dz.querySelector('i').style.color='var(--green)';}
             }else{
               if(status){status.textContent='⚠ No GPS data in photo. Enter coordinates manually.';status.style.color='var(--amber)';}
             }
