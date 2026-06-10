@@ -836,7 +836,7 @@ setInterval(()=>{
 
 function setSS(state,txt){$('dot').className='dot '+state;$('sync-txt').textContent=txt;}
 function updateCounts(){
-  $('nc-pipeline').textContent=db.deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').length;
+  $('nc-pipeline').textContent=db.deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified').length;
   $('nc-companies').textContent=db.companies.length;
   $('nc-contacts').textContent=db.contacts.length;
   $('nc-fleet').textContent=db.fleet.filter(u=>u.condition!=='Competitor').length;
@@ -893,7 +893,7 @@ function renderDashboard(){
   const isManager=currentUser?.role==='manager';
   const myD=myDeals();
   const myT=myTasks();
-  const active=myD.filter(d=>d.stage!=='Won'&&d.stage!=='Lost');
+  const active=myD.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified');
   const won=myD.filter(d=>d.stage==='Won');
   const pipeVal=active.reduce((s,d)=>s+d.amount,0);
   const wonVal=won.reduce((s,d)=>s+d.amount,0);
@@ -924,7 +924,7 @@ function renderDashboard(){
     const last=lastActDate(c.id);
     const daysSince=last?Math.floor((new Date()-new Date(last))/(1000*60*60*24)):999;
     const nt=nextTask(c.id);
-    const hasActiveDeal=db.deals.some(d=>d.company_id===c.id&&d.stage!=='Won'&&d.stage!=='Lost');
+    const hasActiveDeal=db.deals.some(d=>d.company_id===c.id&&d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified');
     // If next task is far in future (>14 days) and no active deal → dormant/waking
     const nextTaskFar=nt&&nt.due>twoWeeksStr;
 
@@ -983,7 +983,7 @@ function renderDashboard(){
           <span style="font-size:11px;color:${c.daysSince>14?'var(--amber)':'var(--green)'};font-weight:600">${c.daysSince===999?'—':c.daysSince+'d ago'}</span>
         </div>
         ${c.nextTask?`<div style="font-size:11px;color:var(--blue);margin-top:2px"><i class="ti ti-checkbox" style="font-size:10px"></i> ${c.nextTask.title} · ${dueFmt(c.nextTask.due)}</div>`:''}
-        ${db.deals.filter(d=>d.company_id===c.id&&d.stage!=='Won'&&d.stage!=='Lost').map(d=>`<span class="b ${stageBadge(d.stage)}" style="font-size:10px;margin-top:2px">${d.stage} · ${fmtUSD(d.amount)}</span>`).join('')}
+        ${db.deals.filter(d=>d.company_id===c.id&&d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified').map(d=>`<span class="b ${stageBadge(d.stage)}" style="font-size:10px;margin-top:2px">${d.stage} · ${fmtUSD(d.amount)}</span>`).join('')}
       </div>`).join('')||'<div class="empty" style="padding:16px"><i class="ti ti-flame"></i><div class="empty-title" style="font-size:12px">No active companies</div></div>'}
     </div>
 
@@ -1086,7 +1086,7 @@ function dealStaleDays(d){
 
 function forecastByMonth(deals){
   const months={};
-  deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.next_date).forEach(d=>{
+  deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified'&&d.next_date).forEach(d=>{
     const m=d.next_date.slice(0,7); // YYYY-MM
     if(!months[m])months[m]={amount:0,deals:[]};
     months[m].amount+=(d.amount*(({Lead:0.1,Qualified:0.25,Proposal:0.5,Negotiation:0.75}[d.stage]||0)));
@@ -1098,7 +1098,7 @@ function forecastByMonth(deals){
 function renderPipeline(){
   const visStages=STAGES.filter(s=>s!=='Lost'&&s!=='Disqualified');
   const allMyDeals=myDeals();
-  const active=allMyDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified');
+  const active=allMyDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified'&&d.stage!=='Disqualified');
   const pipeVal=active.reduce((s,d)=>s+d.amount,0);
   const stale=active.filter(d=>dealStaleDays(d)>=30);
   const forecast=forecastByMonth(allMyDeals);
@@ -1421,7 +1421,7 @@ function openCompanyDetail(id){
     .filter(x=>REAL_ACT_TYPES.includes(x.type)||(x.type==='note'&&x.note&&!x.note.startsWith('✏️')&&!x.note.startsWith('Updated:')&&!x.note.startsWith('Stage changed')&&!x.note.startsWith('🎯 Lead converted')))
     .sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
   const hitachi=fleet.filter(f=>f.brand==='Hitachi').length;
-  const pipeVal=deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').reduce((s,d)=>s+d.amount,0);
+  const pipeVal=deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified').reduce((s,d)=>s+d.amount,0);
   const wonVal=deals.filter(d=>d.stage==='Won').reduce((s,d)=>s+d.amount,0);
   const lastAct=acts[0];
   const lastActDays=lastAct?(Math.floor((new Date()-new Date(lastAct.date||lastAct.created))/(1000*60*60*24))):null;
@@ -1461,7 +1461,7 @@ function openCompanyDetail(id){
   <div class="kpi-strip-co">
     <div class="kpi-cell"><div class="kpi-v" style="color:var(--blue)">${fmtUSD(pipeVal)}</div><div class="kpi-l">Pipeline</div></div>
     <div class="kpi-cell"><div class="kpi-v">${fleet.length}</div><div class="kpi-l">Fleet units</div></div>
-    <div class="kpi-cell"><div class="kpi-v">${deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').length}</div><div class="kpi-l">Open deals</div></div>
+    <div class="kpi-cell"><div class="kpi-v">${deals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified').length}</div><div class="kpi-l">Open deals</div></div>
     <div class="kpi-cell"><div class="kpi-v" style="color:${lastActDays!==null&&lastActDays>30?'var(--red)':'var(--green)'}">${lastActDays===null?'—':lastActDays===0?'Today':lastActDays+'d ago'}</div><div class="kpi-l">Last contact</div></div>
     <div class="kpi-cell"><div class="kpi-v" style="color:var(--green)">${fmtUSD(wonVal)}</div><div class="kpi-l">Won revenue</div></div>
   </div>
@@ -2223,7 +2223,7 @@ async function quickDoneTask(id){
 function renderReports(){
   const allDeals=currentUser?.role==='manager'?db.deals:myDeals();
   const wonDeals=allDeals.filter(d=>d.stage==='Won');
-  const activeDeals=allDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost');
+  const activeDeals=allDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified');
   const lostDeals=allDeals.filter(d=>d.stage==='Lost');
   const convRate=allDeals.length?Math.round(wonDeals.length/allDeals.length*100):0;
   const pipeVal=activeDeals.reduce((s,d)=>s+d.amount,0);
@@ -2299,7 +2299,7 @@ function renderReports(){
     const total=agentDeals.length;
     const w=agentDeals.filter(d=>d.stage==='Won').length;
     const l=agentDeals.filter(d=>d.stage==='Lost').length;
-    const active=agentDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').length;
+    const active=agentDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified').length;
     const winRate=total?Math.round(w/total*100):0;
     const avgSize=total?Math.round(agentDeals.reduce((s,d)=>s+d.amount,0)/total):0;
     return{name:a,total,active,won:w,lost:l,winRate,avgSize,revenue:wonDeals.filter(d=>d.agent===a).reduce((s,d)=>s+d.amount,0)};
@@ -4411,8 +4411,8 @@ function getSegmentedCompanies(){
   if(cat)companies=companies.filter(c=>c.category===cat);
   if(fleetF==='yes')companies=companies.filter(c=>db.fleet.some(f=>f.company_id===c.id));
   if(fleetF==='no')companies=companies.filter(c=>!db.fleet.some(f=>f.company_id===c.id));
-  if(dealsF==='yes')companies=companies.filter(c=>db.deals.some(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost'));
-  if(dealsF==='no')companies=companies.filter(c=>!db.deals.some(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost'));
+  if(dealsF==='yes')companies=companies.filter(c=>db.deals.some(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified'));
+  if(dealsF==='no')companies=companies.filter(c=>!db.deals.some(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified'));
   return companies;
 }
 
@@ -4436,7 +4436,7 @@ function renderSegRows(companies){
   if(!companies.length)return`<tr><td colspan="7"><div class="empty" style="padding:24px"><i class="ti ti-filter"></i><div class="empty-title">No companies matching filter</div></div></td></tr>`;
   return companies.map(c=>{
     const fleetCount=db.fleet.filter(f=>f.company_id===c.id).length;
-    const dealsCount=db.deals.filter(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost').length;
+    const dealsCount=db.deals.filter(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified').length;
     return`<tr onclick="openCompanyDetail('${c.id}');go('companies',null)">
       <td><strong>${c.name}</strong></td>
       <td style="font-size:12px;color:var(--text-m)">${c.industry||'—'}</td>
@@ -5407,7 +5407,7 @@ function buildNotifications(){
   });
 
   // 2. Stale deals (30+ days no activity)
-  myDeals().filter(d=>d.stage!=='Won'&&d.stage!=='Lost').forEach(d=>{
+  myDeals().filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified').forEach(d=>{
     const stale=dealStaleDays(d);
     if(stale>=NOTIF_STALE_DAYS){
       notifs.push({id:'stale-'+d.id,type:'stale',priority:'high',icon:'ti-clock-exclamation',color:'#f59e0b',
