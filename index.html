@@ -1842,6 +1842,12 @@ async function moveDeal(id,stage){
     if(!confirm('Move deal to WON?\n\n• '+( d.model||'Equipment')+' will be added to '+d.company+' fleet\n• Company status → Active'))return;
   }
   if(stage==='Lost'){
+    if(d.lost_reason==='Price too high'&&!Number(d.competitor_price)){
+      const price=prompt('Reason is "Price too high" — enter competitor price (required):');
+      if(!price||isNaN(Number(price)))return alert('Competitor price is required. Deal not moved.');
+      d.competitor_price=Number(price);
+      await persist('deals',{...d});
+    }
     if(!confirm('Move deal to LOST?\n\n'+(d.competitor?'• '+d.competitor+' will be recorded in '+d.company+' fleet as competitor':'• No competitor specified')))return;
   }
 
@@ -2489,7 +2495,7 @@ function openM(type,id=null,coId=null,dealId=null){
         </select>
       </div>
       <div class="fr" id="competitor-price-wrap" style="display:${e.lost_reason==='Price too high'?'flex':'none'}">
-        <div class="fg"><label class="fl">Competitor price</label><input class="fc" id="f-competitor-price" type="number" placeholder="0" value="${e.competitor_price||''}"></div>
+        <div class="fg"><label class="fl">Competitor price *</label><input class="fc" id="f-competitor-price" type="number" placeholder="0" value="${e.competitor_price||''}"></div>
         <div class="fg"><label class="fl">Currency</label><select class="fc" id="f-comp-currency"><option ${(e.competitor_currency||'USD')==='USD'?'selected':''}>USD</option><option ${e.competitor_currency==='EUR'?'selected':''}>EUR</option><option ${e.competitor_currency==='RUB'?'selected':''}>RUB</option><option ${e.competitor_currency==='AMD'?'selected':''}>AMD</option></select></div>
       </div>`,
     fleet:`
@@ -2667,6 +2673,7 @@ async function _saveM(){
     let {id:coId,name:coName}=getCompanyFromForm();
     if(!coName)return alert('Select a company');
     if(!coId){const s=await persist('companies',{name:coName,status:'Prospect',created:new Date().toISOString().slice(0,10)});db.companies.push(s);coId=s.id;updateCounts();}
+    if(g('f-lost-reason')==='Price too high'&&!Number(g('f-competitor-price')))return alert('Enter competitor price — it is required when reason is "Price too high"');
     row={...row,company_id:coId,company:coName,model:g('f-model')||'',amount:Number(g('f-amount'))||0,currency:g('f-currency')||'USD',stage:g('f-stage')||'Lead',agent:g('f-agent')||'',next_action:g('f-next')||'',next_date:g('f-ndate')||'',days:Number(g('f-days'))||0,competitor:g('f-competitor')||'',lost_reason:g('f-lost-reason')||'',competitor_price:Number(g('f-competitor-price'))||0,competitor_currency:g('f-comp-currency')||'USD',probability:{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[g('f-stage')]||0,created:row.created||today()};
     const prevStage=eid?db.deals.find(x=>x.id===eid)?.stage:null;
     const s=await persist('deals',row);
