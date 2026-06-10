@@ -2551,7 +2551,7 @@ async function _saveM(){
         db.activities.push(act);persist('activities',act);
       }
     }
-    updateCounts();renderCompanies();
+    updateCounts();if(eid&&cur.company)openCompanyDetail(cur.company);else renderCompanies();
   }else if(mtype==='contact'){
     const {id:coId,name:coName}=getCompanyFromForm();
     const fname=(g('f-fname')||'').trim();if(!fname)return alert('Enter a name');
