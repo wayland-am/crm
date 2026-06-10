@@ -653,16 +653,16 @@ const coDatalist=()=>db.companies.map(c=>`<option>${c.name}</option>`).join('');
 
 // ─── API ───────────────────────────────────────────────────────────────────
 const CACHE_KEY='wcrm_cache_v3';
-const SHEETS=['companies','contacts','deals','fleet','tasks','activities','agents','users','leads','automations','contracts','locations'];
+const SHEETS=['companies','contacts','deals','fleet','tasks','activities','agents','users','leads','automations','contracts','locations','photos'];
 let pendingSync=false;
 
 // ── Fetch with timeout + exponential retry ──────────────────────────────────
-async function fetchWithTimeout(url,timeout=12000,retries=2,options={}){
+async function fetchWithTimeout(url,timeout=12000,retries=2){
   for(let attempt=0;attempt<=retries;attempt++){
     const ctrl=new AbortController();
     const timer=setTimeout(()=>ctrl.abort(),timeout);
     try{
-      const res=await fetch(url,{redirect:'follow',signal:ctrl.signal,...options});
+      const res=await fetch(url,{redirect:'follow',signal:ctrl.signal});
       clearTimeout(timer);return res;
     }catch(e){
       clearTimeout(timer);
@@ -676,7 +676,7 @@ async function fetchWithTimeout(url,timeout=12000,retries=2,options={}){
 async function apiCall(params){
   try{
     const url=API+'?payload='+encodeURIComponent(JSON.stringify(params));
-    const res=await fetchWithTimeout(url,30000,2);
+    const res=await fetchWithTimeout(url,12000,2);
     const text=await res.text();
     const data=JSON.parse(text);
     if(!data.ok)throw new Error(data.error||'Error');
@@ -1493,9 +1493,9 @@ function openCompanyDetail(id){
         <div class="cd-sec-title">Photos
           <button class="btn btn-xs btn-ghost" onclick="openPhotoUpload('${id}')"><i class="ti ti-camera-plus"></i></button>
         </div>
-        <div id="co-photos-${id}" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
-          <div style="font-size:12px;color:var(--text-m);grid-column:1/-1;text-align:center;padding:8px">
-            <i class="ti ti-loader-2" style="animation:spin .8s linear infinite"></i> Loading...
+        <div id="co-photos-${id}" style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;min-height:60px">
+          <div style="grid-column:1/-1;text-align:center;padding:8px;font-size:12px;color:var(--text-l)">
+            <i class="ti ti-loader-2" style="animation:spin .8s linear infinite"></i>
           </div>
         </div>
       </div>
@@ -1618,8 +1618,7 @@ function openCompanyDetail(id){
   // Store company acts for filter
   window._curCoActs=acts;
   window._curCoId=id;
-  // Load photos asynchronously (don't block render)
-  setTimeout(()=>loadCompanyPhotos(id),100);
+  setTimeout(()=>loadCompanyPhotos(id),200);
 }
 
 function renderActFeedItems(acts, coId){
@@ -4653,64 +4652,57 @@ async function saveApiKey(btn){
   }
 }
 
+// ─── PHOTOS (Cloudinary) ────────────────────────────────────────────────────
+const CLOUDINARY_CLOUD='datwudgmo';
+const CLOUDINARY_PRESET='wayland_crm';
 
-// ─── PHOTOS ────────────────────────────────────────────────────────────────
 async function loadCompanyPhotos(coId){
   const el=document.getElementById('co-photos-'+coId);
   if(!el)return;
   try{
-    const photos=await apiCall({action:'getPhotos',company_id:coId});
-    renderPhotoGallery(coId,photos||[]);
+    const all=await apiCall({action:'read',sheet:'photos'});
+    renderPhotoGallery(coId,(all||[]).filter(p=>p.company_id===coId));
   }catch(e){
-    el.innerHTML=`<div style="font-size:12px;color:var(--text-m);grid-column:1/-1;text-align:center;padding:8px">
-      <button class="btn btn-sm" onclick="openPhotoUpload('${coId}')"><i class="ti ti-camera-plus"></i>Add photo</button>
-    </div>`;
+    el.innerHTML=`<div style="text-align:center;padding:8px"><button class="btn btn-sm" onclick="openPhotoUpload('${coId}')"><i class="ti ti-camera-plus"></i>Add photo</button></div>`;
   }
 }
 
 function renderPhotoGallery(coId,photos){
-  const el=document.getElementById('co-photos-'+coId);
-  if(!el)return;
+  const el=document.getElementById('co-photos-'+coId);if(!el)return;
   if(!photos.length){
-    el.innerHTML=`<div style="font-size:12px;color:var(--text-m);grid-column:1/-1;text-align:center;padding:12px">
-      <i class="ti ti-photo" style="font-size:24px;display:block;margin-bottom:6px;opacity:.3"></i>
-      No photos yet<br>
-      <button class="btn btn-sm" style="margin-top:8px" onclick="openPhotoUpload('${coId}')"><i class="ti ti-camera-plus"></i>Upload</button>
-    </div>`;
-    return;
+    el.innerHTML=`<div style="text-align:center;padding:12px;grid-column:1/-1">
+      <i class="ti ti-photo" style="font-size:28px;display:block;margin-bottom:6px;opacity:.3"></i>
+      <div style="font-size:12px;color:var(--text-m);margin-bottom:8px">No photos yet</div>
+      <button class="btn btn-sm" onclick="openPhotoUpload('${coId}')"><i class="ti ti-camera-plus"></i>Upload</button>
+    </div>`;return;
   }
   el.innerHTML=photos.map(p=>`
     <div style="position:relative;aspect-ratio:1;border-radius:6px;overflow:hidden;cursor:pointer;background:var(--gray-100)"
-         onclick="openPhotoViewer('${p.id}','${p.caption||p.name}')">
-      <img src="${p.thumb}" alt="${p.name}" style="width:100%;height:100%;object-fit:cover" loading="lazy"
-           onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;font-size:28px\\'>📷</div>'">
-      <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));padding:4px 6px;font-size:10px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.caption||p.name}</div>
+         onclick="openPhotoViewer('${p.url}','${p.caption||p.name||''}')">
+      <img src="${p.thumb||p.url}" style="width:100%;height:100%;object-fit:cover" loading="lazy"
+           onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;font-size:24px\\'>📷</div>'">
+      <div style="position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.6));padding:4px 6px;font-size:10px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.caption||''}</div>
       <button onclick="event.stopPropagation();deleteCompanyPhoto('${p.id}','${coId}')"
-        style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.5);border:none;border-radius:50%;width:20px;height:20px;color:#fff;cursor:pointer;font-size:11px;line-height:1">×</button>
+        style="position:absolute;top:3px;right:3px;background:rgba(0,0,0,.5);border:none;border-radius:50%;width:20px;height:20px;color:#fff;cursor:pointer;font-size:12px;line-height:1;display:flex;align-items:center;justify-content:center">×</button>
     </div>`).join('')+
-    `<div style="aspect-ratio:1;border-radius:6px;border:1.5px dashed var(--bdr);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-l)"
-         onclick="openPhotoUpload('${coId}')">
-      <i class="ti ti-plus" style="font-size:20px"></i>
-    </div>`;
+  `<div style="aspect-ratio:1;border-radius:6px;border:1.5px dashed var(--bdr);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text-l)"
+       onclick="openPhotoUpload('${coId}')"><i class="ti ti-plus" style="font-size:20px"></i></div>`;
 }
 
-function openPhotoViewer(fileId,caption){
-  const url='https://drive.google.com/file/d/'+fileId+'/view';
-  const imgUrl='https://drive.google.com/uc?id='+fileId+'&export=view';
+function openPhotoViewer(url,caption){
   const overlay=document.createElement('div');
   overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:600;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px';
   overlay.innerHTML=`
-    <div style="position:absolute;top:16px;right:16px;display:flex;gap:8px">
-      <a href="${url}" target="_blank" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:#fff;border:none"><i class="ti ti-external-link"></i>Google Drive</a>
-      <button onclick="this.closest('div[style*=fixed]').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:14px">✕</button>
+    <div style="position:absolute;top:16px;right:16px">
+      <button onclick="this.closest('div[style*=fixed]').remove()" style="background:rgba(255,255,255,.15);border:none;color:#fff;border-radius:8px;padding:6px 16px;cursor:pointer;font-size:14px">✕ Close</button>
     </div>
-    <img src="${imgUrl}" style="max-width:90vw;max-height:82vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5)"
-         onerror="this.style.display='none';document.getElementById('photo-err').style.display='block'">
-    <div id="photo-err" style="display:none;color:#fff;text-align:center;padding:40px"><i class="ti ti-photo-off" style="font-size:48px;display:block;margin-bottom:12px;opacity:.5"></i>Can't preview — <a href="${url}" target="_blank" style="color:var(--blue)">open in Drive</a></div>
-    <div style="color:rgba(255,255,255,.8);margin-top:12px;font-size:13px;text-align:center">${caption}</div>`;
+    <img src="${url}" style="max-width:90vw;max-height:82vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 40px rgba(0,0,0,.5)">
+    <div style="color:rgba(255,255,255,.8);margin-top:12px;font-size:13px">${caption}</div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
 }
+
+let _photoFile=null;
 
 function openPhotoUpload(coId){
   const co=db.companies.find(x=>x.id===coId);
@@ -4719,16 +4711,13 @@ function openPhotoUpload(coId){
   overlay.innerHTML=`
     <div style="background:var(--sur);border-radius:12px;padding:24px;width:400px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
       <div style="font-size:16px;font-weight:700;margin-bottom:4px">📷 Upload Photo</div>
-      <div style="font-size:12px;color:var(--text-m);margin-bottom:16px">${co?.name||''} — saved to Google Drive</div>
+      <div style="font-size:12px;color:var(--text-m);margin-bottom:16px">${co?.name||''}</div>
       <div style="border:2px dashed var(--bdr);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:12px"
-           onclick="document.getElementById('photo-file-inp').click()"
-           ondragover="event.preventDefault();this.style.borderColor='var(--blue)'"
-           ondragleave="this.style.borderColor='var(--bdr)'"
-           ondrop="event.preventDefault();this.style.borderColor='var(--bdr)';handlePhotoDrop(event,'${coId}')">
+           onclick="document.getElementById('photo-file-inp').click()">
         <i class="ti ti-camera" style="font-size:32px;color:var(--blue);display:block;margin-bottom:8px"></i>
         <div style="font-weight:600;color:var(--blue)">Tap to select or drag photo</div>
-        <div style="font-size:11px;color:var(--text-m);margin-top:4px">JPG, PNG, HEIC · Max 10MB</div>
-        <input type="file" id="photo-file-inp" accept="image/*" style="display:none" onchange="handlePhotoSelect(this,'${coId}')">
+        <div style="font-size:11px;color:var(--text-m);margin-top:4px">JPG, PNG, HEIC · любой размер</div>
+        <input type="file" id="photo-file-inp" accept="image/*" style="display:none" onchange="handlePhotoSelect(this)">
       </div>
       <div id="photo-preview" style="display:none;margin-bottom:12px">
         <img id="photo-preview-img" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px">
@@ -4736,7 +4725,7 @@ function openPhotoUpload(coId){
       </div>
       <div style="margin-bottom:14px">
         <label style="font-size:11px;color:var(--text-m);display:block;margin-bottom:4px">Caption</label>
-        <input class="fc" id="photo-caption" placeholder="Карьер, техника, встреча...">
+        <input class="fc" id="photo-caption" placeholder="Карьер, техника, клиент...">
       </div>
       <div id="photo-upload-status" style="min-height:18px;font-size:12px;margin-bottom:10px"></div>
       <div style="display:flex;gap:8px;justify-content:flex-end">
@@ -4750,15 +4739,13 @@ function openPhotoUpload(coId){
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
 }
 
-let _photoFile=null;
-
-function handlePhotoSelect(inp,coId){
+function handlePhotoSelect(inp){
   const file=inp.files[0];if(!file)return;
   _photoFile=file;
   const prev=document.getElementById('photo-preview');
   const img=document.getElementById('photo-preview-img');
   const nm=document.getElementById('photo-preview-name');
-  if(prev){prev.style.display='block';}
+  if(prev)prev.style.display='block';
   if(img)img.src=URL.createObjectURL(file);
   if(nm)nm.textContent=file.name+' ('+Math.round(file.size/1024)+'KB)';
   const btn=document.getElementById('photo-upload-btn');
@@ -4767,85 +4754,44 @@ function handlePhotoSelect(inp,coId){
   if(cap&&!cap.value)cap.value=file.name.replace(/\.[^.]+$/,'').replace(/[_\-]/g,' ');
 }
 
-function handlePhotoDrop(e,coId){
-  const file=e.dataTransfer.files[0];
-  if(!file||!file.type.startsWith('image/'))return;
-  handlePhotoSelect({files:e.dataTransfer.files},coId);
-}
-
 async function uploadCompanyPhoto(coId,btn){
   if(!_photoFile){alert('Select a photo first');return;}
   const caption=document.getElementById('photo-caption')?.value||'';
   const status=document.getElementById('photo-upload-status');
   btn.disabled=true;
-  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin .8s linear infinite"></i> Compressing...';
-  if(status)status.innerHTML='<span style="color:var(--blue)">Compressing photo...</span>';
+  btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin .8s linear infinite"></i> Uploading...';
+  if(status)status.innerHTML='<span style="color:var(--blue)">Uploading to Cloudinary...</span>';
   const co=db.companies.find(x=>x.id===coId);
   try{
-    // Compress to ~200KB max
-    const base64=await compressImage(_photoFile,600,0.6);
-    const sizeKB=Math.round(base64.length*3/4/1024);
-    if(status)status.innerHTML=`<span style="color:var(--blue)">Uploading (${sizeKB}KB)...</span>`;
-    btn.innerHTML='<i class="ti ti-loader-2" style="animation:spin .8s linear infinite"></i> Uploading...';
-
-    // Split base64 into chunks to work around URL length limits
-    const CHUNK=50000; // ~50KB per chunk
-    const chunks=[];
-    for(let i=0;i<base64.length;i+=CHUNK)chunks.push(base64.slice(i,i+CHUNK));
-
-    let fileId=null;
-    for(let i=0;i<chunks.length;i++){
-      if(status)status.innerHTML=`<span style="color:var(--blue)">Uploading part ${i+1}/${chunks.length}...</span>`;
-      const params={
-        action: i===0?'uploadPhotoChunk':'appendPhotoChunk',
-        company_id:coId, company:co?.name||'',
-        filename:_photoFile.name, mimeType:'image/jpeg',
-        caption, chunk:chunks[i], chunkIndex:i, totalChunks:chunks.length,
-        fileId: fileId||''
-      };
-      const result=await apiCall(params);
-      if(i===0&&result?.tempId)fileId=result.tempId;
-      if(result?.id)fileId=result.id; // final chunk returns real Drive ID
-    }
+    const formData=new FormData();
+    formData.append('file',_photoFile);
+    formData.append('upload_preset',CLOUDINARY_PRESET);
+    formData.append('folder','wayland-crm/'+(co?.name||'unknown').replace(/[^a-zA-Zа-яА-Я0-9\-]/g,'_'));
+    const res=await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,{method:'POST',body:formData});
+    if(!res.ok)throw new Error('Cloudinary error: '+res.status);
+    const data=await res.json();
+    const thumb=data.secure_url.replace('/upload/','/upload/w_300,h_300,c_fill,q_auto,f_auto/');
+    const photo={id:uid(),company_id:coId,company:co?.name||'',
+      name:_photoFile.name,url:data.secure_url,thumb,caption,created:today()};
+    await persist('photos',photo);
     if(status)status.innerHTML='<span style="color:var(--green)">✅ Uploaded!</span>';
     _photoFile=null;
-    setTimeout(()=>{btn.closest('div[style*=fixed]')?.remove();loadCompanyPhotos(coId);showToast('📷 Photo saved to Drive');},800);
+    setTimeout(()=>{btn.closest('div[style*=fixed]')?.remove();loadCompanyPhotos(coId);showToast('📷 Photo saved');},700);
   }catch(e){
     if(status)status.innerHTML=`<span style="color:var(--red)">⚠ ${e.message}</span>`;
     btn.disabled=false;btn.innerHTML='<i class="ti ti-upload"></i>Retry';
   }
 }
 
-// Compress image using canvas before upload
-function compressImage(file,maxPx,quality){
-  return new Promise((resolve,reject)=>{
-    const img=new Image();
-    const url=URL.createObjectURL(file);
-    img.onload=()=>{
-      URL.revokeObjectURL(url);
-      let w=img.width,h=img.height;
-      if(w>maxPx||h>maxPx){
-        if(w>h){h=Math.round(h*maxPx/w);w=maxPx;}
-        else{w=Math.round(w*maxPx/h);h=maxPx;}
-      }
-      const canvas=document.createElement('canvas');
-      canvas.width=w;canvas.height=h;
-      canvas.getContext('2d').drawImage(img,0,0,w,h);
-      const dataUrl=canvas.toDataURL('image/jpeg',quality);
-      resolve(dataUrl.split(',')[1]);
-    };
-    img.onerror=reject;
-    img.src=url;
-  });
+async function deleteCompanyPhoto(photoId,coId){
+  if(!confirm('Delete this photo?'))return;
+  try{
+    await remove('photos',photoId);
+    showToast('Photo deleted');
+    loadCompanyPhotos(coId);
+  }catch(e){showToast('Error: '+e.message);}
 }
 
-async function deleteCompanyPhoto(fileId,coId){
-  if(!confirm('Delete this photo from Drive?'))return;
-  try{await apiCall({action:'deletePhoto',fileId});showToast('Photo deleted');loadCompanyPhotos(coId);}
-  catch(e){showToast('Error: '+e.message);}
-}
-
-// ─── LOCATIONS ─────────────────────────────────────────────────────────────
 function getLocations(coId){
   return(db.locations||[]).filter(l=>l.company_id===coId);
 }
@@ -4878,21 +4824,11 @@ function renderLocations(coId){
 }
 
 async function deleteLocation(locId,coId){
-  // Remove from db
   db.locations=(db.locations||[]).filter(l=>l.id!==locId);
   saveCache();
-  // Remove from localStorage backup
-  try{
-    const lsKey='locs_'+coId;
-    const existing=JSON.parse(localStorage.getItem(lsKey)||'[]');
-    const filtered=existing.filter(l=>l.id!==locId);
-    localStorage.setItem(lsKey,JSON.stringify(filtered));
-  }catch(e){}
-  // Remove from Sheets
-  try{await remove('locations',locId);}catch(e){}
+  await remove('locations',locId);
   const el=document.getElementById('co-locations-'+coId);
   if(el)el.innerHTML=renderLocations(coId);
-  showToast('📍 Location removed');
 }
 
 function openAddLocation(coId){
