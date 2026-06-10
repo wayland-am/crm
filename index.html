@@ -884,7 +884,7 @@ function render(sec){
   if(sec==='agents')tr.innerHTML='<button class="btn btn-primary" onclick="go(\'users\')" ><i class="ti ti-arrow-right"></i>Manage in Users</button>';
   if(sec==='automation')tr.innerHTML=mkBtn('automation','New Rule');
   if(sec==='calendar')tr.innerHTML=`<button class="btn" onclick="generateVisitPlan()"><i class="ti ti-refresh"></i>Refresh Plan</button>`;
-  const fns={dashboard:renderDashboard,pipeline:renderPipeline,leads:renderLeads,companies:renderCompanies,clientmap:renderClientMap,contacts:renderContacts,fleet:renderFleet,tasks:renderTasks,reports:renderReports,agents:renderAgents,calendar:renderCalendar,parts:renderParts,operations:renderOperations,users:renderUsers,segments:renderSegments,automation:renderAutomation,contracts:renderContracts};
+  const fns={dashboard:()=>renderDashboard(),pipeline:()=>renderPipeline(),leads:()=>renderLeads(),companies:()=>renderCompanies(),clientmap:()=>renderClientMap(),contacts:()=>renderContacts(),fleet:()=>renderFleet(),tasks:()=>renderTasks(),reports:()=>renderReports(),agents:()=>renderAgents(),calendar:()=>renderCalendar(),parts:()=>renderParts(),operations:()=>renderOperations(),users:()=>renderUsers(),segments:()=>renderSegments(),automation:()=>renderAutomation(),contracts:()=>renderContracts()};
   if(fns[sec])fns[sec]();
 }
 function mkBtn(type,label){return`<button class="btn btn-primary" onclick="openM('${type}')"><i class="ti ti-plus"></i>${label}</button>`;}
