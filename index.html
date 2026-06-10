@@ -3092,7 +3092,7 @@ function renderClientMap(){
   main.innerHTML=
     '<div style="font-size:13px;color:var(--text-m);margin-bottom:8px">'+allWithLocs.size+' companies · '+totalLocs+' locations</div>'+
     '<div style="margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center;gap:4px">'+legend+
-    '<span onclick="window.mapStatusFilter=new Set(['Active','Prospect','Partner','Negotiating','Cold','Inactive']);renderClientMap()" style="display:inline-flex;align-items:center;font-size:12px;cursor:pointer;padding:3px 10px;border-radius:20px;border:1.5px solid #d1d5db;background:transparent;margin-left:4px">Show all</span>'+
+    '<span onclick="window.mapStatusFilter=new Set([&quot;Active&quot;,&quot;Prospect&quot;,&quot;Partner&quot;,&quot;Negotiating&quot;,&quot;Cold&quot;,&quot;Inactive&quot;]);renderClientMap()" style="display:inline-flex;align-items:center;font-size:12px;cursor:pointer;padding:3px 10px;border-radius:20px;border:1.5px solid #d1d5db;background:transparent;margin-left:4px">Show all</span>'+
     '</div>'+
     '<div id="client-map" style="height:calc(100vh - 230px);border-radius:12px;overflow:hidden;border:1px solid var(--bdr)"></div>'+
     (allWithLocs.size===0?'<div style="text-align:center;padding:40px;color:var(--text-m)">No locations with GPS coordinates yet.</div>':'');
