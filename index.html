@@ -2082,7 +2082,7 @@ function renderFleet(){
 
 function groupFleet(){
   const groups={};
-  db.fleet.forEach(u=>{
+  db.fleet.filter(u=>u.condition!=='Competitor').forEach(u=>{
     const key=u.company_id||u.company||'Unknown';
     if(!groups[key])groups[key]={id:u.company_id,name:u.company||'Unknown',units:[]};
     groups[key].units.push(u);
