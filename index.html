@@ -1156,7 +1156,7 @@ function renderPipeline(){
   </div>`:''}
 
   <!-- LOST TABLE -->
-  \${window.showLost?(()=>{
+  ${window.showLost?(()=>{
     const lostDeals=allMyDeals.filter(d=>d.stage==='Lost').sort((a,b)=>(b.created||'').localeCompare(a.created||''));
     const lostVal=lostDeals.reduce((s,d)=>s+d.amount,0);
     const rows=lostDeals.map(d=>'<tr style="cursor:pointer" onclick="openDealDetail(\''+d.id+'\')">'+
