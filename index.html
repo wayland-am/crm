@@ -2059,23 +2059,49 @@ function sortFleet(col){if(flSort.col===col)flSort.dir*=-1;else{flSort.col=col;f
 function toggleFleetGroup(coId){if(flExpanded.has(coId))flExpanded.delete(coId);else flExpanded.add(coId);renderFleetRows();}
 
 function renderFleet(){
-  const byBrand={};db.fleet.forEach(u=>{byBrand[u.brand]=(byBrand[u.brand]||0)+1});
-  const tot=db.fleet.length;const h=byBrand.Hitachi||0;
-  const opp=db.fleet.filter(u=>u.condition==='Poor'||u.condition==='Fair').length;
+  if(window.fleetShowComp===undefined)window.fleetShowComp=false;
+  const wayland=['Hitachi','Epiroc','Normet','Genie','Atlas Copco','Ingersoll Rand'];
+  const ourFleet=db.fleet.filter(u=>u.condition!=='Competitor');
+  const compFleet=db.fleet.filter(u=>u.condition==='Competitor');
+  const byBrand={};ourFleet.forEach(u=>{byBrand[u.brand]=(byBrand[u.brand]||0)+1});
+  const tot=ourFleet.length;
+  const h=ourFleet.filter(u=>wayland.includes(u.brand)).length;
+  const opp=ourFleet.filter(u=>u.condition==='Poor'||u.condition==='Fair').length;
+  const compByBrand={};compFleet.forEach(u=>{compByBrand[u.brand]=(compByBrand[u.brand]||0)+1});
 
-  $('content').innerHTML=`
-  <div class="metrics" style="margin-bottom:18px">
-    <div class="metric"><div class="metric-label">Total Units</div><div class="metric-value">${tot}</div></div>
-    <div class="metric"><div class="metric-label">Hitachi</div><div class="metric-value" style="color:var(--blue)">${h}</div><div class="metric-sub">${tot?Math.round(h/tot*100):0}% of fleet</div></div>
-    <div class="metric"><div class="metric-label">Competitors</div><div class="metric-value">${tot-h}</div></div>
-    <div class="metric"><div class="metric-label" style="color:var(--red)">For Replacement</div><div class="metric-value" style="color:var(--red)">${opp}</div><div class="metric-sub">poor/fair condition</div></div>
-  </div>
-  <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center">
-    <span style="font-size:13px;color:var(--text-m)">${Object.entries(byBrand).map(([b,n])=>`<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px"><span class="brand-dot" style="background:${BRAND_C[b]||'#888'}"></span>${b}: <strong>${n}</strong></span>`).join('')}</span>
-    <button class="btn btn-sm" style="margin-left:auto" onclick="flExpanded=new Set(Object.keys(groupFleet()));renderFleetRows()"><i class="ti ti-chevrons-down"></i>Expand all</button>
-    <button class="btn btn-sm" onclick="flExpanded=new Set();renderFleetRows()"><i class="ti ti-chevrons-up"></i>Collapse all</button>
-  </div>
-  <div id="fleet-tbody"></div>`;
+  // Легенда наших брендов
+  const ourLegend=Object.entries(byBrand).map(([b,n])=>'<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px"><span class="brand-dot" style="background:'+(BRAND_C[b]||'#888')+'"></span>'+b+': <strong>'+n+'</strong></span>').join('');
+
+  // Кнопка конкурентов
+  const compBtn='<button class="btn btn-sm'+(window.fleetShowComp?' ':' ')+'" style="'+(window.fleetShowComp?'background:#fef2f2;color:var(--red);border-color:#fca5a5':'')+'" onclick="window.fleetShowComp=!window.fleetShowComp;renderFleet()"><i class="ti ti-sword"></i>Competitors ('+compFleet.length+')</button>';
+
+  $('content').innerHTML=
+    '<div class="metrics" style="margin-bottom:18px">'+
+    '<div class="metric"><div class="metric-label">Hitachi Fleet</div><div class="metric-value" style="color:var(--blue)">'+h+'</div><div class="metric-sub">'+tot+' total units</div></div>'+
+    '<div class="metric"><div class="metric-label">Competitors at clients</div><div class="metric-value">'+compFleet.length+'</div><div class="metric-sub">'+(compFleet.length?Object.entries(compByBrand).map(([b,n])=>b+': '+n).join(', '):'none recorded')+'</div></div>'+
+    '<div class="metric"><div class="metric-label" style="color:var(--red)">For Replacement</div><div class="metric-value" style="color:var(--red)">'+opp+'</div><div class="metric-sub">poor/fair condition</div></div>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">'+
+    '<span style="font-size:13px;color:var(--text-m)">'+ourLegend+'</span>'+
+    '<div style="margin-left:auto;display:flex;gap:6px">'+
+    compBtn+
+    '<button class="btn btn-sm" onclick="flExpanded=new Set(Object.keys(groupFleet()));renderFleetRows()"><i class="ti ti-chevrons-down"></i>Expand all</button>'+
+    '<button class="btn btn-sm" onclick="flExpanded=new Set();renderFleetRows()"><i class="ti ti-chevrons-up"></i>Collapse all</button>'+
+    '</div></div>'+
+    (window.fleetShowComp&&compFleet.length?
+      '<div style="margin-bottom:16px;background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;overflow:hidden">'+
+      '<div style="padding:10px 16px;font-weight:700;color:var(--red);font-size:13px;border-bottom:1px solid #fca5a5"><i class="ti ti-sword"></i> Competitor Equipment at Client Sites</div>'+
+      '<table class="tbl"><thead><tr><th>Company</th><th>Brand</th><th>Model</th><th>Year</th><th>Notes</th></tr></thead><tbody>'+
+      compFleet.map(function(u){
+        return '<tr onclick="openCompanyDetail(\''+u.company_id+'\')" style="cursor:pointer">'+
+          '<td><strong>'+u.company+'</strong></td>'+
+          '<td><span style="color:var(--red);font-weight:600">'+u.brand+'</span></td>'+
+          '<td>'+u.model+'</td>'+
+          '<td style="color:var(--text-m)">'+( u.year||'—')+'</td>'+
+          '<td style="color:var(--text-m);font-size:12px">'+(u.notes||'—')+'</td>'+
+          '</tr>';
+      }).join('')+
+      '</tbody></table></div>':'')+'<div id="fleet-tbody"></div>';
 
   renderFleetRows();
 }
