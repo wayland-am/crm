@@ -4700,6 +4700,23 @@ function openPhotoViewer(url,caption){
     <div style="color:rgba(255,255,255,.8);margin-top:12px;font-size:13px">${caption}</div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+  // Ctrl+V paste support
+  function onPaste(e){
+    const items=e.clipboardData?.items;
+    if(!items)return;
+    for(const item of items){
+      if(item.type.startsWith('image/')){
+        e.preventDefault();
+        handlePhotoFile(item.getAsFile());
+        return;
+      }
+    }
+  }
+  document.addEventListener('paste',onPaste);
+  overlay.addEventListener('remove',()=>document.removeEventListener('paste',onPaste));
+  // cleanup on cancel
+  const orig=overlay.remove.bind(overlay);
+  overlay.remove=()=>{document.removeEventListener('paste',onPaste);orig();};
 }
 
 let _photoFile=null;
@@ -4712,12 +4729,15 @@ function openPhotoUpload(coId){
     <div style="background:var(--sur);border-radius:12px;padding:24px;width:400px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
       <div style="font-size:16px;font-weight:700;margin-bottom:4px">📷 Upload Photo</div>
       <div style="font-size:12px;color:var(--text-m);margin-bottom:16px">${co?.name||''}</div>
-      <div style="border:2px dashed var(--bdr);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:12px"
-           onclick="document.getElementById('photo-file-inp').click()">
+      <div id="photo-drop-zone" style="border:2px dashed var(--bdr);border-radius:10px;padding:24px;text-align:center;cursor:pointer;margin-bottom:12px;transition:border-color .2s,background .2s"
+           onclick="document.getElementById('photo-file-inp').click()"
+           ondragover="event.preventDefault();this.style.borderColor='var(--blue)';this.style.background='rgba(59,130,246,.07)'"
+           ondragleave="this.style.borderColor='';this.style.background=''"
+           ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';handlePhotoFile(event.dataTransfer.files[0])">
         <i class="ti ti-camera" style="font-size:32px;color:var(--blue);display:block;margin-bottom:8px"></i>
-        <div style="font-weight:600;color:var(--blue)">Tap to select or drag photo</div>
-        <div style="font-size:11px;color:var(--text-m);margin-top:4px">JPG, PNG, HEIC · любой размер</div>
-        <input type="file" id="photo-file-inp" accept="image/*" style="display:none" onchange="handlePhotoSelect(this)">
+        <div style="font-weight:600;color:var(--blue)">Перетащи фото или нажми</div>
+        <div style="font-size:11px;color:var(--text-m);margin-top:4px">JPG, PNG, HEIC · или Ctrl+V для вставки</div>
+        <input type="file" id="photo-file-inp" accept="image/*" style="display:none" onchange="handlePhotoFile(this.files[0])">
       </div>
       <div id="photo-preview" style="display:none;margin-bottom:12px">
         <img id="photo-preview-img" style="width:100%;max-height:180px;object-fit:cover;border-radius:8px">
@@ -4739,8 +4759,8 @@ function openPhotoUpload(coId){
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
 }
 
-function handlePhotoSelect(inp){
-  const file=inp.files[0];if(!file)return;
+function handlePhotoFile(file){
+  if(!file||!file.type.startsWith('image/'))return;
   _photoFile=file;
   const prev=document.getElementById('photo-preview');
   const img=document.getElementById('photo-preview-img');
