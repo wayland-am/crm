@@ -4859,11 +4859,15 @@ function openAddLocation(coId){
     <div style="background:var(--sur);border-radius:12px;padding:24px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto">
       <div style="font-size:16px;font-weight:700;margin-bottom:4px">Add Site Location</div>
       <div style="font-size:12px;color:var(--text-m);margin-bottom:16px">${co?.name||''}</div>
-      <div style="background:var(--blue-lt);border:1.5px dashed #93c5fd;border-radius:8px;padding:14px;margin-bottom:14px;text-align:center;cursor:pointer" onclick="document.getElementById('loc-photo-inp').click()">
+      <div style="background:var(--blue-lt);border:1.5px dashed #93c5fd;border-radius:8px;padding:14px;margin-bottom:14px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s"
+           onclick="document.getElementById('loc-photo-inp').click()"
+           ondragover="event.preventDefault();this.style.borderColor='#3b82f6';this.style.background='rgba(59,130,246,.15)'"
+           ondragleave="this.style.borderColor='';this.style.background=''"
+           ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';extractGPSfile(event.dataTransfer.files[0],'loc-lat','loc-lng','loc-gps-status')">
         <i class="ti ti-camera" style="font-size:24px;color:var(--blue);display:block;margin-bottom:6px"></i>
-        <div style="font-size:13px;font-weight:600;color:var(--blue)">Upload photo with GPS</div>
-        <div style="font-size:11px;color:var(--text-m);margin-top:2px">Coordinates extracted automatically from photo</div>
-        <input type="file" accept="image/*" id="loc-photo-inp" style="display:none" onchange="extractGPS(this,'loc-lat','loc-lng','loc-gps-status')">
+        <div style="font-size:13px;font-weight:600;color:var(--blue)">Перетащи фото с GPS или нажми</div>
+        <div style="font-size:11px;color:var(--text-m);margin-top:2px">Координаты извлекутся автоматически из EXIF</div>
+        <input type="file" accept="image/*" id="loc-photo-inp" style="display:none" onchange="extractGPSfile(this.files[0],'loc-lat','loc-lng','loc-gps-status')">
       </div>
       <div id="loc-gps-status" style="font-size:12px;margin-bottom:12px;min-height:16px;text-align:center"></div>
       <div style="font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:6px">Or enter coordinates manually</div>
@@ -4892,8 +4896,13 @@ function openAddLocation(coId){
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
 }
 
+function extractGPSfile(file,latId,lngId,statusId){
+  if(!file)return;
+  // Wrap file in fake input-like object and call extractGPS
+  extractGPS({files:[file]},latId,lngId,statusId);
+}
 function extractGPS(input,latId,lngId,statusId){
-  const file=input.files[0];if(!file)return;
+  const file=input.files?.[0]||input;if(!file)return;
   const status=document.getElementById(statusId);
   if(status){status.textContent='📷 Reading GPS...';status.style.color='var(--blue)';}
   const reader=new FileReader();
