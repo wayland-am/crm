@@ -2926,24 +2926,27 @@ async function scheduleAllCompanies(){
 let calView='month';
 let calOffset=0;
 
-function buildCalCell(day,dStr,isWeekend,isToday,inPeriod,dayTasks,maxShow,extra,catColor){
+function buildCalCell(day,dStr,isWeekend,isToday,inPeriod,grouped,maxShow,extra,catColor){
   const bg=isWeekend?'#f9fafb':isToday?'#eff6ff':'var(--sur)';
   const numBg=isToday?'var(--blue)':'transparent';
   const numColor=isToday?'#fff':'var(--text)';
   const numW=isToday?'22px':'auto';
   let html='<div style="min-height:90px;padding:4px;border-right:1px solid var(--bdr);border-bottom:1px solid var(--bdr);background:'+bg+';opacity:'+(inPeriod?1:0.4)+'">';
   html+='<div style="margin-bottom:3px"><span style="font-size:12px;font-weight:'+(isToday?700:500)+';color:'+numColor+';background:'+numBg+';width:'+numW+';height:'+numW+';border-radius:50%;display:inline-flex;align-items:center;justify-content:center">'+day.getDate()+'</span></div>';
-  dayTasks.slice(0,maxShow).forEach(function(t){
+  grouped.slice(0,maxShow).forEach(function(item){
+    const t=item.task;
+    const cnt=item.count;
     const co=db.companies.find(function(c){return c.id===t.company_id;});
     const cat=co&&co.category?co.category:'';
     const isAuto=t.auto_scheduled==='true';
     const color=catColor[cat]||'#6b7280';
     const coId=co?co.id:'';
     html+='<div onclick="'+(coId?'openCompanyDetail(\'' +coId+ '\')':'')+'"'+
-      ' title="'+t.company+(t.title?' — '+t.title:'')+'"'+
+      ' title="'+t.company+(cnt>1?' ('+cnt+' tasks)':'')+'"'+
       ' style="font-size:11px;padding:2px 5px;margin-bottom:2px;border-radius:4px;cursor:pointer;background:'+(isAuto?color+'18':'#fff')+';border-left:3px solid '+color+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px">';
     if(cat)html+='<span style="font-size:9px;font-weight:800;color:'+color+'">'+cat+'</span>';
     html+='<span style="overflow:hidden;text-overflow:ellipsis;flex:1">'+t.company+'</span>';
+    if(cnt>1)html+='<span style="font-size:9px;color:'+color+';font-weight:700;flex-shrink:0">+'+( cnt-1)+'</span>';
     html+='</div>';
   });
   if(extra)html+='<div style="font-size:10px;color:var(--text-m);padding:1px 4px">+'+extra+' more</div>';
@@ -2952,6 +2955,8 @@ function buildCalCell(day,dStr,isWeekend,isToday,inPeriod,dayTasks,maxShow,extra
 }
 
 function renderCalendar(){
+  if(window.calCatFilter===undefined)window.calCatFilter=new Set(['A','B','C','D','']);
+
   const $tr=$('topbar-right');
   $tr.innerHTML=
     '<select class="btn" id="cal-agent-filter" onchange="renderCalendar()">'+
@@ -2970,7 +2975,15 @@ function renderCalendar(){
     '<button class="btn" onclick="scheduleAllCompanies()"><i class="ti ti-refresh"></i>Update Schedule</button>';
 
   const agentFilter=document.getElementById('cal-agent-filter')&&document.getElementById('cal-agent-filter').value||'';
-  const allTasks=db.tasks.filter(function(t){return !t.done&&t.due&&(!agentFilter||t.agent===agentFilter);});
+  const allTasks=db.tasks.filter(function(t){
+    if(t.done||!t.due)return false;
+    if(agentFilter&&t.agent!==agentFilter)return false;
+    // Фильтр по категории
+    const co=db.companies.find(function(c){return c.id===t.company_id;});
+    const cat=co&&co.category?co.category:'';
+    return window.calCatFilter.has(cat)||window.calCatFilter.has('');
+  });
+
   const now=new Date();
   const numMonths=calView==='quarter'?3:1;
   const startMonth=new Date(now.getFullYear(),now.getMonth()+calOffset,1);
@@ -2980,11 +2993,9 @@ function renderCalendar(){
     ?startMonth.toLocaleString('en',{month:'long',year:'numeric'})+' — '+endMonthDate.toLocaleString('en',{month:'long',year:'numeric'})
     :startMonth.toLocaleString('en',{month:'long',year:'numeric'});
 
-  // Собираем все дни периода
   const firstDay=new Date(startMonth);
   const lastDay=new Date(startMonth.getFullYear(),startMonth.getMonth()+numMonths,0);
 
-  // Сетка начинается с понедельника
   const gridStart=new Date(firstDay);
   const startDow=gridStart.getDay();
   gridStart.setDate(gridStart.getDate()-(startDow===0?6:startDow-1));
@@ -2997,91 +3008,114 @@ function renderCalendar(){
     gridDays.push(new Date(gd));
   }
 
-  // Группируем задачи по дате
+  // Группируем задачи по дате, затем по компании (схлопываем дубли)
   const tasksByDay={};
   allTasks.forEach(function(t){
-    if(!tasksByDay[t.due])tasksByDay[t.due]=[];
-    tasksByDay[t.due].push(t);
+    if(!tasksByDay[t.due])tasksByDay[t.due]={};
+    const key=t.company_id||t.company;
+    if(!tasksByDay[t.due][key])tasksByDay[t.due][key]={task:t,count:0};
+    tasksByDay[t.due][key].count++;
   });
 
   const todayStr=now.toISOString().slice(0,10);
   const catColor={A:'#ef4444',B:'#f59e0b',C:'#3b82f6',D:'#9ca3af'};
+  const catDesc={A:'Contact monthly',B:'Contact quarterly',C:'Contact bi-annually',D:'Contact annually'};
 
-  // Легенда
-  const legend=Object.entries(CO_CATEGORIES).map(function(e){
-    return '<span style="display:inline-flex;align-items:center;gap:4px;margin-right:10px;font-size:12px"><span style="width:10px;height:10px;border-radius:50%;background:'+catColor[e[0]]+';display:inline-block"></span>'+e[0]+' — '+e[1].desc+'</span>';
+  // Легенда-фильтр
+  const legend=Object.entries(catColor).map(function(e){
+    const active=window.calCatFilter.has(e[0]);
+    return '<span onclick="toggleCalCat(\''+e[0]+'\');renderCalendar()" style="display:inline-flex;align-items:center;gap:5px;margin-right:10px;font-size:12px;cursor:pointer;padding:3px 8px;border-radius:20px;border:1.5px solid '+(active?e[1]:'#d1d5db')+';background:'+(active?e[1]+'15':'transparent')+';opacity:'+(active?1:0.5)+';transition:all .15s">'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:'+e[1]+';display:inline-block"></span>'+
+      e[0]+' — '+catDesc[e[0]]+
+      '</span>';
   }).join('');
 
-  // Заголовки дней недели
   const dayHeaders=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(d,i){
     return '<div style="padding:8px;text-align:center;font-size:11px;font-weight:700;color:'+(i>=5?'#9ca3af':'var(--text-m)')+';text-transform:uppercase;letter-spacing:.5px">'+d+'</div>';
   }).join('');
 
-  // Ячейки
   const cells=gridDays.map(function(day){
     const dStr=day.toISOString().slice(0,10);
     const inPeriod=day>=firstDay&&day<=lastDay;
     const isToday=dStr===todayStr;
     const isWeekend=day.getDay()===0||day.getDay()===6;
-    const dayTasks=(tasksByDay[dStr]||[]).slice().sort(function(a,b){
-      if((a.auto_scheduled==='true')!==(b.auto_scheduled==='true'))return a.auto_scheduled==='true'?1:-1;
-      return a.company.localeCompare(b.company);
-    });
+    // Схлопнутые задачи по компании
+    const grouped=tasksByDay[dStr]?Object.values(tasksByDay[dStr]).sort(function(a,b){
+      return a.task.company.localeCompare(b.task.company);
+    }):[];
     const maxShow=3;
-    const extra=dayTasks.length>maxShow?dayTasks.length-maxShow:0;
-    return buildCalCell(day,dStr,isWeekend,isToday,inPeriod,dayTasks,maxShow,extra,catColor);
+    const extra=grouped.length>maxShow?grouped.length-maxShow:0;
+    return buildCalCell(day,dStr,isWeekend,isToday,inPeriod,grouped,maxShow,extra,catColor);
   }).join('');
 
   $('content').innerHTML=
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">'+
-    '<div><div style="font-size:18px;font-weight:700">'+periodLabel+'</div>'+
-    '<div style="margin-top:4px">'+legend+'</div></div></div>'+
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+    '<div style="font-size:18px;font-weight:700">'+periodLabel+'</div></div>'+
+    '<div style="margin-bottom:14px">'+legend+'</div>'+
     '<div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;overflow:hidden">'+
     '<div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:2px solid var(--bdr)">'+dayHeaders+'</div>'+
     '<div style="display:grid;grid-template-columns:repeat(7,1fr)">'+cells+'</div>'+
     '</div>';
 }
 
+function toggleCalCat(cat){
+  if(!window.calCatFilter)window.calCatFilter=new Set(['A','B','C','D']);
+  if(window.calCatFilter.has(cat))window.calCatFilter.delete(cat);
+  else window.calCatFilter.add(cat);
+}
 // ─── Parts forecast ────────────────────────────────────────────────────────
 function renderClientMap(){
+  if(window.mapStatusFilter===undefined)window.mapStatusFilter=new Set(['Active','Prospect','Partner','Negotiating','Cold','Inactive']);
   const main=$('content');
   const locs=db.locations||[];
-  const withLocs=new Map();
+  const allWithLocs=new Map();
   locs.forEach(function(l){
     if(!l.lat||!l.lng)return;
     const co=db.companies.find(function(x){return x.id===l.company_id;});
     if(!co)return;
-    if(!withLocs.has(l.company_id))withLocs.set(l.company_id,{co:co,locs:[]});
-    withLocs.get(l.company_id).locs.push(l);
+    if(!allWithLocs.has(l.company_id))allWithLocs.set(l.company_id,{co:co,locs:[]});
+    allWithLocs.get(l.company_id).locs.push(l);
   });
-  const total=withLocs.size;
   const totalLocs=locs.filter(function(l){return l.lat&&l.lng;}).length;
 
-  main.innerHTML=
-    '<div style="padding:0 0 12px"><div style="font-size:13px;color:var(--text-m)">'+total+' companies · '+totalLocs+' locations on map</div></div>'+
-    '<div style="display:flex;gap:12px;margin-bottom:12px;font-size:12px">'+
-    '<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:50%;background:#185FA5;display:inline-block"></span>Active</span>'+
-    '<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:50%;background:#f59e0b;display:inline-block"></span>Prospect</span>'+
-    '<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:12px;height:12px;border-radius:50%;background:#1D9E75;display:inline-block"></span>Partner</span>'+
-    '</div>'+
-    '<div id="client-map" style="height:calc(100vh - 220px);border-radius:12px;overflow:hidden;border:1px solid var(--bdr)"></div>'+
-    (total===0?'<div style="text-align:center;padding:40px;color:var(--text-m)">No locations with GPS coordinates yet.<br>Add site locations in company cards.</div>':'');
+  const statusColor={Active:'#185FA5',Prospect:'#f59e0b',Partner:'#1D9E75',Negotiating:'#7F77DD',Cold:'#9ca3af',Inactive:'#d1d5db'};
+  const allStatuses=Object.keys(statusColor);
 
-  if(total===0)return;
+  // Фильтр-легенда
+  const legend=allStatuses.map(function(s){
+    const active=window.mapStatusFilter.has(s);
+    const color=statusColor[s];
+    return '<span onclick="toggleMapFilter(\''+s+'\');renderClientMap()" style="display:inline-flex;align-items:center;gap:5px;margin-right:8px;margin-bottom:6px;font-size:12px;cursor:pointer;padding:3px 10px;border-radius:20px;border:1.5px solid '+(active?color:'#d1d5db')+';background:'+(active?color+'15':'transparent')+';opacity:'+(active?1:0.45)+';transition:all .15s">'+
+      '<span style="width:10px;height:10px;border-radius:50%;background:'+color+';display:inline-block"></span>'+s+'</span>';
+  }).join('');
+
+  main.innerHTML=
+    '<div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">'+
+    '<div style="font-size:13px;color:var(--text-m)">'+allWithLocs.size+' companies · '+totalLocs+' locations</div>'+
+    '<button class="btn" onclick="window.mapStatusFilter=new Set(Object.keys({Active:1,Prospect:1,Partner:1,Negotiating:1,Cold:1,Inactive:1}));renderClientMap()" style="font-size:11px">Show all</button>'+
+    '</div>'+
+    '<div style="margin-bottom:12px;display:flex;flex-wrap:wrap">'+legend+'</div>'+
+    '<div id="client-map" style="height:calc(100vh - 230px);border-radius:12px;overflow:hidden;border:1px solid var(--bdr)"></div>'+
+    (allWithLocs.size===0?'<div style="text-align:center;padding:40px;color:var(--text-m)">No locations with GPS coordinates yet.</div>':'');
+
+  if(allWithLocs.size===0)return;
+
   setTimeout(function(){
     if(window._clientMap){window._clientMap.remove();window._clientMap=null;}
     var map=L.map('client-map').setView([40.18,44.51],8);
     window._clientMap=map;
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:18}).addTo(map);
-    var statusColor={Active:'#185FA5',Prospect:'#f59e0b',Partner:'#1D9E75',Negotiating:'#7F77DD'};
     var bounds=[];
-    withLocs.forEach(function(item){
+
+    allWithLocs.forEach(function(item){
       var co=item.co;
+      // Применяем фильтр
+      if(!window.mapStatusFilter.has(co.status||'Prospect'))return;
+      var color=statusColor[co.status]||'#9ca3af';
       item.locs.forEach(function(loc){
         var lat=parseFloat(loc.lat),lng=parseFloat(loc.lng);
         if(isNaN(lat)||isNaN(lng))return;
         bounds.push([lat,lng]);
-        var color=statusColor[co.status]||'#9ca3af';
         var marker=L.circleMarker([lat,lng],{radius:9,fillColor:color,color:'#fff',weight:2,opacity:1,fillOpacity:0.9}).addTo(map);
         var deals=db.deals.filter(function(d){return d.company_id===co.id&&d.stage!=='Lost';});
         var pipeline=deals.reduce(function(s,d){return s+Number(d.amount||0);},0);
@@ -3091,17 +3125,23 @@ function renderClientMap(){
           '<div style="font-weight:700;font-size:14px;margin-bottom:4px">'+co.name+'</div>'+
           '<div style="font-size:12px;color:#666;margin-bottom:6px">'+loc.name+' · '+(loc.type||'')+'</div>'+
           '<span style="background:'+color+'22;color:'+color+';padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600">'+co.status+'</span>'+
+          (co.category?'<span style="margin-left:4px;background:#f3f4f6;padding:2px 7px;border-radius:10px;font-size:11px">Cat. '+co.category+'</span>':'')+
           (pipeline>0?'<div style="margin-top:6px;font-size:12px">Pipeline: <b>$'+pipeline.toLocaleString()+'</b></div>':'')+
           (fleetCount>0?'<div style="font-size:12px">Fleet: <b>'+fleetCount+' units</b></div>':'')+
           '<div style="margin-top:8px"><a href="#" onclick="event.preventDefault();go(\'companies\');setTimeout(function(){openCompanyDetail(\''+co.id+'\')},200)" style="font-size:12px;color:#185FA5;font-weight:600">Open card →</a></div>'+
-          '</div>',
-          {maxWidth:240}
+          '</div>',{maxWidth:240}
         );
       });
     });
     if(bounds.length>1)map.fitBounds(bounds,{padding:[40,40]});
     else if(bounds.length===1)map.setView(bounds[0],13);
   },150);
+}
+
+function toggleMapFilter(status){
+  if(!window.mapStatusFilter)window.mapStatusFilter=new Set();
+  if(window.mapStatusFilter.has(status))window.mapStatusFilter.delete(status);
+  else window.mapStatusFilter.add(status);
 }
 
 function renderParts(){
