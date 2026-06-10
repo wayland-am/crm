@@ -880,6 +880,7 @@ function render(sec){
   if(sec==='contacts')tr.innerHTML=mkBtn('contact','Add Contact');
   if(sec==='fleet')tr.innerHTML=mkBtn('fleet','Add Equipment');
   if(sec==='tasks')tr.innerHTML=mkBtn('task','Add Task');
+  if(sec==='reports'&&currentUser?.role==='manager')tr.innerHTML='<select class="btn" id="rep-filter" onchange="renderReports()"><option value="">👥 All managers</option>'+AGENTS().map(a=>'<option>'+a+'</option>').join('')+'</select>';
   if(sec==='agents')tr.innerHTML='<button class="btn btn-primary" onclick="go(\'users\')" ><i class="ti ti-arrow-right"></i>Manage in Users</button>';
   if(sec==='automation')tr.innerHTML=mkBtn('automation','New Rule');
   if(sec==='calendar')tr.innerHTML=`<button class="btn" onclick="generateVisitPlan()"><i class="ti ti-refresh"></i>Refresh Plan</button>`;
@@ -2221,7 +2222,11 @@ async function quickDoneTask(id){
 
 // ─── Reports ───────────────────────────────────────────────────────────────
 function renderReports(){
-  const allDeals=currentUser?.role==='manager'?db.deals:myDeals();
+  // Фильтр по менеджеру — Sales Rep видит только себя, Manager может фильтровать
+  const repFilter=document.getElementById('rep-filter')?.value||'';
+  const isManager=currentUser?.role==='manager';
+  const baseDeals=isManager?db.deals:myDeals();
+  const allDeals=repFilter?baseDeals.filter(d=>d.agent===repFilter):baseDeals;
   const wonDeals=allDeals.filter(d=>d.stage==='Won');
   const activeDeals=allDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified');
   const lostDeals=allDeals.filter(d=>d.stage==='Lost');
