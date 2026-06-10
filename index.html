@@ -3076,7 +3076,7 @@ function renderCalendar(){
 // ─── Parts forecast ────────────────────────────────────────────────────────
 function renderClientMap(){
   $('topbar-right').innerHTML='';
-  const main=$('main');
+  const main=$('content');
   // Собираем все локации с компаниями
   const locs=db.locations||[];
   const withLocs=new Map();
