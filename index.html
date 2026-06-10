@@ -509,9 +509,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 <script>
 // ─── Constants ─────────────────────────────────────────────────────────────
-const STAGES=['Lead','Qualified','Proposal','Negotiation','Won','Lost'];
+const STAGES=['Lead','Qualified','Proposal','Negotiation','Won','Lost','Disqualified'];
 const STAGE_P={Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0};
-const STAGE_COLOR={Lead:'#9ca3af',Qualified:'#8b5cf6',Proposal:'#f59e0b',Negotiation:'#3b82f6',Won:'#22c55e',Lost:'#ef4444'};
+const STAGE_COLOR={Lead:'#9ca3af',Qualified:'#8b5cf6',Proposal:'#f59e0b',Negotiation:'#3b82f6',Won:'#22c55e',Lost:'#ef4444',Disqualified:'#6b7280'};
 const DEFAULT_AGENTS=[];
 const AGENTS=()=>db.agents.length?db.agents.map(a=>a.name):(currentUser?[currentUser.name]:[]);
 const INDUSTRIES=['Mining','Construction','Road Construction','Quarrying','Infrastructure','Industry','Other'];
@@ -1096,9 +1096,9 @@ function forecastByMonth(deals){
 }
 
 function renderPipeline(){
-  const visStages=STAGES.filter(s=>s!=='Lost');
+  const visStages=STAGES.filter(s=>s!=='Lost'&&s!=='Disqualified');
   const allMyDeals=myDeals();
-  const active=allMyDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost');
+  const active=allMyDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified');
   const pipeVal=active.reduce((s,d)=>s+d.amount,0);
   const stale=active.filter(d=>dealStaleDays(d)>=30);
   const forecast=forecastByMonth(allMyDeals);
@@ -1769,6 +1769,8 @@ function openDealDetail(id){
           ['Next Action Date',d.next_date],
           d.competitor?['Competitor',`<span style="color:var(--red)"><i class="ti ti-sword" style="font-size:11px"></i> ${d.competitor}</span>`]:null,
           isLost&&d.lost_reason?['Reason Lost',`<span style="color:var(--red)">${d.lost_reason}</span>`]:null,
+          d.stage==='Disqualified'&&d.disq_reason?['Disqualification reason',`<span style="color:#6b7280;font-weight:600">${d.disq_reason}</span>`]:null,
+          d.stage==='Disqualified'&&d.disq_comment?['Comment',`<span style="color:var(--text-m)">${d.disq_comment}</span>`]:null,
           isLost&&d.competitor_price?['Competitor price',`<span style="color:var(--red);font-weight:700">${d.competitor_currency||'USD'} ${Number(d.competitor_price).toLocaleString()}</span>`]:null,
         ].filter(Boolean).filter(r=>r[1]).map(([k,v])=>`<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')}
       </div>
@@ -1864,6 +1866,15 @@ async function moveDeal(id,stage){
   if(stage==='Won'){
     if(!confirm('Move deal to WON?\n\n• '+( d.model||'Equipment')+' will be added to '+d.company+' fleet\n• Company status → Active'))return;
   }
+  if(stage==='Disqualified'){
+    const reasons=['No target need','No budget','Non-target client','No decision maker','Wrong product / spec','Geography / logistics','Fake / test lead','Intermediary / competitor','Project not approved','Other'];
+    const reason=prompt('Disqualification reason (required):\n\n'+reasons.map((r,i)=>(i+1)+'. '+r).join('\n')+'\n\nEnter number or text:');
+    if(!reason)return;
+    const idx=parseInt(reason)-1;
+    d.disq_reason=(!isNaN(idx)&&reasons[idx])?reasons[idx]:reason;
+    d.disq_comment=prompt('Comment (optional, press Enter to skip):')||'';
+    await persist('deals',{...d});
+  }
   if(stage==='Lost'){
     if(d.lost_reason==='Price too high'&&!Number(d.competitor_price)){
       const price=prompt('Reason is "Price too high" — enter competitor price (required):');
@@ -1890,7 +1901,7 @@ async function moveDeal(id,stage){
   }
 
   d.stage=stage;
-  d.probability={Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[stage]||0;
+  d.probability={Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0,Disqualified:0}[stage]||0;
   await persist('deals',{...d});
 
   // Log stage change to activities with timestamp
@@ -2526,7 +2537,7 @@ function openM(type,id=null,coId=null,dealId=null){
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Currency</label><select class="fc" id="f-currency">${['USD','EUR','AMD','RUB'].map(c=>`<option ${(e.currency||'USD')===c?'selected':''}>${c}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Stage</label><select class="fc" id="f-stage" onchange="updateLostReason(this.value)">${['Lead','Qualified','Proposal','Negotiation','Won','Lost'].map(s=>`<option ${(e.stage||'Lead')===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Stage</label><select class="fc" id="f-stage" onchange="updateLostReason(this.value)">${['Lead','Qualified','Proposal','Negotiation','Won','Lost','Disqualified'].map(s=>`<option ${(e.stage||'Lead')===s?'selected':''}>${s}</option>`).join('')}</select></div>
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Competitor</label><input class="fc" id="f-competitor" value="${e.competitor||''}" placeholder="Komatsu, Caterpillar, Volvo..."></div>
@@ -2535,6 +2546,17 @@ function openM(type,id=null,coId=null,dealId=null){
       <div class="fr">
         <div class="fg"><label class="fl">Next Action</label><input class="fc" id="f-next" value="${e.next_action||''}" placeholder="Send Proposal..."></div>
         <div class="fg"><label class="fl">Date</label><input class="fc" id="f-ndate" type="date" value="${e.next_date||''}"></div>
+      </div>
+      <div class="fg" id="disq-reason-wrap" style="display:${(e.stage||'Lead')==='Disqualified'?'block':'none'}">
+        <label class="fl">Disqualification reason *</label>
+        <select class="fc" id="f-disq-reason">
+          <option value="">— select reason —</option>
+          ${['No target need','No budget','Non-target client','No decision maker','Wrong product / spec','Geography / logistics','Fake / test lead','Intermediary / competitor','Project not approved','Other'].map(r=>`<option ${e.disq_reason===r?'selected':''}>${r}</option>`).join('')}
+        </select>
+      </div>
+      <div class="fg" id="disq-comment-wrap" style="display:${(e.stage||'Lead')==='Disqualified'?'block':'none'}">
+        <label class="fl">Comment <span style="font-weight:400;color:var(--text-m)">(optional)</span></label>
+        <input class="fc" id="f-disq-comment" value="${e.disq_comment||''}" placeholder="e.g. Company only rents, does not buy equipment">
       </div>
       <div class="fg" id="lost-reason-wrap" style="display:${(e.stage||'Lead')==='Lost'?'block':'none'}">
         <label class="fl">Reason Lost</label>
@@ -2724,8 +2746,9 @@ async function _saveM(){
     let {id:coId,name:coName}=getCompanyFromForm();
     if(!coName)return alert('Select a company');
     if(!coId){const s=await persist('companies',{name:coName,status:'Prospect',created:new Date().toISOString().slice(0,10)});db.companies.push(s);coId=s.id;updateCounts();}
+    if(g('f-stage')==='Disqualified'&&!g('f-disq-reason'))return alert('Select disqualification reason — it is required.');
     if(g('f-lost-reason')==='Price too high'&&!Number(g('f-competitor-price')))return alert('Enter competitor price — it is required when reason is "Price too high"');
-    row={...row,company_id:coId,company:coName,model:g('f-model')||'',amount:Number(g('f-amount'))||0,currency:g('f-currency')||'USD',stage:g('f-stage')||'Lead',agent:g('f-agent')||'',next_action:g('f-next')||'',next_date:g('f-ndate')||'',days:Number(g('f-days'))||0,competitor:g('f-competitor')||'',lost_reason:g('f-lost-reason')||'',competitor_price:Number(g('f-competitor-price'))||0,competitor_currency:g('f-comp-currency')||'USD',probability:{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[g('f-stage')]||0,created:row.created||today()};
+    row={...row,company_id:coId,company:coName,model:g('f-model')||'',amount:Number(g('f-amount'))||0,currency:g('f-currency')||'USD',stage:g('f-stage')||'Lead',agent:g('f-agent')||'',next_action:g('f-next')||'',next_date:g('f-ndate')||'',days:Number(g('f-days'))||0,competitor:g('f-competitor')||'',lost_reason:g('f-lost-reason')||'',competitor_price:Number(g('f-competitor-price'))||0,competitor_currency:g('f-comp-currency')||'USD',disq_reason:g('f-disq-reason')||'',disq_comment:g('f-disq-comment')||'',probability:{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[g('f-stage')]||0,created:row.created||today()};
     const prevStage=eid?db.deals.find(x=>x.id===eid)?.stage:null;
     const s=await persist('deals',row);
     if(!eid)db.deals.push(s);else Object.assign(db.deals.find(x=>x.id===eid),s);
