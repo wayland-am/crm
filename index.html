@@ -383,6 +383,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   .bar-val{width:55px!important;font-size:10px!important}
 }
 </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 </head>
 <body>
 
@@ -440,6 +442,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
       <div class="nav-sec">Clients</div>
       <div class="ni" onclick="go('leads',this)"><i class="ti ti-user-plus"></i>Leads<span class="count" id="nc-leads">0</span></div>
       <div class="ni" onclick="go('companies',this)"><i class="ti ti-building"></i>Companies<span class="count" id="nc-companies">0</span></div>
+      <div class="ni" onclick="go('clientmap',this)"><i class="ti ti-map-pin"></i>Client Map</div>
       <div class="ni" onclick="go('contacts',this)"><i class="ti ti-users"></i>Contacts<span class="count" id="nc-contacts">0</span></div>
       <div class="ni" onclick="go('fleet',this)"><i class="ti ti-tractor"></i>Fleet<span class="count" id="nc-fleet">0</span></div>
       <div class="nav-sec">Work</div>
@@ -825,7 +828,7 @@ setInterval(()=>{
     pendingSync=true;
     loadFromSheets().finally(()=>{
       pendingSync=false;
-      const safe=['dashboard','pipeline','leads','companies','contacts','fleet','tasks','reports','agents','contracts'];
+      const safe=['dashboard','pipeline','leads','companies','clientmap','contacts','fleet','tasks','reports','agents','contracts'];
       if(safe.includes(cur.section))try{render(cur.section);}catch(e){}
     });
   }
@@ -869,7 +872,7 @@ function go(sec,el){
 function render(sec){
   const tr=$('topbar-right');tr.innerHTML='';
   $('breadcrumb').innerHTML='';
-  const titles={dashboard:'Dashboard',pipeline:'Pipeline',leads:'Leads',companies:'Companies',contacts:'Contacts',fleet:'Fleet',tasks:'Tasks',reports:'Reports',segments:'Segmentation',automation:'Automation',calendar:'Calendar',agents:'Sales Team',parts:'Parts',operations:'Operations',users:'Users',contracts:'Contracts'};
+  const titles={dashboard:'Dashboard',pipeline:'Pipeline',leads:'Leads',companies:'Companies',clientmap:'Client Map',contacts:'Contacts',fleet:'Fleet',tasks:'Tasks',reports:'Reports',segments:'Segmentation',automation:'Automation',calendar:'Calendar',agents:'Sales Team',parts:'Parts',operations:'Operations',users:'Users',contracts:'Contracts'};
   $('ptitle').textContent=titles[sec]||sec;
   if(sec==='pipeline')tr.innerHTML=mkBtn('deal','Add Deal');
   if(sec==='leads')tr.innerHTML=mkBtn('lead','Add Lead');
@@ -880,7 +883,7 @@ function render(sec){
   if(sec==='agents')tr.innerHTML=mkBtn('agent','Add Member');
   if(sec==='automation')tr.innerHTML=mkBtn('automation','New Rule');
   if(sec==='calendar')tr.innerHTML=`<button class="btn" onclick="generateVisitPlan()"><i class="ti ti-refresh"></i>Refresh Plan</button>`;
-  const fns={dashboard:renderDashboard,pipeline:renderPipeline,leads:renderLeads,companies:renderCompanies,contacts:renderContacts,fleet:renderFleet,tasks:renderTasks,reports:renderReports,agents:renderAgents,calendar:renderCalendar,parts:renderParts,operations:renderOperations,users:renderUsers,segments:renderSegments,automation:renderAutomation,contracts:renderContracts};
+  const fns={dashboard:renderDashboard,pipeline:renderPipeline,leads:renderLeads,companies:renderCompanies,clientmap:renderClientMap,contacts:renderContacts,fleet:renderFleet,tasks:renderTasks,reports:renderReports,agents:renderAgents,calendar:renderCalendar,parts:renderParts,operations:renderOperations,users:renderUsers,segments:renderSegments,automation:renderAutomation,contracts:renderContracts};
   if(fns[sec])fns[sec]();
 }
 function mkBtn(type,label){return`<button class="btn btn-primary" onclick="openM('${type}')"><i class="ti ti-plus"></i>${label}</button>`;}
@@ -1386,7 +1389,8 @@ function openCompanyDetail(id){
 
   const contacts=db.contacts.filter(x=>x.company_id===id);
   const deals=db.deals.filter(x=>x.company_id===id);
-  const fleet=db.fleet.filter(x=>x.company_id===id);
+  const fleet=db.fleet.filter(x=>x.company_id===id&&x.condition!=='Competitor');
+  const compFleet=db.fleet.filter(x=>x.company_id===id&&x.condition==='Competitor');
   const tasks=db.tasks.filter(x=>x.company_id===id&&!x.done);
   const REAL_ACT_TYPES=['Call','Meeting','WhatsApp','Email','Proposal','Demo','Documents','Other'];
   const acts=db.activities
@@ -1461,6 +1465,21 @@ function openCompanyDetail(id){
           <div style="text-align:right"><span class="b ${condBadge(u.condition)}" style="font-size:10px;padding:1px 5px">${u.condition||'?'}</span></div>
         </div>`).join('')}`:`<div class="empty" style="padding:16px"><i class="ti ti-tractor"></i><div class="empty-title" style="font-size:12px">No equipment</div><button class="btn btn-sm" onclick="openM('fleet',null,'${id}')"><i class="ti ti-plus"></i>Add</button></div>`}
       </div>
+      <!-- Competitor Fleet -->
+      ${compFleet.length?`<div class="cd-sec" style="border-top:2px solid #fee2e2">
+        <div class="cd-sec-title" style="color:var(--red)"><i class="ti ti-sword" style="font-size:13px"></i> Конкуренты <span style="font-weight:500;font-size:12px;color:var(--text)">${compFleet.length} ед.</span></div>
+        <div style="display:grid;grid-template-columns:1fr 60px;gap:4px;margin-bottom:6px;font-size:10px;color:var(--text-m);font-weight:600;text-transform:uppercase;letter-spacing:.4px">
+          <span>Модель</span><span style="text-align:right">Год</span>
+        </div>
+        ${compFleet.map(u=>`<div class="fleet-row" style="opacity:.85">
+          <div style="font-weight:600;display:flex;align-items:center;gap:4px">
+            <span class="brand-dot" style="background:#ef4444"></span>${u.brand} ${u.model}
+            ${u.notes?`<span style="font-size:10px;color:var(--text-m);font-weight:400">· ${u.notes.replace('Lost deal — ','')}</span>`:''}
+          </div>
+          <div style="text-align:right;color:var(--text-m)">${u.year||'—'}</div>
+        </div>`).join('')}
+      </div>`:``}
+
       <!-- Sales potential -->
       ${c.budget||fleet.length?`<div class="cd-sec">
         <div class="cd-sec-title">Sales potential</div>
@@ -1906,7 +1925,6 @@ async function moveDeal(id,stage){
 
   // ── LOST: записать конкурента в парк клиента ──
   if(stage==='Lost' && prevStage!=='Lost' && d.competitor){
-    // Проверяем нет ли уже такой записи
     const alreadyLost=db.fleet.some(f=>f.company_id===d.company_id&&f.brand===d.competitor&&f.model===d.model&&f.condition==='Competitor');
     if(!alreadyLost){
       const fleetUnit={id:uid(),company_id:d.company_id,company:d.company,
@@ -1918,7 +1936,50 @@ async function moveDeal(id,stage){
     }
   }
 
+  // ── Lost: предложить задачу на возврат ──
+  if(stage==='Lost' && prevStage!=='Lost'){
+    showLostFollowupDialog(d);
+  }
+
   updateCounts();openDealDetail(id);
+}
+
+function showLostFollowupDialog(deal){
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:flex;align-items:center;justify-content:center';
+  overlay.innerHTML=`
+    <div style="background:var(--sur);border-radius:12px;padding:24px;width:360px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+      <div style="font-size:16px;font-weight:700;margin-bottom:4px">📅 Запланировать возврат?</div>
+      <div style="font-size:12px;color:var(--text-m);margin-bottom:16px">${deal.company} · ${deal.model||'—'}</div>
+      <div style="font-size:13px;color:var(--text);margin-bottom:12px">Когда вернуться к клиенту?</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+        ${[
+          {label:'1 месяц',days:30},
+          {label:'3 месяца',days:90},
+          {label:'6 месяцев',days:180},
+          {label:'1 год',days:365}
+        ].map(o=>`<button class="btn" style="padding:10px;font-size:13px" onclick="createLostFollowup('${deal.id}','${deal.company_id}','${deal.company}','${deal.agent||''}',${o.days});this.closest('div[style*=fixed]').remove()">${o.label}</button>`).join('')}
+      </div>
+      <div style="display:flex;justify-content:center">
+        <button class="btn btn-ghost" style="font-size:12px;color:var(--text-m)" onclick="this.closest('div[style*=fixed]').remove()">Не создавать задачу</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
+async function createLostFollowup(dealId,coId,coName,agent,days){
+  const due=new Date();due.setDate(due.getDate()+days);
+  const task={id:uid(),deal_id:dealId,company_id:coId,company:coName,
+    title:`Вернуться к ${coName} — повторный контакт`,
+    text:`Сделка была закрыта как Lost. Проверить актуальность потребности.`,
+    agent:agent||currentUser?.name||'',
+    due:due.toISOString().slice(0,10),
+    priority:'medium',type:'follow-up',done:false,
+    auto_scheduled:true,created:today()};
+  db.tasks.push(task);
+  await persist('tasks',task);
+  updateCounts();
+  showToast(`📅 Задача создана на ${due.toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'})}`,3500);
 }
 
 function showToast(msg,duration=2500){
@@ -2660,8 +2721,8 @@ async function _saveM(){
     }
     const s=await persist('deals',row);
     if(!eid)db.deals.push(s);else Object.assign(db.deals.find(x=>x.id===eid),s);
-    // Won/Lost side-effects (same as moveDeal)
-    if(s.stage!==prevStageEdit){
+    // Won/Lost side-effects — при смене стадии ИЛИ если запись в парке ещё не создана
+    if(s.stage!==prevStageEdit || s.stage==='Won' || s.stage==='Lost'){
       if(s.stage==='Won'&&s.model){
         const alreadyInFleet=db.fleet.some(f=>f.company_id===s.company_id&&f.deal_id===s.id);
         if(!alreadyInFleet){
@@ -3013,6 +3074,87 @@ function renderCalendar(){
 
 
 // ─── Parts forecast ────────────────────────────────────────────────────────
+function renderClientMap(){
+  $('topbar-right').innerHTML='';
+  const main=$('main');
+  // Собираем все локации с компаниями
+  const locs=db.locations||[];
+  const withLocs=new Map();
+  locs.forEach(l=>{
+    if(!l.lat||!l.lng)return;
+    const co=db.companies.find(x=>x.id===l.company_id);
+    if(!co)return;
+    if(!withLocs.has(l.company_id))withLocs.set(l.company_id,{co,locs:[]});
+    withLocs.get(l.company_id).locs.push(l);
+  });
+  const total=withLocs.size;
+  const totalLocs=locs.filter(l=>l.lat&&l.lng).length;
+
+  main.innerHTML=`
+    <div style="padding:20px 24px 12px">
+      <div style="font-size:20px;font-weight:700;margin-bottom:4px">Client Map</div>
+      <div style="font-size:13px;color:var(--text-m)">${total} компаний · ${totalLocs} объектов на карте</div>
+    </div>
+    <div style="padding:0 24px 12px;display:flex;gap:8px;flex-wrap:wrap">
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#185FA5;display:inline-block"></span>Active</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#f59e0b;display:inline-block"></span>Prospect</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#1D9E75;display:inline-block"></span>Partner</span>
+      <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px"><span style="width:12px;height:12px;border-radius:50%;background:#9ca3af;display:inline-block"></span>Other</span>
+    </div>
+    <div id="client-map" style="height:calc(100vh - 180px);margin:0 24px 24px;border-radius:12px;overflow:hidden;border:1px solid var(--bdr)"></div>
+    ${total===0?`<div style="text-align:center;padding:40px;color:var(--text-m)"><i class="ti ti-map-off" style="font-size:48px;display:block;margin-bottom:12px;opacity:.3"></i>Нет объектов с координатами.<br>Добавьте GPS-локации в карточках компаний.</div>`:''}
+  `;
+
+  if(total===0)return;
+
+  // Инициализируем карту после рендера
+  setTimeout(()=>{
+    if(window._clientMap){window._clientMap.remove();window._clientMap=null;}
+    const map=L.map('client-map',{zoomControl:true}).setView([40.18,44.51],8);
+    window._clientMap=map;
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+      attribution:'© OpenStreetMap',maxZoom:18
+    }).addTo(map);
+
+    const statusColor={Active:'#185FA5',Prospect:'#f59e0b',Partner:'#1D9E75',Negotiating:'#7F77DD'};
+    const bounds=[];
+
+    withLocs.forEach(({co,locs})=>{
+      const color=statusColor[co.status]||'#9ca3af';
+      locs.forEach(loc=>{
+        const lat=parseFloat(loc.lat),lng=parseFloat(loc.lng);
+        if(isNaN(lat)||isNaN(lng))return;
+        bounds.push([lat,lng]);
+        const marker=L.circleMarker([lat,lng],{
+          radius:9,fillColor:color,color:'#fff',weight:2,opacity:1,fillOpacity:0.9
+        }).addTo(map);
+        const deals=db.deals.filter(d=>d.company_id===co.id&&d.stage!=='Lost');
+        const pipeline=deals.reduce((s,d)=>s+Number(d.amount||0),0);
+        marker.bindPopup(`
+          <div style="min-width:180px;font-family:inherit">
+            <div style="font-weight:700;font-size:14px;margin-bottom:4px">${co.name}</div>
+            <div style="font-size:12px;color:#666;margin-bottom:6px">${loc.name} · ${loc.type||''}</div>
+            <div style="display:flex;gap:8px;font-size:11px;flex-wrap:wrap">
+              <span style="background:${color}22;color:${color};padding:2px 7px;border-radius:10px;font-weight:600">${co.status}</span>
+              ${co.category?`<span style="background:#f3f4f6;padding:2px 7px;border-radius:10px">${co.category}</span>`:''}
+            </div>
+            ${pipeline>0?`<div style="margin-top:6px;font-size:12px">Pipeline: <b>$${pipeline.toLocaleString()}</b></div>`:''}
+            ${db.fleet.filter(f=>f.company_id===co.id&&f.condition!=='Competitor').length>0?
+              `<div style="font-size:12px">Fleet: <b>${db.fleet.filter(f=>f.company_id===co.id&&f.condition!=='Competitor').length} units</b></div>`:''}
+            <div style="margin-top:8px">
+              <a href="#" onclick="event.preventDefault();go('companies');setTimeout(()=>openCompanyDetail('${co.id}'),100)" 
+                 style="font-size:12px;color:#185FA5;font-weight:600">Открыть карточку →</a>
+            </div>
+          </div>
+        `,{maxWidth:240});
+      });
+    });
+
+    if(bounds.length>1)map.fitBounds(bounds,{padding:[40,40]});
+    else if(bounds.length===1)map.setView(bounds[0],13);
+  },100);
+}
+
 function renderParts(){
   $('topbar-right').innerHTML=`
     <select class="btn" id="parts-co-filter" onchange="renderParts()">
