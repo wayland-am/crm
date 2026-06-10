@@ -2531,9 +2531,22 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Type</label><select class="fc" id="f-type">${['Excavator','Loader','Bulldozer','Drilling Rig','Dump Truck','Compressor','Crane','Grader'].map(t=>`<option ${e.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
         <div class="fg"><label class="fl">Year</label><input class="fc" id="f-year" type="number" min="2000" max="2026" value="${e.year||''}"></div>
       </div>
+      <div class="fg" style="margin-bottom:10px">
+        <label class="fl" style="margin-bottom:6px;font-weight:600">Ownership *</label>
+        <div style="display:flex;gap:8px">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border-radius:8px;border:1.5px solid ${(e.condition==='Competitor')?'var(--bdr)':' var(--blue)'};background:${(e.condition==='Competitor')?'transparent':'var(--blue-lt)'};flex:1;font-size:13px" id="own-ours-lbl">
+            <input type="radio" name="f-ownership" id="f-own-ours" value="ours" ${e.condition!=='Competitor'?'checked':''} onchange="toggleOwnership()">
+            <span>🔵 Our client's equipment <span style='font-size:11px;color:var(--text-m)'>(competitor to Wayland)</span></span>
+          </label>
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:8px 14px;border-radius:8px;border:1.5px solid ${(e.condition==='Competitor')?'var(--red)':' var(--bdr)'};background:${(e.condition==='Competitor')?'#fef2f2':'transparent'};flex:1;font-size:13px" id="own-comp-lbl">
+            <input type="radio" name="f-ownership" id="f-own-comp" value="competitor" ${e.condition==='Competitor'?'checked':''} onchange="toggleOwnership()">
+            <span>⚔️ Competitor's equipment <span style='font-size:11px;color:var(--text-m)'>(seen at client site)</span></span>
+          </label>
+        </div>
+      </div>
       <div class="fr">
         <div class="fg"><label class="fl">Serial No.</label><input class="fc" id="f-serial" value="${e.serial||''}"></div>
-        <div class="fg"><label class="fl">Condition</label><select class="fc" id="f-cond">${['Excellent','Good','Fair','Poor'].map(c=>`<option ${(e.condition||'Good')===c?'selected':''}>${c}</option>`).join('')}</select></div>
+        <div class="fg" id="cond-field-wrap" style="display:${e.condition==='Competitor'?'none':'block'}"><label class="fl">Condition</label><select class="fc" id="f-cond">${['Excellent','Good','Fair','Poor'].map(c=>`<option ${(e.condition!=='Competitor'&&(e.condition||'Good')===c)?'selected':''}>${c}</option>`).join('')}</select></div>
       </div>
       <div class="fg"><label class="fl">Notes</label><input class="fc" id="f-notes" value="${e.notes||''}" placeholder="Aging, due for replacement..."aging, for replacement..."></div>`,
     task:`
@@ -2740,7 +2753,9 @@ async function _saveM(){
     let {id:coId,name:coName}=getCompanyFromForm();
     if(!coName||!g('f-model'))return alert('Fill in company and model');
     if(!coId&&coName){const s=await persist('companies',{name:coName,status:'Prospect',created:new Date().toISOString().slice(0,10)});db.companies.push(s);coId=s.id;updateCounts();}
-    row={...row,company_id:coId,company:coName,brand:g('f-brand')||'Hitachi',model:g('f-model'),type:g('f-type')||'',year:Number(g('f-year'))||0,serial:g('f-serial')||'',condition:g('f-cond')||'Good',notes:g('f-notes')||''};
+    const isCompetitor=document.getElementById('f-own-comp')?.checked;
+    const condVal=isCompetitor?'Competitor':(g('f-cond')||'Good');
+    row={...row,company_id:coId,company:coName,brand:g('f-brand')||'Hitachi',model:g('f-model'),type:g('f-type')||'',year:Number(g('f-year'))||0,serial:g('f-serial')||'',condition:condVal,notes:g('f-notes')||''};
     const s=await persist('fleet',row);
     if(!eid)db.fleet.push(s);else Object.assign(db.fleet.find(x=>x.id===eid),s);
     updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderFleet();
@@ -2945,6 +2960,16 @@ let calYear=new Date().getFullYear();
 let calAgent='all';
 
 // ─── Auto-scheduler ────────────────────────────────────────────────────────
+function toggleOwnership(){
+  const isComp=document.getElementById('f-own-comp')?.checked;
+  const condWrap=document.getElementById('cond-field-wrap');
+  if(condWrap)condWrap.style.display=isComp?'none':'block';
+  const oursLbl=document.getElementById('own-ours-lbl');
+  const compLbl=document.getElementById('own-comp-lbl');
+  if(oursLbl){oursLbl.style.borderColor=isComp?'var(--bdr)':'var(--blue)';oursLbl.style.background=isComp?'transparent':'var(--blue-lt)';}
+  if(compLbl){compLbl.style.borderColor=isComp?'var(--red)':'var(--bdr)';compLbl.style.background=isComp?'#fef2f2':'transparent';}
+}
+
 function toggleCompetitorPrice(reason){
   const wrap=document.getElementById('competitor-price-wrap');
   if(wrap)wrap.style.display=reason==='Price too high'?'flex':'none';
