@@ -4589,6 +4589,12 @@ function setSentiment(val,el){
 function updateLostReason(stage){
   const wrap=$('lost-reason-wrap');
   if(wrap)wrap.style.display=stage==='Lost'?'block':'none';
+  const priceWrap=$('competitor-price-wrap');
+  if(priceWrap&&stage!=='Lost')priceWrap.style.display='none';
+  const disqWrap=$('disq-reason-wrap');
+  if(disqWrap)disqWrap.style.display=stage==='Disqualified'?'block':'none';
+  const disqComWrap=$('disq-comment-wrap');
+  if(disqComWrap)disqComWrap.style.display=stage==='Disqualified'?'block':'none';
 }
 
 function updateAutoFields(){
