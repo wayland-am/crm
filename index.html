@@ -1746,6 +1746,7 @@ function openDealDetail(id){
           ['Next Action Date',d.next_date],
           d.competitor?['Competitor',`<span style="color:var(--red)"><i class="ti ti-sword" style="font-size:11px"></i> ${d.competitor}</span>`]:null,
           isLost&&d.lost_reason?['Reason Lost',`<span style="color:var(--red)">${d.lost_reason}</span>`]:null,
+          isLost&&d.competitor_price?['Competitor price',`<span style="color:var(--red);font-weight:700">${d.competitor_currency||'USD'} ${Number(d.competitor_price).toLocaleString()}</span>`]:null,
         ].filter(Boolean).filter(r=>r[1]).map(([k,v])=>`<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')}
       </div>
 
@@ -2482,10 +2483,14 @@ function openM(type,id=null,coId=null,dealId=null){
       </div>
       <div class="fg" id="lost-reason-wrap" style="display:${(e.stage||'Lead')==='Lost'?'block':'none'}">
         <label class="fl">Reason Lost</label>
-        <select class="fc" id="f-lost-reason">
+        <select class="fc" id="f-lost-reason" onchange="toggleCompetitorPrice(this.value)">
           <option value="">— select reason —</option>
           ${['Price too high','Chose competitor','Budget cut','No budget','Project cancelled','No response','Bought used equipment','Technical mismatch','Other'].map(r=>`<option ${e.lost_reason===r?'selected':''}>${r}</option>`).join('')}
         </select>
+      </div>
+      <div class="fr" id="competitor-price-wrap" style="display:${e.lost_reason==='Price too high'?'flex':'none'}">
+        <div class="fg"><label class="fl">Competitor price</label><input class="fc" id="f-competitor-price" type="number" placeholder="0" value="${e.competitor_price||''}"></div>
+        <div class="fg"><label class="fl">Currency</label><select class="fc" id="f-comp-currency"><option ${(e.competitor_currency||'USD')==='USD'?'selected':''}>USD</option><option ${e.competitor_currency==='EUR'?'selected':''}>EUR</option><option ${e.competitor_currency==='RUB'?'selected':''}>RUB</option><option ${e.competitor_currency==='AMD'?'selected':''}>AMD</option></select></div>
       </div>`,
     fleet:`
       <div class="fg"><label class="fl">Company *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
@@ -2662,9 +2667,44 @@ async function _saveM(){
     let {id:coId,name:coName}=getCompanyFromForm();
     if(!coName)return alert('Select a company');
     if(!coId){const s=await persist('companies',{name:coName,status:'Prospect',created:new Date().toISOString().slice(0,10)});db.companies.push(s);coId=s.id;updateCounts();}
-    row={...row,company_id:coId,company:coName,model:g('f-model')||'',amount:Number(g('f-amount'))||0,currency:g('f-currency')||'USD',stage:g('f-stage')||'Lead',agent:g('f-agent')||'',next_action:g('f-next')||'',next_date:g('f-ndate')||'',days:Number(g('f-days'))||0,competitor:g('f-competitor')||'',lost_reason:g('f-lost-reason')||'',probability:{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[g('f-stage')]||0,created:row.created||today()};
+    row={...row,company_id:coId,company:coName,model:g('f-model')||'',amount:Number(g('f-amount'))||0,currency:g('f-currency')||'USD',stage:g('f-stage')||'Lead',agent:g('f-agent')||'',next_action:g('f-next')||'',next_date:g('f-ndate')||'',days:Number(g('f-days'))||0,competitor:g('f-competitor')||'',lost_reason:g('f-lost-reason')||'',competitor_price:Number(g('f-competitor-price'))||0,competitor_currency:g('f-comp-currency')||'USD',probability:{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[g('f-stage')]||0,created:row.created||today()};
+    const prevStage=eid?db.deals.find(x=>x.id===eid)?.stage:null;
     const s=await persist('deals',row);
     if(!eid)db.deals.push(s);else Object.assign(db.deals.find(x=>x.id===eid),s);
+
+    // Won/Lost side-effects — при смене стадии ИЛИ при создании сразу в Won/Lost
+    const stageChanged=s.stage!==prevStage;
+    const isNewWon=s.stage==='Won'&&(stageChanged||!eid);
+    const isNewLost=s.stage==='Lost'&&(stageChanged||!eid);
+
+    if(isNewWon&&s.model){
+      const alreadyInFleet=db.fleet.some(f=>f.company_id===s.company_id&&f.deal_id===s.id);
+      if(!alreadyInFleet){
+        const brands=['Hitachi','Epiroc','Normet','Genie','Atlas Copco','Ingersoll Rand'];
+        const detectedBrand=brands.find(b=>s.model.toLowerCase().includes(b.toLowerCase()))||'Hitachi';
+        const fu={id:uid(),company_id:s.company_id,company:s.company,brand:detectedBrand,model:s.model,
+          type:'',year:new Date().getFullYear(),serial:'',condition:'New',
+          notes:'Auto-added from Won deal #'+s.id.slice(-6),deal_id:s.id};
+        db.fleet.push(fu);await persist('fleet',fu);
+        showToast('🚜 '+s.model+' added to '+s.company+' fleet',3500);
+      }
+      const co=db.companies.find(x=>x.id===s.company_id);
+      if(co&&co.status==='Prospect'){co.status='Active';await persist('companies',{...co});}
+    }
+    if(isNewLost){
+      if(s.competitor){
+        const alreadyLost=db.fleet.some(f=>f.company_id===s.company_id&&f.brand===s.competitor&&f.condition==='Competitor'&&f.deal_id===s.id);
+        if(!alreadyLost){
+          const fu={id:uid(),company_id:s.company_id,company:s.company,brand:s.competitor,
+            model:s.model||'Unknown',type:'',year:new Date().getFullYear(),serial:'',
+            condition:'Competitor',notes:'Lost deal — '+(s.lost_reason||'not specified'),deal_id:s.id};
+          db.fleet.push(fu);await persist('fleet',fu);
+          showToast('⚔️ '+s.competitor+' recorded in '+s.company+' fleet',3500);
+        }
+      }
+      showLostFollowupDialog(s);
+    }
+
     updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderPipeline();
   }else if(mtype==='fleet'){
     let {id:coId,name:coName}=getCompanyFromForm();
@@ -2875,6 +2915,11 @@ let calYear=new Date().getFullYear();
 let calAgent='all';
 
 // ─── Auto-scheduler ────────────────────────────────────────────────────────
+function toggleCompetitorPrice(reason){
+  const wrap=document.getElementById('competitor-price-wrap');
+  if(wrap)wrap.style.display=reason==='Price too high'?'flex':'none';
+}
+
 function nextWorkday(date){
   const d=new Date(date);
   const day=d.getDay();
