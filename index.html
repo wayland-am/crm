@@ -3090,11 +3090,10 @@ function renderClientMap(){
   }).join('');
 
   main.innerHTML=
-    '<div style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">'+
-    '<div style="font-size:13px;color:var(--text-m)">'+allWithLocs.size+' companies · '+totalLocs+' locations</div>'+
-    '<button class="btn" onclick="window.mapStatusFilter=new Set(Object.keys({Active:1,Prospect:1,Partner:1,Negotiating:1,Cold:1,Inactive:1}));renderClientMap()" style="font-size:11px">Show all</button>'+
+    '<div style="font-size:13px;color:var(--text-m);margin-bottom:8px">'+allWithLocs.size+' companies · '+totalLocs+' locations</div>'+
+    '<div style="margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center;gap:4px">'+legend+
+    '<span onclick="window.mapStatusFilter=new Set(['Active','Prospect','Partner','Negotiating','Cold','Inactive']);renderClientMap()" style="display:inline-flex;align-items:center;font-size:12px;cursor:pointer;padding:3px 10px;border-radius:20px;border:1.5px solid #d1d5db;background:transparent;margin-left:4px">Show all</span>'+
     '</div>'+
-    '<div style="margin-bottom:12px;display:flex;flex-wrap:wrap">'+legend+'</div>'+
     '<div id="client-map" style="height:calc(100vh - 230px);border-radius:12px;overflow:hidden;border:1px solid var(--bdr)"></div>'+
     (allWithLocs.size===0?'<div style="text-align:center;padding:40px;color:var(--text-m)">No locations with GPS coordinates yet.</div>':'');
 
@@ -3102,9 +3101,10 @@ function renderClientMap(){
 
   setTimeout(function(){
     if(window._clientMap){window._clientMap.remove();window._clientMap=null;}
-    var map=L.map('client-map').setView([40.18,44.51],8);
+    var map=L.map('client-map',{attributionControl:false}).setView([40.18,44.51],8);
+    L.control.attribution({prefix:false}).addTo(map);
     window._clientMap=map;
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CARTO',maxZoom:19,subdomains:'abcd'}).addTo(map);
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',{attribution:'© Esri © OpenStreetMap',maxZoom:18}).addTo(map);
     var bounds=[];
 
     allWithLocs.forEach(function(item){
