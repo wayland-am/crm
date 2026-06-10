@@ -3611,7 +3611,7 @@ function renderUsers(){
       <thead><tr><th>Name</th><th>Role</th><th>Last Login</th><th>Status</th><th></th></tr></thead>
       <tbody>${db.users.length?db.users.map((u,i)=>`<tr>
         <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:30px;height:30px;font-size:11px">${ini(u.name)}</div><strong>${u.name}</strong></div></td>
-        <td><span class="b ${u.role==='manager'?'b-blue':'b-gray'}">${u.role==='manager'?'Sales Manager':'Sales Rep'}</span></td>
+        <td><span class="b ${u.role==='manager'?'b-green':'b-blue'}">${u.role==='manager'?'Sales Manager':'Sales Rep'}</span></td>
         <td style="color:var(--text-m);font-size:12px">${u.last_login||'—'}</td>
         <td><span class="b ${String(u.active)==='false'?'b-red':'b-green'}">${String(u.active)==='false'?'Blocked':'Active'}</span></td>
         <td><div class="actions">
