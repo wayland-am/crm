@@ -513,7 +513,7 @@ const STAGES=['Lead','Qualified','Proposal','Negotiation','Won','Lost','Disquali
 const STAGE_P={Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0};
 const STAGE_COLOR={Lead:'#9ca3af',Qualified:'#8b5cf6',Proposal:'#f59e0b',Negotiation:'#3b82f6',Won:'#22c55e',Lost:'#ef4444',Disqualified:'#6b7280'};
 const DEFAULT_AGENTS=[];
-const AGENTS=()=>db.agents.length?db.agents.map(a=>a.name):(currentUser?[currentUser.name]:[]);
+const AGENTS=()=>(db.users&&db.users.length)?db.users.filter(u=>String(u.active)!=='false').map(u=>u.name):(currentUser?[currentUser.name]:[]);
 const INDUSTRIES=['Mining','Construction','Road Construction','Quarrying','Infrastructure','Industry','Other'];
 const EQ_TYPES=['Excavator','Wheel Loader','Bulldozer','Drilling Rig','Dump Truck','Compressor','Crane','Grader'];
 const BRANDS=['Hitachi','Caterpillar','Komatsu','Volvo','Liebherr','Doosan','John Deere','Hyundai','Sany','XCMG','Other'];
@@ -2506,7 +2506,7 @@ function openM(type,id=null,coId=null,dealId=null){
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Client Category</label><select class="fc" id="f-category"><option value="">— not set —</option>${Object.entries(CAT_RULES).map(([k,v])=>`<option value="${k}" ${e.category===k?'selected':''}>${v.label} (${v.desc})</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-assigned">${[{name:'— not assigned —',id:''},...db.agents].map(a=>`<option value="${a.name||''}" ${(e.assigned_agent||'')===(a.name||'')?'selected':''}>${a.name||'— not assigned —'}</option>`).join('')}${db.agents.length===0?AGENTS().map(a=>`<option value="${a}" ${(e.assigned_agent||'')===a?'selected':''}>${a}</option>`).join(''):''}</select></div>
+        <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-assigned">${['— not assigned —',...AGENTS()].map(a=>`<option value="${a==='— not assigned —'?'':a}" ${(e.assigned_agent||'')===(a==='— not assigned —'?'':a)?'selected':''}>${a}</option>`).join('')}</select></div>
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Annual Equipment Budget ($)</label><input class="fc" id="f-budget" type="number" value="${e.budget||''}" placeholder="0"></div>
@@ -2656,7 +2656,7 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Next Step</label><input class="fc" id="f-next-step" placeholder="Send proposal, call back, arrange demo..."></div>
         <div class="fg"><label class="fl">Follow-up Date</label><input class="fc" id="f-next-date" type="date"></div>
       </div>
-      <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-agent">${(db.agents.length?db.agents.map(a=>a.name):(currentUser?[currentUser.name]:[])).map(a=>`<option ${a===(currentUser?.name||'')?'selected':''}>${a}</option>`).join('')}</select></div>`,
+      <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-agent">${AGENTS().map(a=>`<option ${a===(currentUser?.name||'')?'selected':''}>${a}</option>`).join('')}</select></div>`,
     contract:`
       <div class="fr">
         <div class="fg"><label class="fl">Contract № *</label><input class="fc" id="f-con-number" value="${e.number||''}" placeholder="ДП-2026-047"></div>
@@ -2891,34 +2891,34 @@ async function delRecord(sheet,id){
 }
 
 function renderAgents(){
-  const list=db.agents;
+  const list=db.users||[];
   const isManager=currentUser?.role==='manager';
   $("content").innerHTML=`
   <div class="toolbar">
-    <div style="font-size:13px;color:var(--text-m)">Sales team members appear in all deal and task assignment dropdowns.</div>
-    ${isManager?`<button class="btn btn-primary" onclick="openM('agent')"><i class="ti ti-plus"></i>Add Member</button>`:''}
+    <div style="font-size:13px;color:var(--text-m)">Sales team — same as CRM users. Manage in <a href="#" onclick="go('users')" style="color:var(--blue)">Users section</a>.</div>
   </div>
   <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">
-    ${list.length?list.map((a,i)=>{
+    ${list.filter(u=>String(u.active)!=='false').map((a,i)=>{
       const dc=db.deals.filter(d=>d.agent===a.name).length;
       const wv=db.deals.filter(d=>d.agent===a.name&&d.stage==="Won").reduce((s,d)=>s+d.amount,0);
+      const lostC=db.deals.filter(d=>d.agent===a.name&&d.stage==="Lost").length;
       return`<div class="card" style="padding:16px">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
           <div class="av ${avC(i)}" style="width:42px;height:42px;font-size:15px">${ini(a.name)}</div>
-          <div><div style="font-weight:700;font-size:14px">${a.name}</div><div style="font-size:12px;color:var(--text-m)">${a.role||"Sales Manager"}</div></div>
+          <div>
+            <div style="font-weight:700;font-size:14px">${a.name}</div>
+            <div style="font-size:12px"><span class="b ${a.role==='manager'?'b-green':'b-blue'}" style="font-size:11px">${a.role==='manager'?'Sales Manager':'Sales Rep'}</span></div>
+          </div>
         </div>
-        ${a.phone?`<div style="font-size:12px;color:var(--text-m);margin-bottom:4px"><i class="ti ti-phone" style="font-size:13px"></i> ${a.phone}</div>`:""}
-        ${a.email?`<div style="font-size:12px;color:var(--blue);margin-bottom:10px">${a.email}</div>`:""}
-        <div style="display:flex;gap:12px;font-size:12px;color:var(--text-m);padding-top:10px;border-top:1px solid var(--gray-100)">
-          <span><strong style="color:var(--text)">${dc}</strong> deals</span>
-          ${wv?`<span><strong style="color:var(--green)">${fmtUSD(wv)}</strong> closed</span>`:""}
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;padding:10px 0;border-top:1px solid var(--gray-100);border-bottom:1px solid var(--gray-100);margin-bottom:10px">
+          <div><div style="font-size:16px;font-weight:700;color:var(--text)">${dc}</div><div style="font-size:10px;color:var(--text-m)">Deals</div></div>
+          <div><div style="font-size:16px;font-weight:700;color:var(--green)">${db.deals.filter(d=>d.agent===a.name&&d.stage==='Won').length}</div><div style="font-size:10px;color:var(--text-m)">Won</div></div>
+          <div><div style="font-size:16px;font-weight:700;color:var(--red)">${lostC}</div><div style="font-size:10px;color:var(--text-m)">Lost</div></div>
         </div>
-        ${isManager?`<div style="display:flex;gap:6px;margin-top:10px">
-          <button class="btn btn-xs" onclick="openM('agent','${a.id}')"><i class="ti ti-edit"></i>Edit</button>
-          <button class="btn btn-xs btn-danger" onclick="delRecord('agents','${a.id}')"><i class="ti ti-trash"></i>Delete</button>
-        </div>`:''}
+        ${wv?`<div style="font-size:12px;color:var(--green);font-weight:600">${fmtUSD(wv)} closed</div>`:''}
+        ${a.last_login?`<div style="font-size:11px;color:var(--text-m);margin-top:6px">Last login: ${a.last_login.slice(0,10)}</div>`:''}
       </div>`;
-    }).join(""):`<div style="grid-column:1/-1"><div class="empty"><i class="ti ti-users-group"></i><div class="empty-title">No team members yet</div>${isManager?`<button class="btn btn-primary" onclick="openM('agent')"><i class="ti ti-plus"></i>Add Member</button>`:''}</div></div>`}
+    }).join("")||`<div style="grid-column:1/-1"><div class="empty"><i class="ti ti-users-group"></i><div class="empty-title">No users yet</div></div></div>`}
   </div>`;
 }
 function globalSearch(q){
