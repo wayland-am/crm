@@ -1770,9 +1770,6 @@ function openDealDetail(id){
           ['Next Action Date',d.next_date],
           d.competitor?['Competitor',`<span style="color:var(--red)"><i class="ti ti-sword" style="font-size:11px"></i> ${d.competitor}</span>`]:null,
           isLost&&d.lost_reason?['Reason Lost',`<span style="color:var(--red)">${d.lost_reason}</span>`]:null,
-          d.stage==='Disqualified'&&d.disq_reason?['Disqualification reason',`<span style="color:#6b7280;font-weight:600">${d.disq_reason}</span>`]:null,
-          d.stage==='Disqualified'&&d.disq_comment?['Comment',`<span style="color:var(--text-m)">${d.disq_comment}</span>`]:null,
-          isLost&&d.competitor_price?['Competitor price',`<span style="color:var(--red);font-weight:700">${d.competitor_currency||'USD'} ${Number(d.competitor_price).toLocaleString()}</span>`]:null,
         ].filter(Boolean).filter(r=>r[1]).map(([k,v])=>`<div class="info-row"><span class="info-label">${k}</span><span class="info-val">${v}</span></div>`).join('')}
       </div>
 
@@ -1863,9 +1860,8 @@ async function moveDeal(id,stage){
   const prevStage=d.stage;
   if(prevStage===stage)return;
 
-  // Защита для Won/Lost
   if(stage==='Won'){
-    if(!confirm('Move deal to WON?\n\n• '+( d.model||'Equipment')+' will be added to '+d.company+' fleet\n• Company status → Active'))return;
+    if(!confirm('Move deal to WON?\n\n• '+(d.model||'Equipment')+' will be added to '+d.company+' fleet\n• Company status → Active'))return;
   }
   if(stage==='Disqualified'){
     const reasons=['No target need','No budget','Non-target client','No decision maker','Wrong product / spec','Geography / logistics','Fake / test lead','Intermediary / competitor','Project not approved','Other'];
@@ -1880,19 +1876,13 @@ async function moveDeal(id,stage){
     if(d.lost_reason==='Price too high'&&!Number(d.competitor_price)){
       const price=prompt('Reason is "Price too high" — enter competitor price (required):');
       if(!price||isNaN(Number(price)))return alert('Competitor price is required. Deal not moved.');
-      d.competitor_price=Number(price);
-      await persist('deals',{...d});
+      d.competitor_price=Number(price);await persist('deals',{...d});
     }
     if(!confirm('Move deal to LOST?\n\n'+(d.competitor?'• '+d.competitor+' will be recorded in '+d.company+' fleet as competitor':'• No competitor specified')))return;
   }
-
-  // Откат при возврате из Won/Lost
-  if(prevStage==='Won'||prevStage==='Lost'){
+  if(prevStage==='Won'||prevStage==='Lost'||prevStage==='Disqualified'){
     const autoFleet=db.fleet.filter(f=>f.deal_id===id);
-    for(const f of autoFleet){
-      db.fleet=db.fleet.filter(x=>x.id!==f.id);
-      await apiCall({action:'delete',sheet:'fleet',id:f.id});
-    }
+    for(const f of autoFleet){db.fleet=db.fleet.filter(x=>x.id!==f.id);await apiCall({action:'delete',sheet:'fleet',id:f.id});}
     if(prevStage==='Won'){
       const co=db.companies.find(x=>x.id===d.company_id);
       const otherWon=db.deals.some(x=>x.id!==id&&x.company_id===d.company_id&&x.stage==='Won');
@@ -1900,9 +1890,8 @@ async function moveDeal(id,stage){
     }
     if(autoFleet.length)showToast('↩️ Reverted: '+autoFleet.length+' fleet records removed',3000);
   }
-
   d.stage=stage;
-  d.probability={Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0,Disqualified:0}[stage]||0;
+  d.probability={Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[stage]||0;
   await persist('deals',{...d});
 
   // Log stage change to activities with timestamp
@@ -1938,30 +1927,22 @@ async function moveDeal(id,stage){
     if(!alreadyInFleet){
       const brands=['Hitachi','Epiroc','Normet','Genie','Atlas Copco','Ingersoll Rand'];
       const detectedBrand=brands.find(b=>d.model.toLowerCase().includes(b.toLowerCase()))||'Hitachi';
-      const fu={id:uid(),company_id:d.company_id,company:d.company,brand:detectedBrand,model:d.model,
-        type:'',year:new Date().getFullYear(),serial:'',condition:'New',
-        notes:'Auto-added from Won deal #'+id.slice(-6),deal_id:id};
-      db.fleet.push(fu);await persist('fleet',fu);
-      showToast('🚜 '+d.model+' added to '+d.company+' fleet',3500);
+      const fu={id:uid(),company_id:d.company_id,company:d.company,brand:detectedBrand,model:d.model,type:'',year:new Date().getFullYear(),serial:'',condition:'New',notes:'Auto-added from Won deal #'+id.slice(-6),deal_id:id};
+      db.fleet.push(fu);await persist('fleet',fu);showToast('🚜 '+d.model+' added to '+d.company+' fleet',3500);
     }
     const co=db.companies.find(x=>x.id===d.company_id);
     if(co&&co.status==='Prospect'){co.status='Active';await persist('companies',{...co});showToast('✅ '+co.name+' → Active',2500);}
   }
-
   if(stage==='Lost'&&prevStage!=='Lost'){
     if(d.competitor){
-      const alreadyLost=db.fleet.some(f=>f.company_id===d.company_id&&f.brand===d.competitor&&f.condition==='Competitor');
+      const alreadyLost=db.fleet.some(f=>f.company_id===d.company_id&&f.brand===d.competitor&&f.condition==='Competitor'&&f.deal_id===id);
       if(!alreadyLost){
-        const fu={id:uid(),company_id:d.company_id,company:d.company,brand:d.competitor,
-          model:d.model||'Unknown',type:'',year:new Date().getFullYear(),serial:'',
-          condition:'Competitor',notes:'Lost deal — '+(d.lost_reason||'not specified'),deal_id:id};
-        db.fleet.push(fu);await persist('fleet',fu);
-        showToast('⚔️ '+d.competitor+' recorded in '+d.company+' fleet',3500);
+        const fu={id:uid(),company_id:d.company_id,company:d.company,brand:d.competitor,model:d.model||'Unknown',type:'',year:new Date().getFullYear(),serial:'',condition:'Competitor',notes:'Lost deal — '+(d.lost_reason||'not specified'),deal_id:id};
+        db.fleet.push(fu);await persist('fleet',fu);showToast('⚔️ '+d.competitor+' recorded in '+d.company+' fleet',3500);
       }
     }
     showLostFollowupDialog(d);
   }
-
   updateCounts();openDealDetail(id);
 }
 
@@ -1985,10 +1966,7 @@ function showLostFollowupDialog(deal){
 
 async function createLostFollowup(dealId,coId,coName,agent,days){
   const due=new Date();due.setDate(due.getDate()+days);
-  const task={id:uid(),deal_id:dealId,company_id:coId,company:coName,
-    title:'Follow up — '+coName,text:'Deal was closed as Lost. Check if need arose again.',
-    agent:agent||currentUser?.name||'',due:due.toISOString().slice(0,10),
-    priority:'medium',type:'follow-up',done:false,auto_scheduled:true,created:today()};
+  const task={id:uid(),deal_id:dealId,company_id:coId,company:coName,title:'Follow up — '+coName,text:'Deal was closed as Lost.',agent:agent||currentUser?.name||'',due:due.toISOString().slice(0,10),priority:'medium',type:'follow-up',done:false,auto_scheduled:true,created:today()};
   db.tasks.push(task);await persist('tasks',task);updateCounts();
   showToast('📅 Task created for '+due.toLocaleDateString('en',{day:'numeric',month:'long',year:'numeric'}),3500);
 }
@@ -2078,49 +2056,28 @@ function renderFleet(){
   const byBrand={};ourFleet.forEach(u=>{byBrand[u.brand]=(byBrand[u.brand]||0)+1});
   const tot=ourFleet.length;
   const h=ourFleet.filter(u=>wayland.includes(u.brand)).length;
-  const opp=ourFleet.filter(u=>u.condition==='Poor'||u.condition==='Fair').length;
-  const compByBrand={};compFleet.forEach(u=>{compByBrand[u.brand]=(compByBrand[u.brand]||0)+1});
+  const opp=db.fleet.filter(u=>u.condition==='Poor'||u.condition==='Fair').length;
 
-  // Легенда наших брендов
-  const ourLegend=Object.entries(byBrand).map(([b,n])=>'<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px"><span class="brand-dot" style="background:'+(BRAND_C[b]||'#888')+'"></span>'+b+': <strong>'+n+'</strong></span>').join('');
-
-  // Кнопка конкурентов
-  const compBtn='<button class="btn btn-sm'+(window.fleetShowComp?' ':' ')+'" style="'+(window.fleetShowComp?'background:#fef2f2;color:var(--red);border-color:#fca5a5':'')+'" onclick="window.fleetShowComp=!window.fleetShowComp;renderFleet()"><i class="ti ti-sword"></i>Competitors ('+compFleet.length+')</button>';
-
-  $('content').innerHTML=
-    '<div class="metrics" style="margin-bottom:18px">'+
-    '<div class="metric"><div class="metric-label">Hitachi Fleet</div><div class="metric-value" style="color:var(--blue)">'+h+'</div><div class="metric-sub">'+tot+' total units</div></div>'+
-    '<div class="metric"><div class="metric-label">Competitors at clients</div><div class="metric-value">'+compFleet.length+'</div><div class="metric-sub">'+(compFleet.length?Object.entries(compByBrand).map(([b,n])=>b+': '+n).join(', '):'none recorded')+'</div></div>'+
-    '<div class="metric"><div class="metric-label" style="color:var(--red)">For Replacement</div><div class="metric-value" style="color:var(--red)">'+opp+'</div><div class="metric-sub">poor/fair condition</div></div>'+
-    '</div>'+
-    '<div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">'+
-    '<span style="font-size:13px;color:var(--text-m)">'+ourLegend+'</span>'+
-    '<div style="margin-left:auto;display:flex;gap:6px">'+
-    compBtn+
-    '<button class="btn btn-sm" onclick="flExpanded=new Set(Object.keys(groupFleet()));renderFleetRows()"><i class="ti ti-chevrons-down"></i>Expand all</button>'+
-    '<button class="btn btn-sm" onclick="flExpanded=new Set();renderFleetRows()"><i class="ti ti-chevrons-up"></i>Collapse all</button>'+
-    '</div></div>'+
-    (window.fleetShowComp&&compFleet.length?
-      '<div style="margin-bottom:16px;background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;overflow:hidden">'+
-      '<div style="padding:10px 16px;font-weight:700;color:var(--red);font-size:13px;border-bottom:1px solid #fca5a5"><i class="ti ti-sword"></i> Competitor Equipment at Client Sites</div>'+
-      '<table class="tbl"><thead><tr><th>Company</th><th>Brand</th><th>Model</th><th>Year</th><th>Notes</th></tr></thead><tbody>'+
-      compFleet.map(function(u){
-        return '<tr onclick="openCompanyDetail(\''+u.company_id+'\')" style="cursor:pointer">'+
-          '<td><strong>'+u.company+'</strong></td>'+
-          '<td><span style="color:var(--red);font-weight:600">'+u.brand+'</span></td>'+
-          '<td>'+u.model+'</td>'+
-          '<td style="color:var(--text-m)">'+( u.year||'—')+'</td>'+
-          '<td style="color:var(--text-m);font-size:12px">'+(u.notes||'—')+'</td>'+
-          '</tr>';
-      }).join('')+
-      '</tbody></table></div>':'')+'<div id="fleet-tbody"></div>';
+  $('content').innerHTML=`
+  <div class="metrics" style="margin-bottom:18px">
+    <div class="metric"><div class="metric-label">Total Units</div><div class="metric-value">${tot}</div></div>
+    <div class="metric"><div class="metric-label">Hitachi</div><div class="metric-value" style="color:var(--blue)">${h}</div><div class="metric-sub">${tot?Math.round(h/tot*100):0}% of fleet</div></div>
+    <div class="metric"><div class="metric-label">Competitors</div><div class="metric-value">${tot-h}</div></div>
+    <div class="metric"><div class="metric-label" style="color:var(--red)">For Replacement</div><div class="metric-value" style="color:var(--red)">${opp}</div><div class="metric-sub">poor/fair condition</div></div>
+  </div>
+  <div style="display:flex;gap:10px;margin-bottom:14px;align-items:center">
+    <span style="font-size:13px;color:var(--text-m)">${Object.entries(byBrand).map(([b,n])=>`<span style="display:inline-flex;align-items:center;gap:5px;margin-right:12px"><span class="brand-dot" style="background:${BRAND_C[b]||'#888'}"></span>${b}: <strong>${n}</strong></span>`).join('')}</span>
+    <button class="btn btn-sm" style="margin-left:auto" onclick="flExpanded=new Set(Object.keys(groupFleet()));renderFleetRows()"><i class="ti ti-chevrons-down"></i>Expand all</button>
+    <button class="btn btn-sm" onclick="flExpanded=new Set();renderFleetRows()"><i class="ti ti-chevrons-up"></i>Collapse all</button>
+  </div>
+  <div id="fleet-tbody"></div>`;
 
   renderFleetRows();
 }
 
 function groupFleet(){
   const groups={};
-  db.fleet.filter(u=>u.condition!=='Competitor').forEach(u=>{
+  db.fleet.forEach(u=>{
     const key=u.company_id||u.company||'Unknown';
     if(!groups[key])groups[key]={id:u.company_id,name:u.company||'Unknown',units:[]};
     groups[key].units.push(u);
@@ -2222,13 +2179,9 @@ async function quickDoneTask(id){
 
 // ─── Reports ───────────────────────────────────────────────────────────────
 function renderReports(){
-  // Фильтр по менеджеру — Sales Rep видит только себя, Manager может фильтровать
-  const repFilter=document.getElementById('rep-filter')?.value||'';
-  const isManager=currentUser?.role==='manager';
-  const baseDeals=isManager?db.deals:myDeals();
-  const allDeals=repFilter?baseDeals.filter(d=>d.agent===repFilter):baseDeals;
+  const allDeals=currentUser?.role==='manager'?db.deals:myDeals();
   const wonDeals=allDeals.filter(d=>d.stage==='Won');
-  const activeDeals=allDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified');
+  const activeDeals=allDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost');
   const lostDeals=allDeals.filter(d=>d.stage==='Lost');
   const convRate=allDeals.length?Math.round(wonDeals.length/allDeals.length*100):0;
   const pipeVal=activeDeals.reduce((s,d)=>s+d.amount,0);
@@ -2304,7 +2257,7 @@ function renderReports(){
     const total=agentDeals.length;
     const w=agentDeals.filter(d=>d.stage==='Won').length;
     const l=agentDeals.filter(d=>d.stage==='Lost').length;
-    const active=agentDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified').length;
+    const active=agentDeals.filter(d=>d.stage!=='Won'&&d.stage!=='Lost').length;
     const winRate=total?Math.round(w/total*100):0;
     const avgSize=total?Math.round(agentDeals.reduce((s,d)=>s+d.amount,0)/total):0;
     return{name:a,total,active,won:w,lost:l,winRate,avgSize,revenue:wonDeals.filter(d=>d.agent===a).reduce((s,d)=>s+d.amount,0)};
@@ -2511,7 +2464,7 @@ function openM(type,id=null,coId=null,dealId=null){
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Client Category</label><select class="fc" id="f-category"><option value="">— not set —</option>${Object.entries(CAT_RULES).map(([k,v])=>`<option value="${k}" ${e.category===k?'selected':''}>${v.label} (${v.desc})</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-assigned">${['— not assigned —',...AGENTS()].map(a=>`<option value="${a==='— not assigned —'?'':a}" ${(e.assigned_agent||'')===(a==='— not assigned —'?'':a)?'selected':''}>${a}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-assigned">${[{name:'— not assigned —',id:''},...db.agents].map(a=>`<option value="${a.name||''}" ${(e.assigned_agent||'')===(a.name||'')?'selected':''}>${a.name||'— not assigned —'}</option>`).join('')}${db.agents.length===0?AGENTS().map(a=>`<option value="${a}" ${(e.assigned_agent||'')===a?'selected':''}>${a}</option>`).join(''):''}</select></div>
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Annual Equipment Budget ($)</label><input class="fc" id="f-budget" type="number" value="${e.budget||''}" placeholder="0"></div>
@@ -2542,7 +2495,7 @@ function openM(type,id=null,coId=null,dealId=null){
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Currency</label><select class="fc" id="f-currency">${['USD','EUR','AMD','RUB'].map(c=>`<option ${(e.currency||'USD')===c?'selected':''}>${c}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Stage</label><select class="fc" id="f-stage" onchange="updateLostReason(this.value)">${['Lead','Qualified','Proposal','Negotiation','Won','Lost','Disqualified'].map(s=>`<option ${(e.stage||'Lead')===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Stage</label><select class="fc" id="f-stage" onchange="updateLostReason(this.value)">${['Lead','Qualified','Proposal','Negotiation','Won','Lost'].map(s=>`<option ${(e.stage||'Lead')===s?'selected':''}>${s}</option>`).join('')}</select></div>
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Competitor</label><input class="fc" id="f-competitor" value="${e.competitor||''}" placeholder="Komatsu, Caterpillar, Volvo..."></div>
@@ -2561,34 +2514,28 @@ function openM(type,id=null,coId=null,dealId=null){
       </div>
       <div class="fg" id="disq-comment-wrap" style="display:${(e.stage||'Lead')==='Disqualified'?'block':'none'}">
         <label class="fl">Comment <span style="font-weight:400;color:var(--text-m)">(optional)</span></label>
-        <input class="fc" id="f-disq-comment" value="${e.disq_comment||''}" placeholder="e.g. Company only rents, does not buy equipment">
+        <input class="fc" id="f-disq-comment" value="${e.disq_comment||''}" placeholder="e.g. Company only rents">
       </div>
       <div class="fg" id="lost-reason-wrap" style="display:${(e.stage||'Lead')==='Lost'?'block':'none'}">
         <label class="fl">Reason Lost</label>
-        <select class="fc" id="f-lost-reason" onchange="toggleCompetitorPrice(this.value)">
+        <select class="fc" id="f-lost-reason">
           <option value="">— select reason —</option>
           ${['Price too high','Chose competitor','Budget cut','No budget','Project cancelled','No response','Bought used equipment','Technical mismatch','Other'].map(r=>`<option ${e.lost_reason===r?'selected':''}>${r}</option>`).join('')}
         </select>
-      </div>
-      <div class="fr" id="competitor-price-wrap" style="display:${e.lost_reason==='Price too high'?'flex':'none'}">
-        <div class="fg"><label class="fl">Competitor price *</label><input class="fc" id="f-competitor-price" type="number" placeholder="0" value="${e.competitor_price||''}"></div>
-        <div class="fg"><label class="fl">Currency</label><select class="fc" id="f-comp-currency"><option ${(e.competitor_currency||'USD')==='USD'?'selected':''}>USD</option><option ${e.competitor_currency==='EUR'?'selected':''}>EUR</option><option ${e.competitor_currency==='RUB'?'selected':''}>RUB</option><option ${e.competitor_currency==='AMD'?'selected':''}>AMD</option></select></div>
       </div>`,
     fleet:`
       <div class="fg"><label class="fl">Company *</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
       <div class="fr">
-        <div class="fg"><label class="fl">Brand *</label><select class="fc" id="f-brand" onchange="onFleetBrandChange(this.value)">${['Hitachi','Epiroc','Normet','Genie','Atlas Copco','Ingersoll Rand','Caterpillar','Komatsu','Volvo','Liebherr','Doosan','John Deere','Hyundai','Sany','XCMG','Other'].map(b=>`<option ${(e.brand||'Hitachi')===b?'selected':''}>${b}</option>`).join('')}</select>
-        <div id="brand-hint" style="font-size:11px;margin-top:4px;padding:4px 8px;border-radius:6px;background:${ ['Hitachi','Epiroc','Normet','Genie','Atlas Copco','Ingersoll Rand'].includes(e.brand||'Hitachi')?'var(--blue-lt)':'#fef2f2'};color:${ ['Hitachi','Epiroc','Normet','Genie','Atlas Copco','Ingersoll Rand'].includes(e.brand||'Hitachi')?'var(--blue)':'var(--red)'}">${['Hitachi','Epiroc','Normet','Genie','Atlas Copco','Ingersoll Rand'].includes(e.brand||'Hitachi')?'✅ Wayland brand — added to fleet + Sales Potential':'⚔️ Competitor brand — recorded for intelligence, excluded from Sales Potential'}</div></div>
+        <div class="fg"><label class="fl">Brand *</label><select class="fc" id="f-brand">${['Hitachi','Caterpillar','Komatsu','Volvo','Liebherr','Doosan','John Deere','Hyundai','Sany','XCMG','Other'].map(b=>`<option ${(e.brand||'Hitachi')===b?'selected':''}>${b}</option>`).join('')}</select></div>
         <div class="fg"><label class="fl">Model *</label><input class="fc" id="f-model" list="mdl2" value="${e.model||''}"><datalist id="mdl2">${['ZX85USB-6','ZX135US-6','ZX210LC-6','ZX330LC-6','ZX470LC-6','ZX890LCH-6'].map(m=>`<option>${m}</option>`).join('')}</datalist></div>
       </div>
       <div class="fr">
         <div class="fg"><label class="fl">Type</label><select class="fc" id="f-type">${['Excavator','Loader','Bulldozer','Drilling Rig','Dump Truck','Compressor','Crane','Grader'].map(t=>`<option ${e.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
         <div class="fg"><label class="fl">Year</label><input class="fc" id="f-year" type="number" min="2000" max="2026" value="${e.year||''}"></div>
       </div>
-
       <div class="fr">
         <div class="fg"><label class="fl">Serial No.</label><input class="fc" id="f-serial" value="${e.serial||''}"></div>
-        <div class="fg" id="cond-field-wrap" style="display:${['Hitachi','Epiroc','Normet','Genie','Atlas Copco','Ingersoll Rand'].includes(e.brand||'Hitachi')?'block':'none'}"><label class="fl">Condition</label><select class="fc" id="f-cond">${['Excellent','Good','Fair','Poor'].map(c=>`<option ${(e.condition!=='Competitor'&&(e.condition||'Good')===c)?'selected':''}>${c}</option>`).join('')}</select></div>
+        <div class="fg"><label class="fl">Condition</label><select class="fc" id="f-cond">${['Excellent','Good','Fair','Poor'].map(c=>`<option ${(e.condition||'Good')===c?'selected':''}>${c}</option>`).join('')}</select></div>
       </div>
       <div class="fg"><label class="fl">Notes</label><input class="fc" id="f-notes" value="${e.notes||''}" placeholder="Aging, due for replacement..."aging, for replacement..."></div>`,
     task:`
@@ -2604,7 +2551,7 @@ function openM(type,id=null,coId=null,dealId=null){
       </div>`,
     user:`
       <div class="fg"><label class="fl">Full Name *</label><input class="fc" id="f-name" value="${e.name||''}" placeholder="J. Smith"></div>
-      <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option value="rep" ${(e.role||'rep')==='rep'?'selected':''}>Sales Rep</option><option value="manager" ${e.role==='manager'?'selected':''}>Sales Manager</option></select></div>
+      <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option value="rep" ${(e.role||'rep')==='rep'?'selected':''}>Sales Representative</option><option value="manager" ${e.role==='manager'?'selected':''}>Sales Rep</option></select></div>
       <div class="fg"><label class="fl">Password ${e.id?'(leave blank to keep unchanged)':'*'}</label><input class="fc" id="f-pass" type="password" placeholder="${e.id?'New password...':'Minimum 4 characters'}"></div>
       <div class="fg"><label class="fl">Status</label><select class="fc" id="f-active"><option value="true" ${String(e.active)!=='false'?'selected':''}>Active</option><option value="false" ${String(e.active)==='false'?'selected':''}>Blocked</option></select></div>`,
     agent:`
@@ -2613,7 +2560,7 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Phone</label><input class="fc" id="f-phone" data-phone value="${e.phone||''}" placeholder="+374 XX XXX XXX"></div>
         <div class="fg"><label class="fl">Email</label><input class="fc" id="f-email" data-email value="${e.email||''}"></div>
       </div>
-      <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option value="manager" ${(e.role||'manager')==='manager'?'selected':''}>Sales Manager</option><option value="rep" ${e.role==='rep'?'selected':''}>Sales Rep</option></select></div>`,
+      <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option>Sales Manager</option><option ${e.role==='Senior Manager'?'selected':''}>Senior Manager</option><option ${e.role==='Sales Rep'?'selected':''}>Sales Rep</option></select></div>`,
     activity:`
       <div class="fr">
         <div class="fg"><label class="fl">Type</label><select class="fc" id="f-type" onchange="updateActivityFields()">${['Call','Meeting','WhatsApp','Email','Proposal','Demo','Documents','Other'].map(t=>`<option>${t}</option>`).join('')}</select></div>
@@ -2661,7 +2608,7 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Next Step</label><input class="fc" id="f-next-step" placeholder="Send proposal, call back, arrange demo..."></div>
         <div class="fg"><label class="fl">Follow-up Date</label><input class="fc" id="f-next-date" type="date"></div>
       </div>
-      <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-agent">${AGENTS().map(a=>`<option ${a===(currentUser?.name||'')?'selected':''}>${a}</option>`).join('')}</select></div>`,
+      <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-agent">${(db.agents.length?db.agents.map(a=>a.name):(currentUser?[currentUser.name]:[])).map(a=>`<option ${a===(currentUser?.name||'')?'selected':''}>${a}</option>`).join('')}</select></div>`,
     contract:`
       <div class="fr">
         <div class="fg"><label class="fl">Contract № *</label><input class="fc" id="f-con-number" value="${e.number||''}" placeholder="ДП-2026-047"></div>
@@ -2739,7 +2686,7 @@ async function _saveM(){
         db.activities.push(act);persist('activities',act);
       }
     }
-    updateCounts();if(eid&&cur.company)openCompanyDetail(cur.company);else renderCompanies();
+    updateCounts();renderCompanies();
   }else if(mtype==='contact'){
     const {id:coId,name:coName}=getCompanyFromForm();
     const fname=(g('f-fname')||'').trim();if(!fname)return alert('Enter a name');
@@ -2751,56 +2698,15 @@ async function _saveM(){
     let {id:coId,name:coName}=getCompanyFromForm();
     if(!coName)return alert('Select a company');
     if(!coId){const s=await persist('companies',{name:coName,status:'Prospect',created:new Date().toISOString().slice(0,10)});db.companies.push(s);coId=s.id;updateCounts();}
-    if(g('f-stage')==='Disqualified'&&!g('f-disq-reason'))return alert('Select disqualification reason — it is required.');
-    if(g('f-lost-reason')==='Price too high'&&!Number(g('f-competitor-price')))return alert('Enter competitor price — it is required when reason is "Price too high"');
-    row={...row,company_id:coId,company:coName,model:g('f-model')||'',amount:Number(g('f-amount'))||0,currency:g('f-currency')||'USD',stage:g('f-stage')||'Lead',agent:g('f-agent')||'',next_action:g('f-next')||'',next_date:g('f-ndate')||'',days:Number(g('f-days'))||0,competitor:g('f-competitor')||'',lost_reason:g('f-lost-reason')||'',competitor_price:Number(g('f-competitor-price'))||0,competitor_currency:g('f-comp-currency')||'USD',disq_reason:g('f-disq-reason')||'',disq_comment:g('f-disq-comment')||'',probability:{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[g('f-stage')]||0,created:row.created||today()};
-    const prevStage=eid?db.deals.find(x=>x.id===eid)?.stage:null;
+    row={...row,company_id:coId,company:coName,model:g('f-model')||'',amount:Number(g('f-amount'))||0,currency:g('f-currency')||'USD',stage:g('f-stage')||'Lead',agent:g('f-agent')||'',next_action:g('f-next')||'',next_date:g('f-ndate')||'',days:Number(g('f-days'))||0,competitor:g('f-competitor')||'',lost_reason:g('f-lost-reason')||'',probability:{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[g('f-stage')]||0,created:row.created||today()};
     const s=await persist('deals',row);
     if(!eid)db.deals.push(s);else Object.assign(db.deals.find(x=>x.id===eid),s);
-
-    // Won/Lost side-effects — при смене стадии ИЛИ при создании сразу в Won/Lost
-    const stageChanged=s.stage!==prevStage;
-    const isNewWon=s.stage==='Won'&&(stageChanged||!eid);
-    const isNewLost=s.stage==='Lost'&&(stageChanged||!eid);
-
-    if(isNewWon&&s.model){
-      const alreadyInFleet=db.fleet.some(f=>f.company_id===s.company_id&&f.deal_id===s.id);
-      if(!alreadyInFleet){
-        const brands=['Hitachi','Epiroc','Normet','Genie','Atlas Copco','Ingersoll Rand'];
-        const detectedBrand=brands.find(b=>s.model.toLowerCase().includes(b.toLowerCase()))||'Hitachi';
-        const fu={id:uid(),company_id:s.company_id,company:s.company,brand:detectedBrand,model:s.model,
-          type:'',year:new Date().getFullYear(),serial:'',condition:'New',
-          notes:'Auto-added from Won deal #'+s.id.slice(-6),deal_id:s.id};
-        db.fleet.push(fu);await persist('fleet',fu);
-        showToast('🚜 '+s.model+' added to '+s.company+' fleet',3500);
-      }
-      const co=db.companies.find(x=>x.id===s.company_id);
-      if(co&&co.status==='Prospect'){co.status='Active';await persist('companies',{...co});}
-    }
-    if(isNewLost){
-      if(s.competitor){
-        const alreadyLost=db.fleet.some(f=>f.company_id===s.company_id&&f.brand===s.competitor&&f.condition==='Competitor'&&f.deal_id===s.id);
-        if(!alreadyLost){
-          const fu={id:uid(),company_id:s.company_id,company:s.company,brand:s.competitor,
-            model:s.model||'Unknown',type:'',year:new Date().getFullYear(),serial:'',
-            condition:'Competitor',notes:'Lost deal — '+(s.lost_reason||'not specified'),deal_id:s.id};
-          db.fleet.push(fu);await persist('fleet',fu);
-          showToast('⚔️ '+s.competitor+' recorded in '+s.company+' fleet',3500);
-        }
-      }
-      showLostFollowupDialog(s);
-    }
-
     updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderPipeline();
   }else if(mtype==='fleet'){
     let {id:coId,name:coName}=getCompanyFromForm();
     if(!coName||!g('f-model'))return alert('Fill in company and model');
     if(!coId&&coName){const s=await persist('companies',{name:coName,status:'Prospect',created:new Date().toISOString().slice(0,10)});db.companies.push(s);coId=s.id;updateCounts();}
-    const brand=g('f-brand')||'Hitachi';
-    const wayland_brands=['Hitachi','Epiroc','Normet','Genie','Atlas Copco','Ingersoll Rand'];
-    const isOurBrand=wayland_brands.includes(brand);
-    const condVal=isOurBrand?(g('f-cond')||'Good'):'Competitor';
-    row={...row,company_id:coId,company:coName,brand:brand,model:g('f-model'),type:g('f-type')||'',year:Number(g('f-year'))||0,serial:g('f-serial')||'',condition:condVal,notes:g('f-notes')||''};
+    row={...row,company_id:coId,company:coName,brand:g('f-brand')||'Hitachi',model:g('f-model'),type:g('f-type')||'',year:Number(g('f-year'))||0,serial:g('f-serial')||'',condition:g('f-cond')||'Good',notes:g('f-notes')||''};
     const s=await persist('fleet',row);
     if(!eid)db.fleet.push(s);else Object.assign(db.fleet.find(x=>x.id===eid),s);
     updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderFleet();
@@ -2896,35 +2802,35 @@ async function delRecord(sheet,id){
 }
 
 function renderAgents(){
-  const list=db.users||[];
+  const list=(db.users||[]).filter(u=>String(u.active)!=='false');
   const isManager=currentUser?.role==='manager';
-  $("content").innerHTML=`
-  <div class="toolbar">
-    <div style="font-size:13px;color:var(--text-m)">Sales team — same as CRM users. Manage in <a href="#" onclick="go('users')" style="color:var(--blue)">Users section</a>.</div>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">
-    ${list.filter(u=>String(u.active)!=='false').map((a,i)=>{
+  let html='<div class="toolbar"><div style="font-size:13px;color:var(--text-m)">Sales team — same as CRM users. Manage in <a href="#" onclick="go(\'users\')" style="color:var(--blue)">Users section</a>.</div></div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px">';
+  if(list.length){
+    list.forEach((a,i)=>{
       const dc=db.deals.filter(d=>d.agent===a.name).length;
-      const wv=db.deals.filter(d=>d.agent===a.name&&d.stage==="Won").reduce((s,d)=>s+d.amount,0);
-      const lostC=db.deals.filter(d=>d.agent===a.name&&d.stage==="Lost").length;
-      return`<div class="card" style="padding:16px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-          <div class="av ${avC(i)}" style="width:42px;height:42px;font-size:15px">${ini(a.name)}</div>
-          <div>
-            <div style="font-weight:700;font-size:14px">${a.name}</div>
-            <div style="font-size:12px"><span class="b ${a.role==='manager'?'b-green':'b-blue'}" style="font-size:11px">${a.role==='manager'?'Sales Manager':'Sales Rep'}</span></div>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;padding:10px 0;border-top:1px solid var(--gray-100);border-bottom:1px solid var(--gray-100);margin-bottom:10px">
-          <div><div style="font-size:16px;font-weight:700;color:var(--text)">${dc}</div><div style="font-size:10px;color:var(--text-m)">Deals</div></div>
-          <div><div style="font-size:16px;font-weight:700;color:var(--green)">${db.deals.filter(d=>d.agent===a.name&&d.stage==='Won').length}</div><div style="font-size:10px;color:var(--text-m)">Won</div></div>
-          <div><div style="font-size:16px;font-weight:700;color:var(--red)">${lostC}</div><div style="font-size:10px;color:var(--text-m)">Lost</div></div>
-        </div>
-        ${wv?`<div style="font-size:12px;color:var(--green);font-weight:600">${fmtUSD(wv)} closed</div>`:''}
-        ${a.last_login?`<div style="font-size:11px;color:var(--text-m);margin-top:6px">Last login: ${a.last_login.slice(0,10)}</div>`:''}
-      </div>`;
-    }).join("")||`<div style="grid-column:1/-1"><div class="empty"><i class="ti ti-users-group"></i><div class="empty-title">No users yet</div></div></div>`}
-  </div>`;
+      const wv=db.deals.filter(d=>d.agent===a.name&&d.stage==='Won').reduce((s,d)=>s+d.amount,0);
+      const lostC=db.deals.filter(d=>d.agent===a.name&&d.stage==='Lost').length;
+      html+='<div class="card" style="padding:16px">'+
+        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">'+
+        '<div class="av '+avC(i)+'" style="width:42px;height:42px;font-size:15px">'+ini(a.name)+'</div>'+
+        '<div><div style="font-weight:700;font-size:14px">'+a.name+'</div>'+
+        '<div style="font-size:12px"><span class="b '+(a.role==='manager'?'b-green':'b-blue')+'" style="font-size:11px">'+(a.role==='manager'?'Sales Manager':'Sales Rep')+'</span></div>'+
+        '</div></div>'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;padding:10px 0;border-top:1px solid var(--gray-100);border-bottom:1px solid var(--gray-100);margin-bottom:10px">'+
+        '<div><div style="font-size:16px;font-weight:700;color:var(--text)">'+dc+'</div><div style="font-size:10px;color:var(--text-m)">Deals</div></div>'+
+        '<div><div style="font-size:16px;font-weight:700;color:var(--green)">'+db.deals.filter(d=>d.agent===a.name&&d.stage==='Won').length+'</div><div style="font-size:10px;color:var(--text-m)">Won</div></div>'+
+        '<div><div style="font-size:16px;font-weight:700;color:var(--red)">'+lostC+'</div><div style="font-size:10px;color:var(--text-m)">Lost</div></div>'+
+        '</div>'+
+        (wv?'<div style="font-size:12px;color:var(--green);font-weight:600">'+fmtUSD(wv)+' closed</div>':'')+
+        (a.last_login?'<div style="font-size:11px;color:var(--text-m);margin-top:6px">Last login: '+a.last_login.slice(0,10)+'</div>':'')+
+        '</div>';
+    });
+  } else {
+    html+='<div style="grid-column:1/-1"><div class="empty"><i class="ti ti-users-group"></i><div class="empty-title">No users yet</div></div></div>';
+  }
+  html+='</div>';
+  $('content').innerHTML=html;
 }
 function globalSearch(q){
   if(!q||q.length<2){$('search-results')&&$('search-results').remove();return;}
@@ -3005,32 +2911,6 @@ let calYear=new Date().getFullYear();
 let calAgent='all';
 
 // ─── Auto-scheduler ────────────────────────────────────────────────────────
-function onFleetBrandChange(brand){
-  const wayland=['Hitachi','Epiroc','Normet','Genie','Atlas Copco','Ingersoll Rand'];
-  const isOurs=wayland.includes(brand);
-  const hint=document.getElementById('brand-hint');
-  const condWrap=document.getElementById('cond-field-wrap');
-  if(hint){
-    hint.style.background=isOurs?'var(--blue-lt)':'#fef2f2';
-    hint.style.color=isOurs?'var(--blue)':'var(--red)';
-    hint.textContent=isOurs?'✅ Wayland brand — added to fleet + Sales Potential':'⚔️ Competitor brand — recorded for intelligence, excluded from Sales Potential';
-  }
-  if(condWrap)condWrap.style.display=isOurs?'block':'none';
-}
-
-function toggleOwnership(){
-  const isComp=document.getElementById('f-own-comp')?.checked;
-  const condWrap=document.getElementById('cond-field-wrap');
-  if(condWrap)condWrap.style.display=isComp?'none':'block';
-  const lbl=document.getElementById('f-own-comp')?.closest('label');
-  if(lbl){lbl.style.borderColor=isComp?'var(--red)':'var(--bdr)';lbl.style.background=isComp?'#fef2f2':'transparent';}
-}
-
-function toggleCompetitorPrice(reason){
-  const wrap=document.getElementById('competitor-price-wrap');
-  if(wrap)wrap.style.display=reason==='Price too high'?'flex':'none';
-}
-
 function nextWorkday(date){
   const d=new Date(date);
   const day=d.getDay();
@@ -3038,15 +2918,16 @@ function nextWorkday(date){
   else if(day===0)d.setDate(d.getDate()+1);
   return d;
 }
-
 async function autoSchedule(companyId, companyName, category, agent, deleteOld=false){
   const cat=CO_CATEGORIES[category];
   if(!cat)return;
   const effectiveAgent=agent&&agent!=='— not assigned —'?agent:(currentUser?.name||'M. Kalashnikov');
+  // Delete existing auto-scheduled tasks for this company
   if(deleteOld){
     const old=db.tasks.filter(t=>t.company_id===companyId&&t.auto_scheduled==='true'&&!t.done);
     for(const t of old){await remove('tasks',t.id);db.tasks=db.tasks.filter(x=>x.id!==t.id);}
   }
+  // Create tasks for next 12 months
   const now=new Date();
   const created=now.toISOString().slice(0,10);
   const newTasks=[];
@@ -3079,233 +2960,81 @@ async function scheduleAllCompanies(){
 }
 
 // ─── Calendar ──────────────────────────────────────────────────────────────
-let calView='month';
-let calOffset=0;
-
-function buildCalCell(day,dStr,isWeekend,isToday,inPeriod,grouped,maxShow,extra,catColor){
-  const bg=isWeekend?'#f9fafb':isToday?'#eff6ff':'var(--sur)';
-  const numBg=isToday?'var(--blue)':'transparent';
-  const numColor=isToday?'#fff':'var(--text)';
-  const numW=isToday?'22px':'auto';
-  let html='<div style="min-height:90px;padding:4px;border-right:1px solid var(--bdr);border-bottom:1px solid var(--bdr);background:'+bg+';opacity:'+(inPeriod?1:0.4)+'">';
-  html+='<div style="margin-bottom:3px"><span style="font-size:12px;font-weight:'+(isToday?700:500)+';color:'+numColor+';background:'+numBg+';width:'+numW+';height:'+numW+';border-radius:50%;display:inline-flex;align-items:center;justify-content:center">'+day.getDate()+'</span></div>';
-  grouped.slice(0,maxShow).forEach(function(item){
-    const t=item.task;
-    const cnt=item.count;
-    const co=db.companies.find(function(c){return c.id===t.company_id;});
-    const cat=co&&co.category?co.category:'';
-    const isAuto=t.auto_scheduled==='true';
-    const color=catColor[cat]||'#6b7280';
-    const coId=co?co.id:'';
-    html+='<div onclick="'+(coId?'openCompanyDetail(\'' +coId+ '\')':'')+'"'+
-      ' title="'+t.company+(cnt>1?' ('+cnt+' tasks)':'')+'"'+
-      ' style="font-size:11px;padding:2px 5px;margin-bottom:2px;border-radius:4px;cursor:pointer;background:'+(isAuto?color+'18':'#fff')+';border-left:3px solid '+color+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px">';
-    if(cat)html+='<span style="font-size:9px;font-weight:800;color:'+color+'">'+cat+'</span>';
-    html+='<span style="overflow:hidden;text-overflow:ellipsis;flex:1">'+t.company+'</span>';
-    if(cnt>1)html+='<span style="font-size:9px;color:'+color+';font-weight:700;flex-shrink:0">+'+( cnt-1)+'</span>';
-    html+='</div>';
-  });
-  if(extra)html+='<div style="font-size:10px;color:var(--text-m);padding:1px 4px">+'+extra+' more</div>';
-  html+='</div>';
-  return html;
-}
-
 function renderCalendar(){
-  if(window.calCatFilter===undefined)window.calCatFilter=new Set(['A','B','C','D','']);
-
   const $tr=$('topbar-right');
-  $tr.innerHTML=
-    '<select class="btn" id="cal-agent-filter" onchange="renderCalendar()">'+
-    '<option value="">All Managers</option>'+
-    AGENTS().map(function(a){return'<option>'+a+'</option>';}).join('')+
-    '</select>'+
-    '<div style="display:flex;gap:4px">'+
-    '<button class="btn'+(calView==='month'?' btn-primary':'')+'" onclick="calView=\'month\';calOffset=0;renderCalendar()">Month</button>'+
-    '<button class="btn'+(calView==='quarter'?' btn-primary':'')+'" onclick="calView=\'quarter\';calOffset=0;renderCalendar()">Quarter</button>'+
-    '</div>'+
-    '<div style="display:flex;gap:4px">'+
-    '<button class="btn" onclick="calOffset--;renderCalendar()"><i class="ti ti-chevron-left"></i></button>'+
-    '<button class="btn" onclick="calOffset=0;renderCalendar()">Today</button>'+
-    '<button class="btn" onclick="calOffset++;renderCalendar()"><i class="ti ti-chevron-right"></i></button>'+
-    '</div>'+
-    '<button class="btn" onclick="scheduleAllCompanies()"><i class="ti ti-refresh"></i>Update Schedule</button>';
+  $tr.innerHTML=`
+    <select class="btn" id="cal-agent-filter" onchange="renderCalendar()">
+      <option value="">All Managers</option>
+      ${AGENTS().map(a=>`<option>${a}</option>`).join('')}
+    </select>
+    <button class="btn" onclick="scheduleAllCompanies()"><i class="ti ti-refresh"></i>Update Schedule</button>`;
 
-  const agentFilter=document.getElementById('cal-agent-filter')&&document.getElementById('cal-agent-filter').value||'';
-  const allTasks=db.tasks.filter(function(t){
-    if(t.done||!t.due)return false;
-    if(agentFilter&&t.agent!==agentFilter)return false;
-    // Фильтр по категории
-    const co=db.companies.find(function(c){return c.id===t.company_id;});
-    const cat=co&&co.category?co.category:'';
-    return window.calCatFilter.has(cat)||window.calCatFilter.has('');
-  });
-
+  const agentFilter=document.getElementById('cal-agent-filter')?.value||'';
   const now=new Date();
-  const numMonths=calView==='quarter'?3:1;
-  const startMonth=new Date(now.getFullYear(),now.getMonth()+calOffset,1);
-  const endMonthDate=new Date(startMonth.getFullYear(),startMonth.getMonth()+numMonths-1,1);
-
-  const periodLabel=calView==='quarter'
-    ?startMonth.toLocaleString('en',{month:'long',year:'numeric'})+' — '+endMonthDate.toLocaleString('en',{month:'long',year:'numeric'})
-    :startMonth.toLocaleString('en',{month:'long',year:'numeric'});
-
-  const firstDay=new Date(startMonth);
-  const lastDay=new Date(startMonth.getFullYear(),startMonth.getMonth()+numMonths,0);
-
-  const gridStart=new Date(firstDay);
-  const startDow=gridStart.getDay();
-  gridStart.setDate(gridStart.getDate()-(startDow===0?6:startDow-1));
-  const gridEnd=new Date(lastDay);
-  const endDow=gridEnd.getDay();
-  if(endDow!==0)gridEnd.setDate(gridEnd.getDate()+(7-endDow));
-
-  const gridDays=[];
-  for(var gd=new Date(gridStart);gd<=gridEnd;gd.setDate(gd.getDate()+1)){
-    gridDays.push(new Date(gd));
+  const months=[];
+  for(let i=0;i<12;i++){
+    const d=new Date(now.getFullYear(),now.getMonth()+i,1);
+    months.push({year:d.getFullYear(),month:d.getMonth(),label:d.toLocaleString('ru',{month:'long',year:'numeric'})});
   }
 
-  // Группируем задачи по дате, затем по компании (схлопываем дубли)
-  const tasksByDay={};
-  allTasks.forEach(function(t){
-    if(!tasksByDay[t.due])tasksByDay[t.due]={};
-    const key=t.company_id||t.company;
-    if(!tasksByDay[t.due][key])tasksByDay[t.due][key]={task:t,count:0};
-    tasksByDay[t.due][key].count++;
-  });
+  // Get scheduled tasks grouped by month
+  const scheduledTasks=db.tasks.filter(t=>t.auto_scheduled==='true'&&!t.done&&t.due&&(!agentFilter||t.agent===agentFilter));
+  // Also get manual tasks with due dates
+  const manualTasks=db.tasks.filter(t=>t.auto_scheduled!=='true'&&!t.done&&t.due&&(!agentFilter||t.agent===agentFilter));
 
-  const todayStr=now.toISOString().slice(0,10);
-  const catColor={A:'#ef4444',B:'#f59e0b',C:'#3b82f6',D:'#9ca3af'};
-  const catDesc={A:'Contact monthly',B:'Contact quarterly',C:'Contact bi-annually',D:'Contact annually'};
+  // Summary stats
+  const totalSched=scheduledTasks.length;
+  const byAgent={};
+  scheduledTasks.forEach(t=>{byAgent[t.agent]=(byAgent[t.agent]||0)+1;});
 
-  // Легенда-фильтр
-  const legend=Object.entries(catColor).map(function(e){
-    const active=window.calCatFilter.has(e[0]);
-    return '<span onclick="toggleCalCat(\''+e[0]+'\');renderCalendar()" style="display:inline-flex;align-items:center;gap:5px;margin-right:10px;font-size:12px;cursor:pointer;padding:3px 8px;border-radius:20px;border:1.5px solid '+(active?e[1]:'#d1d5db')+';background:'+(active?e[1]+'15':'transparent')+';opacity:'+(active?1:0.5)+';transition:all .15s">'+
-      '<span style="width:10px;height:10px;border-radius:50%;background:'+e[1]+';display:inline-block"></span>'+
-      e[0]+' — '+catDesc[e[0]]+
-      '</span>';
-  }).join('');
-
-  const dayHeaders=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(function(d,i){
-    return '<div style="padding:8px;text-align:center;font-size:11px;font-weight:700;color:'+(i>=5?'#9ca3af':'var(--text-m)')+';text-transform:uppercase;letter-spacing:.5px">'+d+'</div>';
-  }).join('');
-
-  const cells=gridDays.map(function(day){
-    const dStr=day.toISOString().slice(0,10);
-    const inPeriod=day>=firstDay&&day<=lastDay;
-    const isToday=dStr===todayStr;
-    const isWeekend=day.getDay()===0||day.getDay()===6;
-    // Схлопнутые задачи по компании
-    const grouped=tasksByDay[dStr]?Object.values(tasksByDay[dStr]).sort(function(a,b){
-      return a.task.company.localeCompare(b.task.company);
-    }):[];
-    const maxShow=3;
-    const extra=grouped.length>maxShow?grouped.length-maxShow:0;
-    return buildCalCell(day,dStr,isWeekend,isToday,inPeriod,grouped,maxShow,extra,catColor);
-  }).join('');
-
-  $('content').innerHTML=
-    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
-    '<div style="font-size:18px;font-weight:700">'+periodLabel+'</div></div>'+
-    '<div style="margin-bottom:14px">'+legend+'</div>'+
-    '<div style="background:var(--sur);border:1px solid var(--bdr);border-radius:12px;overflow:hidden">'+
-    '<div style="display:grid;grid-template-columns:repeat(7,1fr);border-bottom:2px solid var(--bdr)">'+dayHeaders+'</div>'+
-    '<div style="display:grid;grid-template-columns:repeat(7,1fr)">'+cells+'</div>'+
-    '</div>';
+  $('content').innerHTML=`
+  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+    <div class="metric" style="padding:12px 16px;margin:0"><div class="metric-label">Scheduled Contacts</div><div class="metric-value">${totalSched}</div><div class="metric-sub">for the next 12 months</div></div>
+    <div class="metric" style="padding:12px 16px;margin:0;flex:1"><div class="metric-label">How the scheduler works</div>
+      <div style="display:flex;gap:8px;margin-top:6px;flex-wrap:wrap">
+        ${Object.entries(CO_CATEGORIES).map(([k,v])=>`<span class="cat-badge cat-${k}" style="width:auto;padding:4px 10px;border-radius:20px;font-size:12px">${k} — ${v.desc}</span>`).join('')}
+      </div>
+    </div>
+  </div>
+  ${totalSched===0?`<div class="card" style="text-align:center;padding:40px">
+    <i class="ti ti-calendar" style="font-size:48px;color:var(--gray-300);display:block;margin-bottom:16px"></i>
+    <div style="font-size:16px;font-weight:700;margin-bottom:8px">Schedule is empty</div>
+    <div style="font-size:14px;color:var(--text-m);margin-bottom:20px">Assign companies a category (A/B/C/D) and a responsible manager,<br>then click «Update Schedule»</div>
+    <button class="btn btn-primary" onclick="scheduleAllCompanies()"><i class="ti ti-refresh"></i>Create Schedule</button>
+  </div>`:`
+  <div class="cal-grid">
+    ${months.map(({year,month,label})=>{
+      const isPast=year<now.getFullYear()||(year===now.getFullYear()&&month<now.getMonth());
+      const isCurrent=year===now.getFullYear()&&month===now.getMonth();
+      const mTasks=[...scheduledTasks,...manualTasks].filter(t=>{
+        const td=new Date(t.due);return td.getFullYear()===year&&td.getMonth()===month;
+      }).sort((a,b)=>a.due.localeCompare(b.due));
+      return`<div class="cal-month">
+        <div class="cal-month-head ${isCurrent?'current':isPast?'past':''}">
+          <span>${label}</span>
+          ${mTasks.length?`<span style="font-size:11px;opacity:.8">${mTasks.length} cont.</span>`:''}
+        </div>
+        ${mTasks.length?mTasks.map(t=>{
+          const co=db.companies.find(c=>c.id===t.company_id);
+          const cat=co?.category||'';
+          return`<div class="cal-event" onclick="${co?`openCompanyDetail('${co.id}')`:''}">
+            ${cat?`<span class="cat-badge cat-${cat}" style="width:18px;height:18px;font-size:10px">${cat}</span>`:'<span style="width:18px"></span>'}
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.company}</div>
+              <div style="font-size:11px;color:var(--text-m)">${t.agent||''} · ${t.due.slice(5)}</div>
+            </div>
+            <div class="cb ${t.done?'done':''}" style="width:16px;height:16px;flex-shrink:0" onclick="event.stopPropagation();toggleTask('${t.id}',${!t.done})">
+              ${t.done?'<i class="ti ti-check" style="font-size:10px"></i>':''}
+            </div>
+          </div>`;
+        }).join(''):`<div class="cal-empty">No contacts</div>`}
+      </div>`;
+    }).join('')}
+  </div>`}`;
 }
 
-function toggleCalCat(cat){
-  if(!window.calCatFilter)window.calCatFilter=new Set(['A','B','C','D']);
-  if(window.calCatFilter.has(cat))window.calCatFilter.delete(cat);
-  else window.calCatFilter.add(cat);
-}
+
 // ─── Parts forecast ────────────────────────────────────────────────────────
-function renderClientMap(){
-  if(window.mapStatusFilter===undefined)window.mapStatusFilter=new Set(['Active','Prospect','Partner','Negotiating','Cold','Inactive']);
-  const main=$('content');
-  const locs=db.locations||[];
-  const allWithLocs=new Map();
-  locs.forEach(function(l){
-    if(!l.lat||!l.lng)return;
-    const co=db.companies.find(function(x){return x.id===l.company_id;});
-    if(!co)return;
-    if(!allWithLocs.has(l.company_id))allWithLocs.set(l.company_id,{co:co,locs:[]});
-    allWithLocs.get(l.company_id).locs.push(l);
-  });
-  const totalLocs=locs.filter(function(l){return l.lat&&l.lng;}).length;
-
-  const statusColor={Active:'#185FA5',Prospect:'#f59e0b',Partner:'#1D9E75',Negotiating:'#7F77DD',Cold:'#9ca3af',Inactive:'#d1d5db'};
-  const allStatuses=Object.keys(statusColor);
-
-  // Фильтр-легенда
-  const legend=allStatuses.map(function(s){
-    const active=window.mapStatusFilter.has(s);
-    const color=statusColor[s];
-    return '<span onclick="toggleMapFilter(\''+s+'\');renderClientMap()" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;padding:3px 10px;border-radius:20px;border:1.5px solid '+(active?color:'#d1d5db')+';background:'+(active?color+'15':'transparent')+';opacity:'+(active?1:0.45)+';transition:all .15s;line-height:1.4">'+
-      '<span style="width:10px;height:10px;border-radius:50%;background:'+color+';display:inline-block"></span>'+s+'</span>';
-  }).join('');
-
-  main.innerHTML=
-    '<div style="font-size:13px;color:var(--text-m);margin-bottom:8px">'+allWithLocs.size+' companies · '+totalLocs+' locations</div>'+
-    '<div style="margin-bottom:12px;display:flex;flex-wrap:wrap;align-items:center;gap:6px">'+legend+
-    '<span onclick="window.mapStatusFilter=new Set([&quot;Active&quot;,&quot;Prospect&quot;,&quot;Partner&quot;,&quot;Negotiating&quot;,&quot;Cold&quot;,&quot;Inactive&quot;]);renderClientMap()" style="display:inline-flex;align-items:center;font-size:12px;cursor:pointer;padding:3px 10px;border-radius:20px;border:1.5px solid #d1d5db;color:var(--text-m)">Show all</span>'+
-    '</div>'+
-    '<div id="client-map" style="height:calc(100vh - 230px);border-radius:12px;overflow:hidden;border:1px solid var(--bdr)"></div>'+
-    (allWithLocs.size===0?'<div style="text-align:center;padding:40px;color:var(--text-m)">No locations with GPS coordinates yet.</div>':'');
-
-  if(allWithLocs.size===0)return;
-
-  setTimeout(function(){
-    if(window._clientMap){window._clientMap.remove();window._clientMap=null;}
-    var map=L.map('client-map',{attributionControl:false}).setView([40.18,44.51],8);
-    window._clientMap=map;
-
-    var streets=L.tileLayer('https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=ag2mYxKqDIOXJAKnt58I',{maxZoom:20,attribution:'© MapTiler © OpenStreetMap'});
-    var satellite=L.tileLayer('https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=ag2mYxKqDIOXJAKnt58I',{maxZoom:20,attribution:'© MapTiler'});
-    var topo=L.tileLayer('https://api.maptiler.com/maps/topo-v2/{z}/{x}/{y}.png?key=ag2mYxKqDIOXJAKnt58I',{maxZoom:20,attribution:'© MapTiler © OpenStreetMap'});
-    var baseLayers={'Streets':streets,'Satellite':satellite,'Topo':topo};
-    (baseLayers[window._mapLayer||'Streets (OSM)']||streets).addTo(map);
-    L.control.layers(baseLayers,{},{position:'topright',collapsed:false}).addTo(map);
-    map.on('baselayerchange',function(e){window._mapLayer=e.name;});
-    var bounds=[];
-
-    allWithLocs.forEach(function(item){
-      var co=item.co;
-      // Применяем фильтр
-      if(!window.mapStatusFilter.has(co.status||'Prospect'))return;
-      var color=statusColor[co.status]||'#9ca3af';
-      item.locs.forEach(function(loc){
-        var lat=parseFloat(loc.lat),lng=parseFloat(loc.lng);
-        if(isNaN(lat)||isNaN(lng))return;
-        bounds.push([lat,lng]);
-        var marker=L.circleMarker([lat,lng],{radius:9,fillColor:color,color:'#fff',weight:2,opacity:1,fillOpacity:0.9}).addTo(map);
-        var deals=db.deals.filter(function(d){return d.company_id===co.id&&d.stage!=='Lost';});
-        var pipeline=deals.reduce(function(s,d){return s+Number(d.amount||0);},0);
-        var fleetCount=db.fleet.filter(function(f){return f.company_id===co.id&&f.condition!=='Competitor';}).length;
-        marker.bindPopup(
-          '<div style="min-width:180px;font-family:inherit">'+
-          '<div style="font-weight:700;font-size:14px;margin-bottom:4px">'+co.name+'</div>'+
-          '<div style="font-size:12px;color:#666;margin-bottom:6px">'+loc.name+' · '+(loc.type||'')+'</div>'+
-          '<span style="background:'+color+'22;color:'+color+';padding:2px 7px;border-radius:10px;font-size:11px;font-weight:600">'+co.status+'</span>'+
-          (co.category?'<span style="margin-left:4px;background:#f3f4f6;padding:2px 7px;border-radius:10px;font-size:11px">Cat. '+co.category+'</span>':'')+
-          (pipeline>0?'<div style="margin-top:6px;font-size:12px">Pipeline: <b>$'+pipeline.toLocaleString()+'</b></div>':'')+
-          (fleetCount>0?'<div style="font-size:12px">Fleet: <b>'+fleetCount+' units</b></div>':'')+
-          '<div style="margin-top:8px"><a href="#" onclick="event.preventDefault();go(\'companies\');setTimeout(function(){openCompanyDetail(\''+co.id+'\')},200)" style="font-size:12px;color:#185FA5;font-weight:600">Open card →</a></div>'+
-          '</div>',{maxWidth:240}
-        );
-      });
-    });
-    if(bounds.length>1)map.fitBounds(bounds,{padding:[40,40]});
-    else if(bounds.length===1)map.setView(bounds[0],13);
-  },150);
-}
-
-function toggleMapFilter(status){
-  if(!window.mapStatusFilter)window.mapStatusFilter=new Set();
-  if(window.mapStatusFilter.has(status))window.mapStatusFilter.delete(status);
-  else window.mapStatusFilter.add(status);
-}
-
 function renderParts(){
   $('topbar-right').innerHTML=`
     <select class="btn" id="parts-co-filter" onchange="renderParts()">
@@ -3773,7 +3502,7 @@ function renderUsers(){
       <thead><tr><th>Name</th><th>Role</th><th>Last Login</th><th>Status</th><th></th></tr></thead>
       <tbody>${db.users.length?db.users.map((u,i)=>`<tr>
         <td><div style="display:flex;align-items:center;gap:8px"><div class="av ${avC(i)}" style="width:30px;height:30px;font-size:11px">${ini(u.name)}</div><strong>${u.name}</strong></div></td>
-        <td><span class="b ${u.role==='manager'?'b-green':'b-blue'}">${u.role==='manager'?'Sales Manager':'Sales Rep'}</span></td>
+        <td><span class="b ${u.role==='manager'?'b-blue':'b-gray'}">${u.role==='manager'?'Sales Rep':'Sales Rep'}</span></td>
         <td style="color:var(--text-m);font-size:12px">${u.last_login||'—'}</td>
         <td><span class="b ${String(u.active)==='false'?'b-red':'b-green'}">${String(u.active)==='false'?'Blocked':'Active'}</span></td>
         <td><div class="actions">
@@ -3788,10 +3517,10 @@ function renderUsers(){
   <div class="card">
     <div class="card-title">Access Rights</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:4px">
-      <div><div style="font-weight:700;color:var(--blue);margin-bottom:8px;font-size:13px">Sales Rep</div>
+      <div><div style="font-weight:700;color:var(--blue);margin-bottom:8px;font-size:13px">Sales Representative</div>
         ${['✓ Own deals and tasks','✓ Own calendar','✓ All companies and contacts','✓ Fleet','✓ Parts forecast','✗ Others\' deals','✗ Team reports','✗ Operations & import','✗ User management'].map(i=>`<div style="font-size:13px;padding:3px 0;color:${i.startsWith('✗')?'var(--text-l)':'var(--text)'}">${i}</div>`).join('')}
       </div>
-      <div><div style="font-weight:700;color:var(--green);margin-bottom:8px;font-size:13px">Sales Manager</div>
+      <div><div style="font-weight:700;color:var(--green);margin-bottom:8px;font-size:13px">Sales Rep</div>
         ${['✓ All deals from all managers','✓ All team tasks','✓ Shared calendar','✓ All companies and contacts','✓ Fleet','✓ Reports across entire team','✓ Operations & import','✓ User management'].map(i=>`<div style="font-size:13px;padding:3px 0">${i}</div>`).join('')}
       </div>
     </div>
@@ -4416,8 +4145,8 @@ function getSegmentedCompanies(){
   if(cat)companies=companies.filter(c=>c.category===cat);
   if(fleetF==='yes')companies=companies.filter(c=>db.fleet.some(f=>f.company_id===c.id));
   if(fleetF==='no')companies=companies.filter(c=>!db.fleet.some(f=>f.company_id===c.id));
-  if(dealsF==='yes')companies=companies.filter(c=>db.deals.some(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified'));
-  if(dealsF==='no')companies=companies.filter(c=>!db.deals.some(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified'));
+  if(dealsF==='yes')companies=companies.filter(c=>db.deals.some(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost'));
+  if(dealsF==='no')companies=companies.filter(c=>!db.deals.some(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost'));
   return companies;
 }
 
@@ -4441,7 +4170,7 @@ function renderSegRows(companies){
   if(!companies.length)return`<tr><td colspan="7"><div class="empty" style="padding:24px"><i class="ti ti-filter"></i><div class="empty-title">No companies matching filter</div></div></td></tr>`;
   return companies.map(c=>{
     const fleetCount=db.fleet.filter(f=>f.company_id===c.id).length;
-    const dealsCount=db.deals.filter(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified').length;
+    const dealsCount=db.deals.filter(d=>d.company===c.id&&d.stage!=='Won'&&d.stage!=='Lost').length;
     return`<tr onclick="openCompanyDetail('${c.id}');go('companies',null)">
       <td><strong>${c.name}</strong></td>
       <td style="font-size:12px;color:var(--text-m)">${c.industry||'—'}</td>
@@ -4592,14 +4321,10 @@ function setSentiment(val,el){
 }
 
 function updateLostReason(stage){
-  const wrap=$('lost-reason-wrap');
-  if(wrap)wrap.style.display=stage==='Lost'?'block':'none';
-  const priceWrap=$('competitor-price-wrap');
-  if(priceWrap&&stage!=='Lost')priceWrap.style.display='none';
-  const disqWrap=$('disq-reason-wrap');
-  if(disqWrap)disqWrap.style.display=stage==='Disqualified'?'block':'none';
-  const disqComWrap=$('disq-comment-wrap');
-  if(disqComWrap)disqComWrap.style.display=stage==='Disqualified'?'block':'none';
+  const wrap=$('lost-reason-wrap');if(wrap)wrap.style.display=stage==='Lost'?'block':'none';
+  const pw=$('competitor-price-wrap');if(pw&&stage!=='Lost')pw.style.display='none';
+  const dw=$('disq-reason-wrap');if(dw)dw.style.display=stage==='Disqualified'?'block':'none';
+  const dcw=$('disq-comment-wrap');if(dcw)dcw.style.display=stage==='Disqualified'?'block':'none';
 }
 
 function updateAutoFields(){
@@ -5262,11 +4987,11 @@ function openAddLocation(coId){
     <div style="background:var(--sur);border-radius:12px;padding:24px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3);max-height:90vh;overflow-y:auto">
       <div style="font-size:16px;font-weight:700;margin-bottom:4px">Add Site Location</div>
       <div style="font-size:12px;color:var(--text-m);margin-bottom:16px">${co?.name||''}</div>
-      <div id="loc-drop-zone" style="border:1.5px dashed var(--bdr);border-radius:8px;padding:14px;margin-bottom:14px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s" onclick="document.getElementById('loc-photo-inp').click()" ondragover="event.preventDefault();this.style.borderColor='#3b82f6';this.style.background='rgba(59,130,246,.1)'" ondragleave="this.style.borderColor='';this.style.background=''" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';extractGPSfile(event.dataTransfer.files[0],'loc-lat','loc-lng','loc-gps-status')">
+      <div style="background:var(--blue-lt);border:1.5px dashed #93c5fd;border-radius:8px;padding:14px;margin-bottom:14px;text-align:center;cursor:pointer" onclick="document.getElementById('loc-photo-inp').click()">
         <i class="ti ti-camera" style="font-size:24px;color:var(--blue);display:block;margin-bottom:6px"></i>
         <div style="font-size:13px;font-weight:600;color:var(--blue)">Upload photo with GPS</div>
         <div style="font-size:11px;color:var(--text-m);margin-top:2px">Coordinates extracted automatically from photo</div>
-        <input type="file" accept="image/*" id="loc-photo-inp" style="display:none" onchange="extractGPSfile(this.files[0],'loc-lat','loc-lng','loc-gps-status')">
+        <input type="file" accept="image/*" id="loc-photo-inp" style="display:none" onchange="extractGPS(this,'loc-lat','loc-lng','loc-gps-status')">
       </div>
       <div id="loc-gps-status" style="font-size:12px;margin-bottom:12px;min-height:16px;text-align:center"></div>
       <div style="font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:6px">Or enter coordinates manually</div>
@@ -5295,10 +5020,6 @@ function openAddLocation(coId){
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
 }
 
-function extractGPSfile(file,latId,lngId,statusId){
-  if(!file)return;
-  extractGPS({files:[file]},latId,lngId,statusId);
-}
 function extractGPS(input,latId,lngId,statusId){
   const file=input.files[0];if(!file)return;
   const status=document.getElementById(statusId);
@@ -5412,7 +5133,7 @@ function buildNotifications(){
   });
 
   // 2. Stale deals (30+ days no activity)
-  myDeals().filter(d=>d.stage!=='Won'&&d.stage!=='Lost'&&d.stage!=='Disqualified').forEach(d=>{
+  myDeals().filter(d=>d.stage!=='Won'&&d.stage!=='Lost').forEach(d=>{
     const stale=dealStaleDays(d);
     if(stale>=NOTIF_STALE_DAYS){
       notifs.push({id:'stale-'+d.id,type:'stale',priority:'high',icon:'ti-clock-exclamation',color:'#f59e0b',
