@@ -3104,10 +3104,10 @@ function renderClientMap(){
     var map=L.map('client-map',{attributionControl:false}).setView([40.18,44.51],8);
     window._clientMap=map;
 
-    var streets=L.tileLayer('https://tiles.stadiamaps.com/tiles/osm_bright/{z}/{x}/{y}{r}.png',{maxZoom:20,attribution:'© Stadia © OpenStreetMap'});
-    var satellite=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19});
-    var topo=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:18});
-    var baseLayers={'Streets (OSM)':streets,'Satellite':satellite,'Topo':topo};
+    var streets=L.tileLayer('https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=ag2mYxKqDIOXJAKnt58I',{maxZoom:20,attribution:'© MapTiler © OpenStreetMap'});
+    var satellite=L.tileLayer('https://api.maptiler.com/maps/satellite/{z}/{x}/{y}.jpg?key=ag2mYxKqDIOXJAKnt58I',{maxZoom:20,attribution:'© MapTiler'});
+    var topo=L.tileLayer('https://api.maptiler.com/maps/topo-v2/{z}/{x}/{y}.png?key=ag2mYxKqDIOXJAKnt58I',{maxZoom:20,attribution:'© MapTiler © OpenStreetMap'});
+    var baseLayers={'Streets':streets,'Satellite':satellite,'Topo':topo};
     (baseLayers[window._mapLayer||'Streets (OSM)']||streets).addTo(map);
     L.control.layers(baseLayers,{},{position:'topright',collapsed:false}).addTo(map);
     map.on('baselayerchange',function(e){window._mapLayer=e.name;});
