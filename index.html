@@ -3104,7 +3104,7 @@ function renderClientMap(){
     if(window._clientMap){window._clientMap.remove();window._clientMap=null;}
     var map=L.map('client-map').setView([40.18,44.51],8);
     window._clientMap=map;
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap',maxZoom:18}).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{attribution:'© OpenStreetMap © CARTO',maxZoom:19,subdomains:'abcd'}).addTo(map);
     var bounds=[];
 
     allWithLocs.forEach(function(item){
