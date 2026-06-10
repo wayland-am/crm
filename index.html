@@ -1818,6 +1818,36 @@ async function moveDeal(id,stage){
   const d=db.deals.find(x=>x.id===id);if(!d)return;
   const prevStage=d.stage;
   if(prevStage===stage)return;
+
+  // ── Защита: подтверждение для Won и Lost ──
+  if(stage==='Won'){
+    const msg=`Перевести сделку в WON?\n\n• ${d.model||'Техника'} добавится в парк ${d.company}\n• Статус компании → Active\n\nЭто действие можно отменить.`;
+    if(!confirm(msg))return;
+  }
+  if(stage==='Lost'){
+    const msg=`Перевести сделку в LOST?\n\n• ${d.competitor?`${d.competitor} запишется в парк ${d.company} как конкурент`:'Укажи конкурента в сделке для записи в парк'}\n\nЭто действие можно отменить.`;
+    if(!confirm(msg))return;
+  }
+
+  // ── Откат: если возвращаем из Won/Lost ──
+  if(prevStage==='Won'||prevStage==='Lost'){
+    const autoFleet=db.fleet.filter(f=>f.deal_id===id);
+    for(const f of autoFleet){
+      db.fleet=db.fleet.filter(x=>x.id!==f.id);
+      await apiCall({action:'delete',sheet:'fleet',id:f.id});
+    }
+    // Откатить статус компании если он был поставлен этой сделкой
+    if(prevStage==='Won'){
+      const co=db.companies.find(x=>x.id===d.company_id);
+      const otherWon=db.deals.some(x=>x.id!==id&&x.company_id===d.company_id&&x.stage==='Won');
+      if(co&&co.status==='Active'&&!otherWon){
+        co.status='Prospect';
+        await persist('companies',{...co});
+      }
+    }
+    if(autoFleet.length)showToast(`↩️ Откат: ${autoFleet.length} записей удалено из парка`,3000);
+  }
+
   d.stage=stage;
   d.probability={Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[stage]||0;
   await persist('deals',{...d});
@@ -2605,6 +2635,29 @@ async function _saveM(){
     row={...row,company_id:coId,company:coName,model:g('f-model')||'',amount:Number(g('f-amount'))||0,currency:g('f-currency')||'USD',stage:g('f-stage')||'Lead',agent:g('f-agent')||'',next_action:g('f-next')||'',next_date:g('f-ndate')||'',days:Number(g('f-days'))||0,competitor:g('f-competitor')||'',lost_reason:g('f-lost-reason')||'',probability:{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[g('f-stage')]||0,created:row.created||today()};
     const prevDeal=eid?db.deals.find(x=>x.id===eid):null;
     const prevStageEdit=prevDeal?.stage;
+    // Защита при смене на Won/Lost через форму
+    if(prevStageEdit&&prevStageEdit!==row.stage){
+      if(row.stage==='Won'){
+        if(!confirm(`Перевести сделку в WON?\n\n• ${row.model||'Техника'} добавится в парк ${row.company}\n• Статус компании → Active`))return;
+      }
+      if(row.stage==='Lost'){
+        if(!confirm(`Перевести сделку в LOST?\n\n• ${row.competitor?`${row.competitor} запишется в парк как конкурент`:'Конкурент не указан'}`))return;
+      }
+      // Откат если возвращаем из Won/Lost
+      if(prevStageEdit==='Won'||prevStageEdit==='Lost'){
+        const autoFleet=db.fleet.filter(f=>f.deal_id===eid);
+        for(const f of autoFleet){
+          db.fleet=db.fleet.filter(x=>x.id!==f.id);
+          await apiCall({action:'delete',sheet:'fleet',id:f.id});
+        }
+        if(prevStageEdit==='Won'){
+          const co=db.companies.find(x=>x.id===row.company_id);
+          const otherWon=db.deals.some(x=>x.id!==eid&&x.company_id===row.company_id&&x.stage==='Won');
+          if(co&&co.status==='Active'&&!otherWon){co.status='Prospect';await persist('companies',{...co});}
+        }
+        if(autoFleet.length)showToast(`↩️ Откат: ${autoFleet.length} записей удалено из парка`,3000);
+      }
+    }
     const s=await persist('deals',row);
     if(!eid)db.deals.push(s);else Object.assign(db.deals.find(x=>x.id===eid),s);
     // Won/Lost side-effects (same as moveDeal)
