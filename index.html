@@ -2872,7 +2872,7 @@ function buildCalCell(day,dStr,isWeekend,isToday,inPeriod,grouped,maxShow,extra,
     const cat=co&&co.category?co.category:'';
     const color=catColor[cat]||'#6b7280';
     const coId=co?co.id:'';
-    html+='<div onclick="'+(coId?'openCompanyDetail(\''+coId+'\')':'')+' title="'+t.company+(cnt>1?' ('+cnt+' tasks)':'')+'"'+
+    html+='<div data-coid="'+coId+'" onclick="if(this.dataset.coid)openCompanyDetail(this.dataset.coid)" title="'+t.company+(cnt>1?' ('+cnt+' tasks)':'')+'"'+
       ' style="font-size:11px;padding:2px 5px;margin-bottom:2px;border-radius:4px;cursor:pointer;background:'+(t.auto_scheduled==='true'?color+'18':'#fff')+';border-left:3px solid '+color+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px">';
     if(cat)html+='<span style="font-size:9px;font-weight:800;color:'+color+'">'+cat+'</span>';
     html+='<span style="overflow:hidden;text-overflow:ellipsis;flex:1">'+t.company+'</span>';
@@ -2943,7 +2943,7 @@ function renderCalendar(){
     tasksByDay[t.due][key].count++;
   });
 
-  const todayStr=now.toISOString().slice(0,10);
+  const todayStr=[now.getFullYear(),String(now.getMonth()+1).padStart(2,'0'),String(now.getDate()).padStart(2,'0')].join('-');
   const catColor={A:'#ef4444',B:'#f59e0b',C:'#3b82f6',D:'#9ca3af'};
   const catDesc={A:'Contact monthly',B:'Contact quarterly',C:'Contact bi-annually',D:'Contact annually'};
 
@@ -2959,7 +2959,7 @@ function renderCalendar(){
   }).join('');
 
   const cells=gridDays.map(function(day){
-    const dStr=day.toISOString().slice(0,10);
+    const dStr=[day.getFullYear(),String(day.getMonth()+1).padStart(2,'0'),String(day.getDate()).padStart(2,'0')].join('-');
     const inPeriod=day>=firstDay&&day<=lastDay;
     const isToday=dStr===todayStr;
     const isWeekend=day.getDay()===0||day.getDay()===6;
