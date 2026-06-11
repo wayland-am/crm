@@ -2372,6 +2372,10 @@ function openM(type,id=null,coId=null,dealId=null){
         <div class="fg"><label class="fl">Website</label><input class="fc" id="f-website" value="${e.website||''}" placeholder="https://"></div>
       </div>
       <div class="fr">
+        <div class="fg"><label class="fl">Tax ID (НЗОУ)</label><input class="fc" id="f-taxid" value="${e.taxid||''}" placeholder="00000000" style="font-family:monospace"></div>
+        <div class="fg"></div>
+      </div>
+      <div class="fr">
         <div class="fg"><label class="fl">Client Category</label><select class="fc" id="f-category"><option value="">— not set —</option>${Object.entries(CAT_RULES).map(([k,v])=>`<option value="${k}" ${e.category===k?'selected':''}>${v.label} (${v.desc})</option>`).join('')}</select></div>
         <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-assigned"><option value="">— not assigned —</option>${AGENTS().map(a=>`<option value="${a}" ${(e.assigned_agent||'')===a?'selected':''}>${a}</option>`).join('')}</select></div>
       </div>
@@ -2581,7 +2585,7 @@ async function _saveM(){
   if(mtype==='company'){
     const name=(g('f-name')||'').trim();if(!name)return alert('Enter a name');
     const prev=ex?{...ex}:null;
-    row={...row,name,industry:g('f-industry'),status:g('f-status'),address:g('f-address')||'',city:g('f-city'),zip:g('f-zip')||'',country:g('f-country'),phone:g('f-phone')||'',website:g('f-website'),notes:g('f-notes'),category:g('f-category')||'',assigned_agent:g('f-assigned')||'',budget:g('f-budget')||'',seasonality:g('f-seasonality')||'',created:row.created||today()};
+    row={...row,name,industry:g('f-industry'),status:g('f-status'),address:g('f-address')||'',city:g('f-city'),zip:g('f-zip')||'',country:g('f-country'),phone:g('f-phone')||'',website:g('f-website'),taxid:g('f-taxid')||'',notes:g('f-notes'),category:g('f-category')||'',assigned_agent:g('f-assigned')||'',budget:g('f-budget')||'',seasonality:g('f-seasonality')||'',created:row.created||today()};
     const s=await persist('companies',row);
     if(!eid)db.companies.push(s);else Object.assign(db.companies.find(x=>x.id===eid),s);
     // Log change history
