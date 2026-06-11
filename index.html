@@ -4867,7 +4867,7 @@ async function loadCompanyPhotos(coId){
     const all=await apiCall({action:'read',sheet:'photos'});
     renderPhotoGallery(coId,(all||[]).filter(p=>p.company_id===coId));
   }catch(e){
-    el.innerHTML=`<div style="text-align:center;padding:8px"><button class="btn btn-sm" onclick="openPhotoUpload('${coId}')"><i class="ti ti-camera-plus"></i>Add photo</button></div>`;
+    el.innerHTML=`<div style="text-align:center;padding:12px 0"><div style="font-size:12px;color:var(--text-m);margin-bottom:8px">No photos yet</div><button class="btn" onclick="openPhotoUpload('${coId}')"><i class="ti ti-plus"></i>Add photo</button></div>`;
   }
 }
 
@@ -5025,9 +5025,7 @@ function renderLocations(coId){
     <button class="btn btn-sm" style="width:100%;margin-top:8px;justify-content:center" onclick="openAddLocation('${coId}')">
       <i class="ti ti-plus"></i>Add location
     </button>`
-    :`<div style="font-size:12px;color:var(--text-m);text-align:center;padding:12px 0">
-      No locations added yet.<br>Add a quarry, site or plant.
-    </div>`}`;
+    :`<div style="text-align:center;padding:12px 0"><div style="font-size:12px;color:var(--text-m);margin-bottom:8px">No locations added yet</div><button class="btn" onclick="openAddLocation('${coId}')"><i class="ti ti-plus"></i>Add location</button></div>`}`;
 }
 
 async function deleteLocation(locId,coId){
