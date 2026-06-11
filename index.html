@@ -2452,16 +2452,34 @@ function openM(type,id=null,coId=null,dealId=null){
       </div>
       <div class="fg"><label class="fl">Notes</label><input class="fc" id="f-notes" value="${e.notes||''}" placeholder="Aging, due for replacement..."aging, for replacement..."></div>`,
     task:`
-      <div class="fg"><label class="fl">Task *</label><input class="fc" id="f-title" value="${e.title||''}"></div>
-      <div class="fg"><label class="fl">Company</label>${coId?`<input class="fc" value="${co?co.name:''}" readonly style="background:var(--gray-50)"><input type="hidden" id="f-co-id" value="${coId}">`:coDL()}</div>
-      <div class="fr">
-        <div class="fg"><label class="fl">Type</label><select class="fc" id="f-type">${['Call','Meeting','Email','Proposal','Demo','Documents','Other'].map(t=>`<option ${e.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Priority</label><select class="fc" id="f-priority"><option ${e.priority==='high'?'selected':''} value="high">High</option><option ${e.priority==='medium'?'selected':''} value="medium">Medium</option><option ${e.priority==='low'?'selected':''} value="low">Low</option></select></div>
+      <!-- Pipedrive-style: outcome + next step in one form -->
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${e.done?'var(--green-lt)':'var(--blue-lt)'};border-radius:8px;margin-bottom:14px">
+        <input type="checkbox" id="f-done" ${e.done?'checked':''} style="width:18px;height:18px;cursor:pointer" onchange="this.closest('.modal-body').style.background=this.checked?'#f0fdf4':''">
+        <div>
+          <div style="font-weight:600;font-size:13px">${e.title||'Task'}</div>
+          <div style="font-size:11px;color:var(--text-m)">${co?co.name:e.company||''} · ${e.due?'Due: '+e.due:''}</div>
+        </div>
       </div>
-      <div class="fr">
-        <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-agent">${AGENTS().map(a=>`<option ${(e.agent||currentUser?.name||'')=== a?'selected':''}>${a}</option>`).join('')}</select></div>
-        <div class="fg"><label class="fl">Due Date</label><input class="fc" id="f-due" type="date" value="${e.due||''}"></div>
-      </div>`,
+
+      <div class="fg">
+        <label class="fl">📝 What happened? <span style="font-weight:400;color:var(--text-m)">(outcome / call notes)</span></label>
+        <textarea class="fc" id="f-outcome" rows="3" placeholder="Spoke with director. Interested in ZX330, wants a proposal by end of month. Budget ~$180k...">${e.outcome||''}</textarea>
+      </div>
+
+      <div style="border-top:1px solid var(--bdr);margin:12px 0;padding-top:12px">
+        <div style="font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:8px">📅 Next contact</div>
+        <div class="fr">
+          <div class="fg"><label class="fl">Type</label><select class="fc" id="f-type">${['Call','Meeting','Email','Proposal','Demo','Documents','Other'].map(t=>`<option ${e.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+          <div class="fg"><label class="fl">Due Date</label><input class="fc" id="f-due" type="date" value="${e.due||''}"></div>
+        </div>
+        <div class="fr">
+          <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="f-agent">${AGENTS().map(a=>`<option ${(e.agent||currentUser?.name||'')=== a?'selected':''}>${a}</option>`).join('')}</select></div>
+          <div class="fg"><label class="fl">Priority</label><select class="fc" id="f-priority"><option ${e.priority==='high'?'selected':''} value="high">High</option><option ${(e.priority||'medium')==='medium'?'selected':''} value="medium">Medium</option><option ${e.priority==='low'?'selected':''} value="low">Low</option></select></div>
+        </div>
+      </div>
+
+      <input type="hidden" id="f-title" value="${e.title||''}">
+      <input type="hidden" id="f-co-id" value="${coId||e.company_id||''}">`,
     user:`
       <div class="fg"><label class="fl">Full Name *</label><input class="fc" id="f-name" value="${e.name||''}" placeholder="J. Smith"></div>
       <div class="fg"><label class="fl">Role</label><select class="fc" id="f-role"><option value="rep" ${(e.role||'rep')==='rep'?'selected':''}>Sales Representative</option><option value="manager" ${e.role==='manager'?'selected':''}>Sales Rep</option></select></div>
@@ -2624,11 +2642,20 @@ async function _saveM(){
     if(!eid)db.fleet.push(s);else Object.assign(db.fleet.find(x=>x.id===eid),s);
     updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderFleet();
   }else if(mtype==='task'){
-    if(!g('f-title'))return alert('Enter a task');
-    let {id:coId,name:coName}=getCompanyFromForm();
-    row={...row,company_id:coId,company:coName,title:g('f-title'),type:g('f-type')||'',priority:g('f-priority')||'medium',agent:g('f-agent')||'',due:g('f-due')||'',done:row.done||false,created:row.created||new Date().toISOString().slice(0,10)};
+    const taskTitle=g('f-title')||eid?(db.tasks.find(x=>x.id===eid)||{}).title||'Task':'Task';
+    const isDone=document.getElementById('f-done')?.checked||false;
+    const outcome=g('f-outcome')||'';
+    const coId=g('f-co-id')||row.company_id||'';
+    const coName=coId?(db.companies.find(x=>x.id===coId)||{}).name||row.company||'':row.company||'';
+    row={...row,company_id:coId,company:coName,title:taskTitle,type:g('f-type')||'Call',priority:g('f-priority')||'medium',agent:g('f-agent')||'',due:g('f-due')||'',done:isDone,outcome:outcome,created:row.created||new Date().toISOString().slice(0,10)};
     const s=await persist('tasks',row);
     if(!eid)db.tasks.push(s);else Object.assign(db.tasks.find(x=>x.id===eid),s);
+    // Если есть outcome — автоматически логируем как активность
+    if(outcome&&isDone){
+      const act={id:uid(),company_id:coId,company:coName,type:g('f-type')||'Call',note:outcome,date:today(),agent:g('f-agent')||currentUser?.name||'',created:new Date().toISOString(),task_id:s.id};
+      const savedAct=await persist('activities',act);
+      db.activities.push(savedAct);
+    }
     updateCounts();if(cur.company)openCompanyDetail(cur.company);else renderTasks();
   }else if(mtype==='user'){
     const uname=(g('f-name')||'').trim();if(!uname)return alert('Enter a name');
