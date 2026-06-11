@@ -1647,10 +1647,13 @@ function openCompanyDetail(id){
           <button class="btn btn-xs btn-ghost" onclick="openM('task',null,'${id}')"><i class="ti ti-plus"></i></button>
         </div>
         ${tasks.length?tasks.slice(0,5).map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--gray-100);font-size:12px">
-          <div class="cb" onclick="toggleTask('${t.id}',true);openCompanyDetail('${id}')"></div>
-          <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</div>
-          <div style="flex-shrink:0;font-size:11px">${dueFmt(t.due)}</div>
-        </div>`).join(''):`<div style="font-size:12px;color:var(--text-m);text-align:center;padding:8px">All done ✓</div>`}
+          <div class="cb ${t.done?'done':''}" onclick="event.stopPropagation();toggleTask('${t.id}',${!t.done});openCompanyDetail('${id}')">${t.done?'<i class="ti ti-check" style="font-size:11px"></i>':''}</div>
+          <div style="flex:1;min-width:0;cursor:pointer" onclick="openM('task','${t.id}')">
+            <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:${t.done?400:500};text-decoration:${t.done?'line-through':'none'};color:${t.done?'var(--text-m)':'var(--text)'}">${t.title}</div>
+            ${t.text?`<div style="font-size:10px;color:var(--text-m);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.text}</div>`:''}
+          </div>
+          <div style="flex-shrink:0;font-size:11px;color:${t.due&&t.due<todayStr?'var(--red)':'var(--text-m)'}">${dueFmt(t.due)}</div>
+        </div>`).join('')+`${tasks.length>5?`<div style="font-size:11px;color:var(--blue);text-align:center;padding:6px;cursor:pointer" onclick="go('tasks')">+${tasks.length-5} more tasks</div>`:''}` :`<div style="font-size:12px;color:var(--text-m);text-align:center;padding:8px">All done ✓</div>`}
       </div>
 
     </div>
