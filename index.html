@@ -2838,9 +2838,8 @@ async function autoSchedule(companyId, companyName, category, agent, deleteOld=f
     const workday=nextWorkday(d);
     const due=workday.toISOString().slice(0,10);
     const row={company_id:companyId,company:companyName,title:'Contact with '+companyName+' (cat. '+category+')',type:'Call',priority:category==='A'?'high':category==='B'?'medium':'low',agent:effectiveAgent,due,done:false,auto_scheduled:'true',created};
-    const saved=await persist('tasks',row);
-    db.tasks.push(saved);
-    newTasks.push(saved);
+    const dup=db.tasks.some(t=>t.company_id===companyId&&t.due===due&&t.auto_scheduled==='true'&&!t.done);
+    if(!dup){const saved=await persist('tasks',row);db.tasks.push(saved);newTasks.push(saved);}
     d=new Date(d);
     d.setMonth(d.getMonth()+cat.months);
   }
@@ -2848,15 +2847,32 @@ async function autoSchedule(companyId, companyName, category, agent, deleteOld=f
   return newTasks;
 }
 
+async function clearAllAutoTasks(){
+  const autoTasks=db.tasks.filter(t=>t.auto_scheduled==='true'&&!t.done);
+  if(!autoTasks.length){showToast('No auto-tasks to clear',2000);return;}
+  if(!confirm('Delete ALL '+autoTasks.length+' auto-scheduled tasks?'))return;
+  for(const t of autoTasks){
+    await apiCall({action:'delete',sheet:'tasks',id:t.id});
+    db.tasks=db.tasks.filter(x=>x.id!==t.id);
+  }
+  updateCounts();
+  showToast('Cleared '+autoTasks.length+' auto-tasks',2500);
+}
+
 async function scheduleAllCompanies(){
   const withCat=db.companies.filter(c=>c.category&&CO_CATEGORIES[c.category]);
-  if(!withCat.length){alert('No companies with A/B/C/D category. Set a category in the company card.');return;}
-  if(!confirm(`Create/update schedule for ${withCat.length} companies?`))return;
+  if(!withCat.length){alert('No companies with A/B/C/D category.');return;}
+  const autoTasks=db.tasks.filter(t=>t.auto_scheduled==='true'&&!t.done);
+  if(!confirm('Rebuild schedule for '+withCat.length+' companies?\n\nWill delete '+autoTasks.length+' existing auto-tasks and create fresh.'))return;
+  for(const t of autoTasks){
+    await apiCall({action:'delete',sheet:'tasks',id:t.id});
+    db.tasks=db.tasks.filter(x=>x.id!==t.id);
+  }
   for(const c of withCat){
     const agent=c.assigned_agent&&c.assigned_agent!=='— not assigned —'?c.assigned_agent:(currentUser?.name||'');
-    await autoSchedule(c.id,c.name,c.category,agent,true);
+    await autoSchedule(c.id,c.name,c.category,agent,false);
   }
-  alert('Schedule updated!');
+  showToast('Schedule rebuilt — '+db.tasks.filter(t=>t.auto_scheduled==='true').length+' tasks created',3000);
   renderCalendar();
 }
 
@@ -2906,7 +2922,8 @@ function renderCalendar(){
     '<button class="btn" onclick="calOffset=0;renderCalendar()">Today</button>'+
     '<button class="btn" onclick="calOffset++;renderCalendar()"><i class="ti ti-chevron-right"></i></button>'+
     '</div>'+
-    '<button class="btn" onclick="scheduleAllCompanies()"><i class="ti ti-refresh"></i>Update Schedule</button>';
+    '<button class="btn" onclick="clearAllAutoTasks()" style="color:var(--red)"><i class="ti ti-trash"></i>Clear auto</button>'+
+    '<button class="btn" onclick="scheduleAllCompanies()"><i class="ti ti-refresh"></i>Rebuild Schedule</button>';
 
   const agentFilter=document.getElementById('cal-agent-filter')&&document.getElementById('cal-agent-filter').value||'';
   const allTasks=db.tasks.filter(function(t){
