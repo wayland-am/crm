@@ -5049,7 +5049,13 @@ function openAddLocation(coId){
         <input type="file" accept="image/*" id="loc-photo-inp" style="display:none" onchange="extractGPS(this,'loc-lat','loc-lng','loc-gps-status')">
       </div>
       <div id="loc-gps-status" style="font-size:12px;margin-bottom:12px;min-height:16px;text-align:center"></div>
-      <div style="font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:6px">Or enter coordinates manually</div>
+      <div style="margin-bottom:10px">
+        <label style="font-size:12px;font-weight:600;color:var(--text-m);display:block;margin-bottom:6px">Paste coordinates from Google Maps</label>
+        <input class="fc" id="loc-coords-paste" placeholder="40.5096, 44.4521  or  40°31'47.4&quot;N 44°23'55.4&quot;E"
+          oninput="parseCoordsPaste(this.value)"
+          style="font-family:monospace;font-size:13px">
+        <div id="loc-parse-status" style="font-size:11px;margin-top:4px;min-height:14px;color:var(--text-m)"></div>
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
         <div><label style="font-size:11px;color:var(--text-m);display:block;margin-bottom:3px">Latitude</label>
           <input class="fc" id="loc-lat" placeholder="40.1234" type="number" step="any"></div>
@@ -5073,6 +5079,37 @@ function openAddLocation(coId){
     </div>`;
   document.body.appendChild(overlay);
   overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+}
+
+function parseCoordsPaste(val){
+  const status=document.getElementById('loc-parse-status');
+  const latEl=document.getElementById('loc-lat');
+  const lngEl=document.getElementById('loc-lng');
+  if(!val.trim()){if(status)status.textContent='';return;}
+  let lat=null,lng=null;
+  // Decimal: "40.5096, 44.4521"
+  const dec=/(-?\d+\.?\d*)[,\s]+(-?\d+\.?\d*)/.exec(val.trim());
+  if(dec){lat=parseFloat(dec[1]);lng=parseFloat(dec[2]);}
+  // DMS: 40°31'47.4"N 44°23'55.4"E
+  if(lat===null){
+    const dms=/(\d+)[^\d]+(\d+)[^\d]+(\d+\.?\d*)[^\dNS]*([NS])[,\s]+(\d+)[^\d]+(\d+)[^\d]+(\d+\.?\d*)[^\dEW]*([EW])/i.exec(val);
+    if(dms){
+      lat=parseInt(dms[1])+parseInt(dms[2])/60+parseFloat(dms[3])/3600;
+      lng=parseInt(dms[5])+parseInt(dms[6])/60+parseFloat(dms[7])/3600;
+      if(dms[4].toUpperCase()==='S')lat=-lat;
+      if(dms[8].toUpperCase()==='W')lng=-lng;
+    }
+  }
+  if(lat!==null&&lng!==null&&lat>=-90&&lat<=90&&lng>=-180&&lng<=180){
+    if(latEl)latEl.value=lat.toFixed(6);
+    if(lngEl)lngEl.value=lng.toFixed(6);
+    if(status){status.textContent='✅ '+lat.toFixed(5)+', '+lng.toFixed(5);status.style.color='var(--green)';}
+    // Подсвечиваем зелёным поле paste
+    const dz=document.getElementById('loc-drop-zone');
+    if(dz){dz.style.borderColor='var(--green)';dz.style.background='rgba(22,163,74,.08)';}
+  } else {
+    if(status&&val.length>3){status.textContent='Format not recognized. Try: 40.5096, 44.4521';status.style.color='var(--red)';}
+  }
 }
 
 function extractGPS(input,latId,lngId,statusId){
