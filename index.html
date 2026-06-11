@@ -1665,8 +1665,8 @@ function openCompanyDetail(id){
 function renderActFeedItems(acts, coId){
   const actIcons={Call:'ti-phone',Meeting:'ti-calendar-event',WhatsApp:'ti-brand-whatsapp',Email:'ti-mail',Proposal:'ti-file-text',Demo:'ti-eye',Documents:'ti-file',Other:'ti-dots',note:'ti-note',stage:'ti-arrow-right'};
   const actColors={Call:'#3b82f6',Meeting:'#8b5cf6',WhatsApp:'#22c55e',Email:'#14b8a6',Proposal:'#f59e0b',Demo:'#22c55e',Documents:'#6b7280',Other:'#6b7280',note:'#6b7280',stage:'#d1d5db'};
-  if(!acts.length)return`<div class="empty" style="padding:40px"><i class="ti ti-clock"></i><div class="empty-title">No activity yet</div><div style="font-size:12px;color:var(--text-m);margin-bottom:12px">Log calls, meetings and conversations</div><button class="btn btn-sm btn-primary" onclick="openM('activity',null,'${coId}')"><i class="ti ti-plus"></i>Log First Activity</button></div>`;
-  return acts.map(a=>{
+  if(!acts.length)return`<div class="empty" style="padding:40px"><i class="ti ti-clock"></i><div class="empty-title">No activity yet</div><div style="font-size:12px;color:var(--text-m);margin-bottom:12px">Log calls, meetings and conversations</div><button class="btn btn-primary" onclick="openM('activity',null,'${coId}')"><i class="ti ti-phone"></i>Log First Activity</button></div>`;
+  const feedItems=acts.map(a=>{
     const d=a.date||String(a.created||'').slice(0,10);
     const diff=d?Math.floor((new Date()-new Date(d))/(1000*60*60*24)):null;
     const relDate=diff===null?'':diff===0?'Today':diff===1?'Yesterday':diff+'d ago';
@@ -1689,8 +1689,10 @@ function renderActFeedItems(acts, coId){
       </div>
     </div>`;
   }).join('');
+  return feedItems+'<div style="text-align:center;padding:16px 0 8px"><button class="btn btn-primary" style="padding:10px 28px;font-size:14px" onclick="_logAct(\''+coId+'\')" ><i class="ti ti-phone"></i>Log Activity</button></div>';
 }
 
+function _logAct(coId){openM('activity',null,coId);}
 function filterActFeed(types,el){
   document.querySelectorAll('.act-tab').forEach(t=>t.classList.remove('on'));
   el.classList.add('on');
