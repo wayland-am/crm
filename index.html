@@ -2825,7 +2825,7 @@ async function autoSchedule(companyId, companyName, category, agent, deleteOld=f
   const effectiveAgent=agent&&agent!=='— not assigned —'?agent:(currentUser?.name||'M. Kalashnikov');
   // Delete existing auto-scheduled tasks for this company
   if(deleteOld){
-    const old=db.tasks.filter(t=>t.company_id===companyId&&t.auto_scheduled==='true'&&!t.done);
+    const old=db.tasks.filter(t=>t.company_id===companyId&&(t.auto_scheduled===true||t.auto_scheduled==='true')&&!t.done);
     for(const t of old){await remove('tasks',t.id);db.tasks=db.tasks.filter(x=>x.id!==t.id);}
   }
   // Create tasks for next 12 months
@@ -2838,7 +2838,7 @@ async function autoSchedule(companyId, companyName, category, agent, deleteOld=f
     const workday=nextWorkday(d);
     const due=workday.toISOString().slice(0,10);
     const row={company_id:companyId,company:companyName,title:'Contact with '+companyName+' (cat. '+category+')',type:'Call',priority:category==='A'?'high':category==='B'?'medium':'low',agent:effectiveAgent,due,done:false,auto_scheduled:'true',created};
-    const dup=db.tasks.some(t=>t.company_id===companyId&&t.due===due&&t.auto_scheduled==='true'&&!t.done);
+    const dup=db.tasks.some(t=>t.company_id===companyId&&t.due===due&&(t.auto_scheduled===true||t.auto_scheduled==='true')&&!t.done);
     if(!dup){const saved=await persist('tasks',row);db.tasks.push(saved);newTasks.push(saved);}
     d=new Date(d);
     d.setMonth(d.getMonth()+cat.months);
@@ -2848,7 +2848,7 @@ async function autoSchedule(companyId, companyName, category, agent, deleteOld=f
 }
 
 async function clearAllAutoTasks(){
-  const autoTasks=db.tasks.filter(t=>t.auto_scheduled==='true'&&!t.done);
+  const autoTasks=db.tasks.filter(t=>(t.auto_scheduled===true||t.auto_scheduled==='true')&&!t.done);
   if(!autoTasks.length){showToast('No auto-tasks to clear',2000);return;}
   if(!confirm('Delete ALL '+autoTasks.length+' auto-scheduled tasks?'))return;
   for(const t of autoTasks){
@@ -2862,7 +2862,7 @@ async function clearAllAutoTasks(){
 async function scheduleAllCompanies(){
   const withCat=db.companies.filter(c=>c.category&&CO_CATEGORIES[c.category]);
   if(!withCat.length){alert('No companies with A/B/C/D category.');return;}
-  const autoTasks=db.tasks.filter(t=>t.auto_scheduled==='true'&&!t.done);
+  const autoTasks=db.tasks.filter(t=>(t.auto_scheduled===true||t.auto_scheduled==='true')&&!t.done);
   if(!confirm('Rebuild schedule for '+withCat.length+' companies?\n\nWill delete '+autoTasks.length+' existing auto-tasks and create fresh.'))return;
   for(const t of autoTasks){
     await apiCall({action:'delete',sheet:'tasks',id:t.id});
@@ -2872,7 +2872,7 @@ async function scheduleAllCompanies(){
     const agent=c.assigned_agent&&c.assigned_agent!=='— not assigned —'?c.assigned_agent:(currentUser?.name||'');
     await autoSchedule(c.id,c.name,c.category,agent,false);
   }
-  showToast('Schedule rebuilt — '+db.tasks.filter(t=>t.auto_scheduled==='true').length+' tasks created',3000);
+  showToast('Schedule rebuilt — '+db.tasks.filter(t=>(t.auto_scheduled===true||t.auto_scheduled==='true')).length+' tasks created',3000);
   renderCalendar();
 }
 
@@ -2891,7 +2891,7 @@ function buildCalCell(day,dStr,isWeekend,isToday,inPeriod,grouped,maxShow,extra,
     const color=catColor[cat]||'#6b7280';
     const coId=co?co.id:'';
     html+='<div data-coid="'+coId+'" onclick="if(this.dataset.coid)openCompanyDetail(this.dataset.coid)" title="'+t.company+(cnt>1?' ('+cnt+' tasks)':'')+'"'+
-      ' style="font-size:11px;padding:2px 5px;margin-bottom:2px;border-radius:4px;cursor:pointer;background:'+(t.auto_scheduled==='true'?color+'18':'#fff')+';border-left:3px solid '+color+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px">';
+      ' style="font-size:11px;padding:2px 5px;margin-bottom:2px;border-radius:4px;cursor:pointer;background:'+((t.auto_scheduled===true||t.auto_scheduled==='true')?color+'18':'#fff')+';border-left:3px solid '+color+';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:3px">';
     if(cat)html+='<span style="font-size:9px;font-weight:800;color:'+color+'">'+cat+'</span>';
     html+='<span style="overflow:hidden;text-overflow:ellipsis;flex:1">'+t.company+'</span>';
     if(cnt>1)html+='<span style="font-size:9px;color:'+color+';font-weight:700;flex-shrink:0">+'+(cnt-1)+'</span>';
