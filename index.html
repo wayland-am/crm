@@ -1049,6 +1049,17 @@ async function aiParse(){
 }
 
 // ─── TASK MODAL (Pipedrive outcome style) ───────────────────
+async function bulkDoneTasks(ids){
+  if(!ids.length)return;
+  for(const id of ids){
+    const t=db.tasks.find(x=>x.id===id);
+    if(t&&!t.done){t.done=true;await persist('tasks',{...t});}
+  }
+  updateBadges();
+  if(document.getElementById('bulk-sel-bar'))renderDashboard();
+  toast('✅ '+ids.length+' tasks marked done');
+}
+
 function openTaskM(id){
   const tk=db.tasks.find(t=>t.id===id);if(!tk)return;
   const co=db.companies.find(c=>c.id===tk.company_id);
@@ -1101,7 +1112,7 @@ function openTaskM(id){
 }
 
 // ─── PIPELINE ────────────────────────────────────────────────
-let _pipeAgent='',_pipeSearch='';
+let _pipeAgent='',_pipeSearch='',_pipeStage='';
 function renderPipeline(){
   if(!_dataLoaded){
     $('page').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:12px"><i class="ti ti-loader-2 spin" style="font-size:36px;color:var(--blue)"></i><div style="color:var(--text-m)">Loading…</div></div>';
@@ -1114,6 +1125,10 @@ function renderPipeline(){
       <input class="fc" style="padding-left:28px;width:160px;height:32px" placeholder="Search deals…" value="${_pipeSearch}" oninput="_pipeSearch=this.value;renderPipeline()">
     </div>
     ${me?.role==='manager'?`<select class="btn" onchange="_pipeAgent=this.value;renderPipeline()"><option value="">All agents</option>${AGENTS().map(a=>`<option ${_pipeAgent===a?'selected':''}>${a}</option>`).join('')}</select>`:''}
+    <select class="btn" onchange="_pipeStage=this.value;renderPipeline()">
+      <option value="">All stages</option>
+      ${[...ACT_STAGES,'Won','Lost'].map(s=>`<option ${_pipeStage===s?'selected':''}>${s}</option>`).join('')}
+    </select>
     <button class="btn ${_showLost?'btn-danger':''}" onclick="_showLost=!_showLost;renderPipeline()"><i class="ti ti-eye"></i> Lost</button>
     <button class="btn btn-primary" onclick="openDealForm()"><i class="ti ti-plus"></i> Add Deal</button>
     <button class="btn" onclick="exportDeals()" title="Export CSV"><i class="ti ti-download"></i></button>
@@ -1121,6 +1136,11 @@ function renderPipeline(){
   let myD=myDeals();
   if(_pipeAgent)myD=myD.filter(d=>d.agent===_pipeAgent);
   if(_pipeSearch){const q=_pipeSearch;myD=myD.filter(d=>_matches(d.company,q)||_matches(d.model,q)||_matches(d.agent,q));}
+  if(_pipeStage){
+    if(_pipeStage==='Won')myD=myD.filter(d=>d.stage==='Won');
+    else if(_pipeStage==='Lost')myD=myD.filter(d=>d.stage==='Lost');
+    else myD=myD.filter(d=>d.stage===_pipeStage);
+  }
   const active=myD.filter(d=>isActive(d.stage));
   const t=today();
   const pipeBar=`<div class="pipe-bar" style="margin:16px 20px 0">
@@ -2396,6 +2416,18 @@ function exportFleet(){
     {key:'condition',label:'Condition'},{key:'notes',label:'Notes'}
   ]);
 }
+function exportParts(){
+  const fleet=db.fleet.filter(f=>f.condition!=='Competitor');
+  exportCSV(fleet.map(u=>{
+    const age=u.year?new Date().getFullYear()-+u.year:5;
+    const base=Math.max(50000-age*3000,10000);
+    return{...u,age_years:age,parts_yr:Math.round(base*.05),svc_yr:Math.round(base*.02),total_yr:Math.round(base*.07)};
+  }),'parts_forecast',[
+    {key:'company',label:'Company'},{key:'brand',label:'Brand'},{key:'model',label:'Model'},
+    {key:'year',label:'Year'},{key:'age_years',label:'Age (years)'},{key:'condition',label:'Condition'},
+    {key:'parts_yr',label:'Parts/yr $'},{key:'svc_yr',label:'Service/yr $'},{key:'total_yr',label:'Total/yr $'}
+  ]);
+}
 function exportContracts(){
   exportCSV(db.contracts,'contracts',[
     {key:'company',label:'Company'},{key:'type',label:'Type'},{key:'number',label:'Number'},
@@ -2451,17 +2483,26 @@ function openCoForm_prefill(pre,lead,leadId){
   },'Convert');
 }
 
-let _ldFilter='';
+let _ldFilter='',_ldSearch='';
 function renderLeads(){
   $('tb-right').innerHTML=`
+    <div style="position:relative">
+      <i class="ti ti-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text-l);font-size:13px;pointer-events:none"></i>
+      <input class="fc" style="padding-left:28px;width:150px;height:32px" placeholder="Search leads…" value="${_ldSearch}" oninput="_ldSearch=this.value;renderLeads()">
+    </div>
     <select class="btn" onchange="_ldFilter=this.value;renderLeads()">
       <option value="">All statuses</option>
       ${['New','Contacted','Qualified','Converted','Trash'].map(s=>`<option ${_ldFilter===s?'selected':''}>${s}</option>`).join('')}
     </select>
+    <button class="btn" onclick="mergeLeads()" title="Merge duplicates"><i class="ti ti-git-merge"></i></button>
     <button class="btn btn-primary" onclick="openLeadForm()"><i class="ti ti-plus"></i> Add Lead</button>
     <button class="btn" onclick="exportLeads()" title="Export CSV"><i class="ti ti-download"></i></button>
     <button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
-  const leads=db.leads.filter(l=>!_ldFilter||l.status===_ldFilter).sort((a,b)=>(b.created||'').localeCompare(a.created||''));
+  const leads=db.leads.filter(l=>{
+    if(_ldFilter&&l.status!==_ldFilter)return false;
+    if(_ldSearch){const q=_ldSearch;if(!_matches(l.company,q)&&!_matches(l.contact,q)&&!(l.phone||'').includes(q)&&!_matches(l.product,q))return false;}
+    return true;
+  }).sort((a,b)=>(b.created||'').localeCompare(a.created||''));
   const sc={New:'b-red',Contacted:'b-amber',Qualified:'b-blue',Converted:'b-green',Trash:'b-gray'};
   $('page').innerHTML=`<div class="page-pad"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
     ${leads.map(l=>{
@@ -2512,6 +2553,35 @@ function convertLeadToDeal(leadId,coId){
     toast('✅ Deal created');updateBadges();renderLeads();
   },'Create Deal');
 }
+function mergeLeads(){
+  // Находим дубли по названию компании
+  const groups={};
+  db.leads.forEach(l=>{const key=(l.company||'').toLowerCase().trim();if(!key)return;if(!groups[key])groups[key]=[];groups[key].push(l);});
+  const dups=Object.entries(groups).filter(([,arr])=>arr.length>1);
+  if(!dups.length){toast('No duplicate leads found');return;}
+  let html='<div style="font-size:13px;color:var(--text-m);margin-bottom:12px">Found '+dups.length+' duplicate group(s). Select which to keep:</div>';
+  dups.forEach(([key,arr],gi)=>{
+    html+=`<div style="margin-bottom:14px;padding:10px;border:1px solid var(--bdr);border-radius:var(--r)">
+      <div style="font-weight:700;margin-bottom:6px">${arr[0].company} (${arr.length} duplicates)</div>
+      ${arr.map((l,i)=>`<label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:4px;cursor:pointer">
+        <input type="radio" name="mg-${gi}" value="${l.id}" ${i===0?'checked':''} style="margin-top:3px">
+        <div style="font-size:12px"><strong>${l.status}</strong> · ${l.contact||'—'} · ${l.source||'—'} · ${l.product||'—'} · ${timeAgo(l.created)}</div>
+      </label>`).join('')}
+    </div>`;
+  });
+  showModal('Merge Duplicate Leads',html,async()=>{
+    for(let gi=0;gi<dups.length;gi++){
+      const [,arr]=dups[gi];
+      const sel=document.querySelector(`input[name="mg-${gi}"]:checked`)?.value;
+      if(!sel)continue;
+      for(const l of arr){
+        if(l.id!==sel){await del('leads',l.id);db.leads=db.leads.filter(x=>x.id!==l.id);}
+      }
+    }
+    toast('Duplicates merged');updateBadges();renderLeads();
+  },'Merge');
+}
+
 function trashLead(id){
   const l=db.leads.find(x=>x.id===id);if(!l)return;
   if(!confirm('Move to Trash?'))return;
@@ -2613,9 +2683,21 @@ function openContractForm(coId,cid){
 }
 
 // ─── PARTS FORECAST ─────────────────────────────────────────
+let _partsSearch='',_partsBrand='';
 function renderParts(){
-  $('tb-right').innerHTML='<button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
-  const fleet=db.fleet.filter(f=>f.condition!=='Competitor');
+  const allBrands=[...new Set(db.fleet.filter(f=>f.condition!=='Competitor').map(f=>f.brand).filter(Boolean))].sort();
+  $('tb-right').innerHTML=`
+    <div style="position:relative">
+      <i class="ti ti-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text-l);font-size:13px;pointer-events:none"></i>
+      <input class="fc" style="padding-left:28px;width:150px;height:32px" placeholder="Search company…" value="${_partsSearch}" oninput="_partsSearch=this.value;renderParts()">
+    </div>
+    <select class="btn" onchange="_partsBrand=this.value;renderParts()">
+      <option value="">All brands</option>
+      ${allBrands.map(b=>`<option ${_partsBrand===b?'selected':''}>${b}</option>`).join('')}
+    </select>
+    <button class="btn" onclick="exportParts()" title="Export CSV"><i class="ti ti-download"></i></button>
+    <button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
+  const fleet=db.fleet.filter(f=>f.condition!=='Competitor'&&(!_partsBrand||f.brand===_partsBrand)&&(!_partsSearch||_matches(f.company,_partsSearch)||_matches(f.model,_partsSearch)));
   const total={parts:0,svc:0,att:0};
   fleet.forEach(u=>{const age=u.year?new Date().getFullYear()-+u.year:5;const base=Math.max(50000-age*3000,10000);total.parts+=Math.round(base*.05);total.svc+=Math.round(base*.02);total.att+=Math.round(base*.015);});
   $('page').innerHTML=`<div class="page-pad">
