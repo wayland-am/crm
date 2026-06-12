@@ -908,6 +908,14 @@ function taskRow(tk,t){
   </div>`;
 }
 
+async function quickDelTask(id){
+  if(!confirm('Delete task?'))return;
+  await del('tasks',id);db.tasks=db.tasks.filter(x=>x.id!==id);
+  updateBadges();
+  if(coPage)openCo(coPage);else if(page==='tasks')renderTasks();else renderDashboard();
+  toast('Task deleted');
+}
+
 async function quickDone(id,el){
   const tk=db.tasks.find(t=>t.id===id);if(!tk)return;
   tk.done=!tk.done;
@@ -1109,8 +1117,19 @@ function openTaskM(id){
     updateBadges();
     if(coPage&&coPage===tk.company_id)openCo(tk.company_id);
     else if(page==='pipeline')renderPipeline();
+    else if(page==='tasks')renderTasks();
     else renderDashboard();
-  },tk.done?'Save':'Mark as Done');
+  },tk.done?'Save':'Mark as Done',null,[
+    {label:'Delete',danger:true,action:async()=>{
+      if(!confirm('Delete this task?'))return;
+      await del('tasks',id);db.tasks=db.tasks.filter(x=>x.id!==id);
+      closeModal();updateBadges();
+      if(coPage&&coPage===tk.company_id)openCo(tk.company_id);
+      else if(page==='tasks')renderTasks();
+      else renderDashboard();
+      toast('Task deleted');
+    }}
+  ]);
 }
 
 // ─── PIPELINE ────────────────────────────────────────────────
@@ -1619,7 +1638,8 @@ function renderCoCard(id){
           <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tk.title}</div>
           ${tk.auto_scheduled?'<div style="font-size:10px;color:var(--text-l)">🔄 auto</div>':'<div style="font-size:10px;color:var(--blue)">✋ manual</div>'}
         </div>
-        <div style="font-size:11px">${dueFmt(tk.due)}</div>
+        <div style="font-size:11px;color:var(--text-m)">${dueFmt(tk.due)}</div>
+        <button class="btn btn-xs btn-ghost" style="color:var(--red);flex-shrink:0;padding:2px 5px" onclick="event.stopPropagation();quickDelTask('${tk.id}')" title="Delete task"><i class="ti ti-trash"></i></button>
       </div>`).join('')}
       ${!tasks.length?`<div style="font-size:12px;color:var(--text-m);text-align:center;padding:8px">All done ✓</div>`:''}
     </div>
