@@ -1617,6 +1617,7 @@ function renderCoCard(id){
         <div class="task-cb ${tk.done?'done':''}" onclick="event.stopPropagation();quickDone('${tk.id}',this)" style="flex-shrink:0"></div>
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${tk.title}</div>
+          ${tk.auto_scheduled?'<div style="font-size:10px;color:var(--text-l)">🔄 auto</div>':'<div style="font-size:10px;color:var(--blue)">✋ manual</div>'}
         </div>
         <div style="font-size:11px">${dueFmt(tk.due)}</div>
       </div>`).join('')}
@@ -1850,7 +1851,13 @@ function openTaskForm(coId,tid,prefillDate){
   const co=db.companies.find(c=>c.id===coId);
   showModal((tid?'Edit':'Add')+' Task',`
     <div class="fg"><label class="fl">Task *</label><input class="fc" id="tf-title" value="${tk.title||''}" placeholder="Call, Send proposal, Visit site…"></div>
-    <div class="fg"><label class="fl">Company</label><input class="fc" value="${co?.name||tk.company||''}" readonly></div>
+    <div class="fg"><label class="fl">Company</label>
+      ${co?`<input class="fc" value="${co.name}" readonly><input type="hidden" id="tf-coid" value="${coId}">`
+          :`<select class="fc" id="tf-coid" onchange="updateTfCompany(this)">
+              <option value="">— select company —</option>
+              ${db.companies.sort((a,b)=>(a.name||'').localeCompare(b.name||'')).map(x=>`<option value="${x.id}" ${tk.company_id===x.id?'selected':''}>${x.name}</option>`).join('')}
+            </select>`}
+    </div>
     <div class="fr">
       <div class="fg"><label class="fl">Type</label><select class="fc" id="tf-type">${ACT_TYPES.map(t=>`<option ${tk.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
       <div class="fg"><label class="fl">Due Date</label><input class="fc" id="tf-due" type="date" value="${tk.due||prefillDate||today()}"></div>
@@ -1861,10 +1868,11 @@ function openTaskForm(coId,tid,prefillDate){
     </div>
   `,async()=>{
     const title=($('tf-title').value||'').trim();if(!title){alert('Enter task title');return false;}
-    const row={...(tk||{}),id:tid||uid(),company_id:coId,company:co?.name||tk.company||'',title,type:$('tf-type').value,due:$('tf-due').value,priority:$('tf-pri').value,agent:$('tf-agent').value||me?.name||'',done:tk.done||false,auto_scheduled:false,created:tk.created||today()};
+    const _coid=coId||$('tf-coid')?.value||'';const _co=db.companies.find(x=>x.id===_coid);
+    const row={...(tk||{}),id:tid||uid(),company_id:_coid,company:_co?.name||co?.name||tk.company||'',title,type:$('tf-type').value,due:$('tf-due').value,priority:$('tf-pri').value,agent:$('tf-agent').value||me?.name||'',done:tk.done||false,auto_scheduled:false,created:tk.created||today()};
     await persist('tasks',row);
     if(tid)Object.assign(db.tasks.find(t=>t.id===tid)||{},row);else db.tasks.push(row);
-    toast('Task saved');updateBadges();if(coPage===coId)openCo(coId);else renderDashboard();
+    toast('Task saved');updateBadges();if(coPage&&coPage===_coid)openCo(_coid);else if(page==='tasks')renderTasks();else if(page==='calendar')renderCalendar();else renderDashboard();
   });
 }
 
@@ -2134,8 +2142,7 @@ function renderCalendar(){
     <button class="btn" onclick="_calOff--;renderCalendar()"><i class="ti ti-chevron-left"></i></button>
     <button class="btn" onclick="_calOff=0;renderCalendar()">Today</button>
     <button class="btn" onclick="_calOff++;renderCalendar()"><i class="ti ti-chevron-right"></i></button>
-    <button class="btn btn-primary" onclick="rebuildSched()"><i class="ti ti-refresh"></i> Rebuild</button>
-    <button class="btn" style="color:var(--red)" onclick="clearAutoTasks()"><i class="ti ti-trash"></i></button>
+    <button class="btn" onclick="openTaskForm()"><i class="ti ti-plus"></i> Add Task</button>
     <button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
 
   const agentF=$('cal-a')?.value||'';
@@ -2143,7 +2150,12 @@ function renderCalendar(){
     if(t.done||!t.due)return false;
     if(agentF&&t.agent!==agentF)return false;
     const co=db.companies.find(c=>c.id===t.company_id);
-    return!co?.category||_calCats.has(co.category);
+    // Если фильтр по категории активен — показываем только подходящие
+    // Если категорий не выбрано или у компании нет категории — показываем всё
+    if(_calCats.size<4){
+      if(co?.category&&!_calCats.has(co.category))return false;
+    }
+    return true;
   });
   const now=new Date();
   const nMo=_calView==='quarter'?3:1;
@@ -2165,9 +2177,12 @@ function renderCalendar(){
     const dStr=[day.getFullYear(),String(day.getMonth()+1).padStart(2,'0'),String(day.getDate()).padStart(2,'0')].join('-');
     const inP=day>=firstDay&&day<=lastDay;
     const isT=dStr===todayStr,isW=day.getDay()===0||day.getDay()===6;
+    // Квартальный вид — чередуем оттенки месяцев
+    const moIdx=inP&&_calView==='quarter'?(day.getMonth()-startM.getMonth()+12)%12%3:0;
+    const moBg=moIdx===1?'var(--sur2)':moIdx===2?'var(--sur3,var(--sur))':'var(--sur)';
     const grp=tByDay[dStr]?Object.values(tByDay[dStr]).sort((a,b)=>a.t.company.localeCompare(b.t.company)):[];
     const max=3,extra=grp.length>max?grp.length-max:0;
-    return`<div class="cal-cell" style="background:${isT?'var(--blue-lt)':isW?'var(--sur2)':'var(--sur)'};opacity:${inP?1:0.35};cursor:${inP?'default':'default'}" ondblclick="${inP?`openTaskFormOnDay('${dStr}')`:''}">
+    return`<div class="cal-cell" style="background:${isT?'var(--blue-lt)':isW?(moIdx===1?'#e8edf5':'var(--sur2)'):(_calView==='quarter'?moBg:'var(--sur)')};opacity:${inP?1:0.35};cursor:${inP?'default':'default'}" ondblclick="${inP?`openTaskFormOnDay('${dStr}')`:''}">
       <div style="margin-bottom:2px"><span style="font-size:12px;font-weight:${isT?700:400};color:${isT?'#fff':'var(--text)'};background:${isT?'var(--blue)':'transparent'};width:${isT?'22px':'auto'};height:${isT?'22px':'auto'};border-radius:50%;display:inline-flex;align-items:center;justify-content:center;padding:${isT?'0':'0 2px'}">${day.getDate()}</span></div>
       ${grp.slice(0,max).map(item=>{const co=db.companies.find(c=>c.id===item.t.company_id);const cat=co?.category||'';const color=catC[cat]||'var(--text-l)';return`<div class="cal-event" style="border-left-color:${color};background:${color}12;color:${color}" data-coid="${co?.id||''}" onclick="if(this.dataset.coid){go('companies');openCo(this.dataset.coid)}" title="${item.t.company}">${cat?`<strong>${cat}</strong> `:''}${item.t.company}${item.n>1?` +${item.n-1}`:''}</div>`;}).join('')}
       ${extra?`<div style="font-size:10px;color:var(--text-l);padding:1px 3px">+${extra} more</div>`:''}
@@ -2727,6 +2742,8 @@ function openLeadForm(id){
     ...(()=>{const l2=db.leads.find(x=>x.id===id);const existCo=l2&&db.companies.find(c=>(c.name||'').toLowerCase()===(l2.company||'').toLowerCase());return existCo?[{label:'Convert → Deal',success:true,action:()=>{closeModal();convertLeadToDeal(id,existCo.id);}}]:[{label:'Convert → Company',success:true,action:()=>{closeModal();convertLead(id);}}];})()
   ]:undefined);
 }
+
+function updateTfCompany(sel){} // placeholder — company set on save
 
 function openTaskFormOnDay(date){
   openTaskForm(null,null,date);
