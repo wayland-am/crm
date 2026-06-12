@@ -1598,11 +1598,13 @@ function renderCoCard(id){
     <!-- Locations -->
     <div class="co-sec">
       <div class="co-sec-title">Site Locations <button class="btn btn-xs btn-primary" onclick="openLocForm('${id}')"><i class="ti ti-plus"></i></button></div>
-      ${locations.length?`<div id="mini-map-${id}" style="height:120px;border-radius:var(--r);overflow:hidden;margin-bottom:8px;border:1px solid var(--bdr)"></div>
+      ${locations.length?`<div id="mini-map-${id}" style="height:180px;border-radius:var(--r);overflow:hidden;margin-bottom:8px;border:1px solid var(--bdr);cursor:pointer" onclick="expandMap('${id}')"></div>
+      <div style="font-size:11px;color:var(--text-l);text-align:center;margin:-4px 0 6px">Click map to expand · <a href="https://maps.google.com/?q=${locations[0]?.lat},${locations[0]?.lng}" target="_blank" style="color:var(--blue)">Open in Google Maps ↗</a></div>
       ${locations.map(l=>`<div style="display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 0;border-bottom:1px solid var(--bdr)">
         <i class="ti ti-map-pin" style="color:var(--blue);font-size:12px;flex-shrink:0"></i>
         <div style="flex:1"><strong>${l.name}</strong>${l.type?` <span style="color:var(--text-m)">· ${l.type}</span>`:''}</div>
-        <a href="https://maps.google.com/?q=${l.lat},${l.lng}" target="_blank" class="btn btn-xs btn-ghost"><i class="ti ti-map-2"></i></a>
+        <a href="https://maps.google.com/maps?q=${l.lat},${l.lng}&z=15" target="_blank" class="btn btn-xs btn-ghost" title="Open in Google Maps"><i class="ti ti-map-2"></i></a>
+        <a href="https://maps.google.com/maps?saddr=current+location&daddr=${l.lat},${l.lng}" target="_blank" class="btn btn-xs btn-ghost" title="Get directions"><i class="ti ti-route"></i></a>
         <button class="btn btn-xs btn-ghost" onclick="delLoc('${l.id}','${id}')"><i class="ti ti-x"></i></button>
       </div>`).join('')}`
       :`<div style="text-align:center;padding:10px"><div style="font-size:12px;color:var(--text-m);margin-bottom:6px">No locations</div><button class="btn btn-sm" onclick="openLocForm('${id}')"><i class="ti ti-plus"></i> Add</button></div>`}
@@ -2482,6 +2484,38 @@ function setGPSStatus(msg,color){
   if(s){s.textContent=msg;s.style.color=color==='green'?'var(--green)':'var(--red)';}
 }
 function parseEXIFgps(){} // legacy stub
+
+function expandMap(coId){
+  const locations=db.locations.filter(l=>l.company_id===coId&&l.lat&&l.lng);
+  if(!locations.length)return;
+  const ov=document.createElement('div');ov.className='overlay';
+  ov.innerHTML=`<div class="modal" style="max-width:90vw;width:900px;padding:0;overflow:hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--bdr)">
+      <div style="font-weight:700">${db.companies.find(c=>c.id===coId)?.name||''} — Site Locations</div>
+      <div style="display:flex;gap:8px">
+        <a href="https://maps.google.com/?q=${locations[0].lat},${locations[0].lng}" target="_blank" class="btn btn-sm"><i class="ti ti-map-2"></i> Google Maps</a>
+        <a href="https://maps.google.com/maps?saddr=current+location&daddr=${locations[0].lat},${locations[0].lng}" target="_blank" class="btn btn-sm btn-primary"><i class="ti ti-route"></i> Directions</a>
+        <button class="btn btn-sm" onclick="this.closest('.overlay').remove()"><i class="ti ti-x"></i></button>
+      </div>
+    </div>
+    <div id="expand-map" style="height:500px"></div>
+    <div style="padding:10px 16px;border-top:1px solid var(--bdr);display:flex;gap:12px;flex-wrap:wrap">
+      ${locations.map(l=>`<span style="font-size:12px"><i class="ti ti-map-pin" style="color:var(--blue)"></i> <strong>${l.name}</strong> ${l.type?'· '+l.type:''} — <a href="https://maps.google.com/?q=${l.lat},${l.lng}" target="_blank" style="color:var(--blue)">${l.lat.toFixed(4)}, ${l.lng.toFixed(4)}</a></span>`).join('')}
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  setTimeout(()=>{
+    const m=L.map('expand-map').setView([locations[0].lat,locations[0].lng],14);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM'}).addTo(m);
+    const bounds=[];
+    locations.forEach(l=>{
+      L.marker([l.lat,l.lng]).addTo(m).bindPopup(`<b>${l.name}</b><br>${l.type||''}`);
+      bounds.push([l.lat,l.lng]);
+    });
+    if(bounds.length>1)m.fitBounds(bounds,{padding:[20,20]});
+  },100);
+}
 
 async function delLoc(id,coId){
   if(!confirm('Delete this location?'))return;
