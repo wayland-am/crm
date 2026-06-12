@@ -943,12 +943,12 @@ function openLogAct(coId){
               ${db.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}
             </select>`}
     </div>
-    <!-- Direction + Contact (only for calls) -->
-    <div class="fr" id="la-call-row">
-      <div class="fg" style="margin-bottom:0"><label class="fl">Direction</label>
+    <!-- Direction (only for calls) + Contact always visible -->
+    <div class="fr">
+      <div class="fg" id="la-dir-wrap" style="margin-bottom:0;display:none"><label class="fl">Direction</label>
         <select class="fc" id="la-dir"><option>Outbound</option><option>Inbound</option></select>
       </div>
-      <div class="fg" style="margin-bottom:0"><label class="fl">Contact</label>
+      <div class="fg" style="margin-bottom:0"><label class="fl">Contact person</label>
         <select class="fc" id="la-contact">
           <option value="">— optional —</option>
           ${contacts.map(c=>`<option value="${c.id}">${c.first_name} ${c.last_name}${c.position?' ('+c.position+')':''}</option>`).join('')}
@@ -1017,8 +1017,8 @@ function selActType(btn,type){
   document.querySelectorAll('[data-atype]').forEach(b=>{b.className='btn btn-sm';});
   btn.className='btn btn-sm btn-primary';
   $('la-type').value=type;
-  const cr=$('la-call-row');
-  if(cr)cr.style.display=(type==='Call'||type==='WhatsApp')?'grid':'none';
+  const cr=$('la-dir-wrap');
+  if(cr)cr.style.display=(type==='Call'||type==='WhatsApp')?'block':'none';
 }
 
 function loadActContacts(coId){
