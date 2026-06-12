@@ -365,6 +365,7 @@ textarea.fc{resize:vertical;min-height:80px;line-height:1.5}
       <button class="nav-btn" data-page="fleet" onclick="go('fleet',this)"><i class="ti ti-tractor"></i>Fleet<span class="nav-badge" id="nb-fl">0</span></button>
       <button class="nav-btn" data-page="reports" onclick="go('reports',this)"><i class="ti ti-chart-bar"></i>Reports</button>
       <button class="nav-btn" data-page="calendar" onclick="go('calendar',this)"><i class="ti ti-calendar"></i>Calendar</button>
+      <button class="nav-btn" data-page="tasks" onclick="go('tasks',this)"><i class="ti ti-checkbox"></i>Tasks<span class="nav-badge" id="nb-tk">0</span></button>
     </div>
 
     <div class="nav-section">
@@ -673,7 +674,7 @@ function go(p,el){
   (el||document.querySelector(`.nav-btn[data-page="${p}"]`))?.classList.add('on');
   $('tb-right').innerHTML='<button class="tb-icon-btn" onclick="toggleNotif()" id="notif-btn"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
   $('nav').classList.remove('open');
-  const pages={dashboard:renderDashboard,pipeline:renderPipeline,companies:renderCompanies,contacts:renderContacts,leads:renderLeads,map:renderMap,fleet:renderFleet,reports:renderReports,calendar:renderCalendar,contracts:renderContracts,parts:renderParts,settings:renderSettings};
+  const pages={dashboard:renderDashboard,pipeline:renderPipeline,companies:renderCompanies,contacts:renderContacts,leads:renderLeads,map:renderMap,fleet:renderFleet,reports:renderReports,calendar:renderCalendar,tasks:renderTasks,contracts:renderContracts,parts:renderParts,settings:renderSettings};
   if(pages[p])pages[p]();
   updateBadges();
 }
@@ -2017,6 +2018,111 @@ function renderReports(){
 }
 
 // ─── CALENDAR ────────────────────────────────────────────────
+// ─── TASKS PAGE ──────────────────────────────────────────────
+let _tkFilter='all',_tkAgent='',_tkSearch='';
+function renderTasks(){
+  $('tb-right').innerHTML=`
+    <div style="position:relative">
+      <i class="ti ti-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text-l);font-size:13px;pointer-events:none"></i>
+      <input class="fc" style="padding-left:28px;width:160px;height:32px" placeholder="Search tasks…" value="${_tkSearch}" oninput="_tkSearch=this.value;renderTasks()">
+    </div>
+    <select class="btn" onchange="_tkFilter=this.value;renderTasks()">
+      <option value="all" ${_tkFilter==='all'?'selected':''}>All</option>
+      <option value="open" ${_tkFilter==='open'?'selected':''}>Open</option>
+      <option value="today" ${_tkFilter==='today'?'selected':''}>Today</option>
+      <option value="overdue" ${_tkFilter==='overdue'?'selected':''}>Overdue</option>
+      <option value="done" ${_tkFilter==='done'?'selected':''}>Done</option>
+    </select>
+    ${me?.role==='manager'?`<select class="btn" onchange="_tkAgent=this.value;renderTasks()"><option value="">All agents</option>${AGENTS().map(a=>`<option ${_tkAgent===a?'selected':''}>${a}</option>`).join('')}</select>`:''}
+    <button class="btn btn-primary" onclick="openTaskForm()"><i class="ti ti-plus"></i> Add Task</button>
+    <button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
+
+  const tod=today();
+  let list=db.tasks.filter(t=>{
+    if(_tkAgent&&t.agent!==_tkAgent)return false;
+    if(_tkSearch&&!_matches(t.title,_tkSearch)&&!_matches(t.company,_tkSearch))return false;
+    if(_tkFilter==='open')return !t.done;
+    if(_tkFilter==='today')return !t.done&&t.due===tod;
+    if(_tkFilter==='overdue')return !t.done&&t.due&&t.due<tod;
+    if(_tkFilter==='done')return t.done;
+    return true;
+  }).sort((a,b)=>{
+    if(a.done!==b.done)return a.done?1:-1;
+    return (a.due||'9999').localeCompare(b.due||'9999');
+  });
+
+  const pc={high:'var(--red)',medium:'var(--amber)',low:'var(--green)'};
+  const overdue=list.filter(t=>!t.done&&t.due&&t.due<tod).length;
+  const todayCount=list.filter(t=>!t.done&&t.due===tod).length;
+
+  $('page').innerHTML=`<div class="page-pad">
+    <div style="display:flex;gap:10px;margin-bottom:16px">
+      <div class="metric${overdue?' red':''}" style="flex:1;padding:12px 16px">
+        <div class="metric-label">Overdue</div>
+        <div class="metric-val" style="font-size:20px;color:${overdue?'var(--red)':'var(--text-m)'}">${overdue}</div>
+      </div>
+      <div class="metric amber" style="flex:1;padding:12px 16px">
+        <div class="metric-label">Due Today</div>
+        <div class="metric-val" style="font-size:20px;color:var(--amber)">${todayCount}</div>
+      </div>
+      <div class="metric" style="flex:1;padding:12px 16px">
+        <div class="metric-label">Total Open</div>
+        <div class="metric-val" style="font-size:20px">${db.tasks.filter(t=>!t.done&&(!_tkAgent||t.agent===_tkAgent)).length}</div>
+      </div>
+    </div>
+    <div class="card" style="overflow:hidden">
+      <table class="tbl tbl-hover">
+        <thead><tr>
+          <th style="width:32px"></th>
+          <th>Task</th>
+          <th>Company</th>
+          <th>Type</th>
+          <th>Due</th>
+          <th>Priority</th>
+          <th>Agent</th>
+          <th></th>
+        </tr></thead>
+        <tbody>${list.map(t=>{
+          const isOv=!t.done&&t.due&&t.due<tod;
+          const isTod=!t.done&&t.due===tod;
+          return`<tr style="opacity:${t.done?0.5:1}">
+            <td onclick="event.stopPropagation()">
+              <input type="checkbox" ${t.done?'checked':''} onchange="toggleTaskDone('${t.id}',this.checked)" style="cursor:pointer;width:16px;height:16px">
+            </td>
+            <td onclick="openTaskM('${t.id}')" style="cursor:pointer">
+              <div style="font-weight:600;${t.done?'text-decoration:line-through;color:var(--text-m)':''}">${t.title}</div>
+              ${t.auto_scheduled?'<div style="font-size:10px;color:var(--text-l)">auto-scheduled</div>':''}
+            </td>
+            <td style="color:var(--blue);cursor:pointer" onclick="if('${t.company_id}'){go('companies');openCo('${t.company_id}')}">${t.company||'—'}</td>
+            <td><span class="badge b-gray" style="font-size:11px">${t.type||'Task'}</span></td>
+            <td style="color:${isOv?'var(--red)':isTod?'var(--amber)':'var(--text-m)'};font-weight:${isOv||isTod?600:400}">
+              ${t.due?fmtD(t.due)+(isOv?' ⚠':'')+(isTod?' •':''):'—'}
+            </td>
+            <td><span style="width:8px;height:8px;border-radius:50%;background:${pc[t.priority]||'var(--text-l)'};display:inline-block"></span> ${t.priority||'medium'}</td>
+            <td style="font-size:12px;color:var(--text-m)">${t.agent||'—'}</td>
+            <td onclick="event.stopPropagation()" style="white-space:nowrap">
+              <button class="btn btn-xs btn-ghost" onclick="openTaskForm(t.company_id,'${t.id}')"><i class="ti ti-edit"></i></button>
+              <button class="btn btn-xs btn-ghost" style="color:var(--red)" onclick="deleteTask('${t.id}')"><i class="ti ti-trash"></i></button>
+            </td>
+          </tr>`;
+        }).join('')||`<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-m)">No tasks found</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  </div>`;
+}
+
+async function toggleTaskDone(id,done){
+  const t=db.tasks.find(x=>x.id===id);if(!t)return;
+  t.done=done;await persist('tasks',{...t});
+  updateBadges();renderTasks();
+}
+async function deleteTask(id){
+  if(!confirm('Delete task?'))return;
+  await del('tasks',id);db.tasks=db.tasks.filter(x=>x.id!==id);
+  updateBadges();renderTasks();toast('Task deleted');
+}
+
 function renderCalendar(){
   $('tb-right').innerHTML=`
     <select class="btn" id="cal-a" onchange="renderCalendar()"><option value="">All Managers</option>${AGENTS().map(a=>`<option>${a}</option>`).join('')}</select>
