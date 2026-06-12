@@ -999,12 +999,13 @@ function openLogAct(coId){
       created:new Date().toISOString()};
     await persist('activities',act);
     db.activities.push(act);
-    // Create follow-up task automatically
-    if(next&&ndate){
-      const tk={id:uid(),company_id:coid,company:coObj?.name||'',title:next,type,
+    // Create follow-up task if date set
+    if(ndate){
+      const taskTitle=next||('Follow up · '+(coObj?.name||''));
+      const tk={id:uid(),company_id:coid,company:coObj?.name||'',title:taskTitle,type:'Call',
         agent:act.agent,due:ndate,priority:'medium',done:false,auto_scheduled:false,created:today()};
       db.tasks.push(tk);await persist('tasks',tk);
-      toast('✅ Activity logged + task created for '+fmtDS(ndate));
+      toast('✅ Activity logged + task for '+fmtDS(ndate));
     }else toast('✅ Activity logged');
     updateBadges();
     if(coPage===coid)openCo(coid);
