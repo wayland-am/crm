@@ -493,6 +493,54 @@ let _modalCb=null;
 const $=id=>document.getElementById(id);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 
+// ── Phone formatter ───────────────────────────────────────────
+function fmtPhone(raw){
+  if(!raw)return '';
+  let d=raw.replace(/\D/g,'');
+  // Армянский: начинается с 374 или 0, длина 8-12 цифр
+  if(d.startsWith('374')){
+    // +374 XX XXX XXX
+    const n=d.slice(3);
+    if(n.length<=2)return '+374 '+n;
+    if(n.length<=5)return '+374 '+n.slice(0,2)+' '+n.slice(2);
+    return '+374 '+n.slice(0,2)+' '+n.slice(2,5)+' '+n.slice(5,8);
+  }
+  if(d.startsWith('0')&&d.length<=9){
+    // Армянский без кода: 0XX XXX XXX
+    const n=d.slice(1);
+    if(n.length<=2)return '+374 '+n;
+    if(n.length<=5)return '+374 '+n.slice(0,2)+' '+n.slice(2);
+    return '+374 '+n.slice(0,2)+' '+n.slice(2,5)+' '+n.slice(5,8);
+  }
+  // Российский: начинается с 7 или 8
+  if(d.startsWith('7')||d.startsWith('8')){
+    const n=d.startsWith('8')?d.slice(1):d.slice(1);
+    if(n.length<=3)return '+7 ('+n;
+    if(n.length<=6)return '+7 ('+n.slice(0,3)+') '+n.slice(3);
+    if(n.length<=8)return '+7 ('+n.slice(0,3)+') '+n.slice(3,6)+'-'+n.slice(6);
+    return '+7 ('+n.slice(0,3)+') '+n.slice(3,6)+'-'+n.slice(6,8)+'-'+n.slice(8,10);
+  }
+  // Уже с +: оставляем как есть, просто добавляем +
+  if(raw.startsWith('+'))return raw;
+  // Короткий номер — армянский мобильный (9 цифр без кода)
+  if(d.length===8){
+    return '+374 '+d.slice(0,2)+' '+d.slice(2,5)+' '+d.slice(5,8);
+  }
+  return raw;
+}
+function onPhoneInput(el){
+  const pos=el.selectionStart;
+  const old=el.value;
+  const fmt=fmtPhone(old);
+  el.value=fmt;
+  // Восстанавливаем курсор
+  const diff=fmt.length-old.length;
+  el.setSelectionRange(pos+diff,pos+diff);
+}
+function onPhoneBlur(el){
+  el.value=fmtPhone(el.value);
+}
+
 // Date utils — always safe, never "Invalid Date"
 const parseLocalDate=s=>{
   if(!s||typeof s!=='string')return null;
@@ -1727,7 +1775,7 @@ function openCoForm(id){
       <div class="fg"><label class="fl">Country</label><input class="fc" id="cf-country" value="${co.country||'Armenia'}"></div>
     </div>
     <div class="fr">
-      <div class="fg"><label class="fl">Phone</label><input class="fc" id="cf-phone" value="${co.phone||''}" placeholder="+374 10 …"></div>
+      <div class="fg"><label class="fl">Phone</label><input class="fc" id="cf-phone" value="${co.phone||''}" placeholder="+374…" oninput="onPhoneInput(this)" onblur="onPhoneBlur(this)"></div>
       <div class="fg"><label class="fl">Website</label><input class="fc" id="cf-web" value="${co.website||''}" placeholder="https://"></div>
     </div>
     <div class="fr">
@@ -1756,7 +1804,7 @@ function openContactForm(coId,cid){
     <div class="fr"><div class="fg"><label class="fl">First Name *</label><input class="fc" id="ctf-fn" value="${c.first_name||''}"></div><div class="fg"><label class="fl">Last Name</label><input class="fc" id="ctf-ln" value="${c.last_name||''}"></div></div>
     <div class="fg"><label class="fl">Company</label>${co?`<input class="fc" value="${co.name}" readonly><input type="hidden" id="ctf-coid" value="${coId}">`:`<select class="fc" id="ctf-coid"><option value="">— select —</option>${db.companies.map(x=>`<option value="${x.id}" ${c.company_id===x.id?'selected':''}>${x.name}</option>`).join('')}</select>`}</div>
     <div class="fg"><label class="fl">Position</label><input class="fc" id="ctf-pos" value="${c.position||''}" placeholder="Director, Engineer…"></div>
-    <div class="fr"><div class="fg"><label class="fl">Phone</label><input class="fc" id="ctf-phone" value="${c.phone||''}" placeholder="+374…"></div><div class="fg"><label class="fl">Email</label><input class="fc" id="ctf-email" value="${c.email||''}"></div></div>
+    <div class="fr"><div class="fg"><label class="fl">Phone</label><input class="fc" id="ctf-phone" value="${c.phone||''}" placeholder="+374…" oninput="onPhoneInput(this)" onblur="onPhoneBlur(this)"></div><div class="fg"><label class="fl">Email</label><input class="fc" id="ctf-email" value="${c.email||''}"></div></div>
     <div class="fr"><div class="fg"><label class="fl">Channel</label><select class="fc" id="ctf-ch">${['WhatsApp','Phone','Email','Telegram'].map(x=>`<option ${c.channel===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="fg"><label class="fl">Language</label><select class="fc" id="ctf-lang">${['Russian','Armenian','English'].map(x=>`<option ${c.language===x?'selected':''}>${x}</option>`).join('')}</select></div></div>
     <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="ctf-notes" rows="2">${c.notes||''}</textarea></div>
   `,async()=>{
@@ -2349,56 +2397,72 @@ function extractGPS(file){
   const r=new FileReader();
   r.onload=e=>{
     try{
-      const v=new DataView(e.target.result);
-      if(v.getUint16(0)!==0xFFD8)return;
+      const buf=e.target.result;
+      const v=new DataView(buf);
+      if(v.getUint16(0)!==0xFFD8){setGPSStatus('Not a JPEG','red');return;}
       let off=2;
-      while(off<v.byteLength-2){
-        const mk=v.getUint16(off);off+=2;
+      while(off<v.byteLength-4){
+        const mk=v.getUint16(off);
         if(mk===0xFFE1){
-          const len=v.getUint16(off);
-          const ex=new DataView(e.target.result,off+2,len-2);
-          if(String.fromCharCode(...Array.from({length:4},(_,i)=>ex.getUint8(i+2)))==='Exif'){
-            const gps=parseEXIFgps(e.target.result,off+2,len-2);
-            if(gps){if($('lf-lat'))$('lf-lat').value=gps.lat.toFixed(6);if($('lf-lng'))$('lf-lng').value=gps.lng.toFixed(6);const s=$('lf-status');if(s){s.textContent='✅ GPS from photo: '+gps.lat.toFixed(5)+', '+gps.lng.toFixed(5);s.style.color='var(--green)';}return;}
+          const segLen=v.getUint16(off+2);
+          // Check Exif header: bytes off+4 .. off+9 = "Exif\0\0"
+          const hdr=String.fromCharCode(v.getUint8(off+4),v.getUint8(off+5),v.getUint8(off+6),v.getUint8(off+7));
+          if(hdr==='Exif'){
+            const tiffStart=off+10; // after APP1 marker(2)+length(2)+Exif\0\0(6)
+            const tv=new DataView(buf,tiffStart);
+            const le=tv.getUint16(0)===0x4949; // byte order
+            const ifd0off=tv.getUint32(4,le);
+            const nEntries=tv.getUint16(ifd0off,le);
+            let gpsIFDoff=null;
+            for(let i=0;i<nEntries;i++){
+              const eo=ifd0off+2+i*12;
+              const tag=tv.getUint16(eo,le);
+              if(tag===0x8825){gpsIFDoff=tv.getUint32(eo+8,le);break;}
+            }
+            if(gpsIFDoff===null){setGPSStatus('No GPS in this photo','red');return;}
+            const gn=tv.getUint16(gpsIFDoff,le);
+            let latRef='N',lngRef='E',lat=null,lng=null;
+            for(let j=0;j<gn;j++){
+              const go=gpsIFDoff+2+j*12;
+              const gt=tv.getUint16(go,le);
+              const gc=tv.getUint16(go+2,le); // type
+              const gvoff=tv.getUint32(go+8,le);
+              if(gt===1)latRef=String.fromCharCode(tv.getUint8(go+8));
+              else if(gt===3)lngRef=String.fromCharCode(tv.getUint8(go+8));
+              else if(gt===2||gt===4){
+                // RATIONAL[3]: deg, min, sec
+                const deg=tv.getUint32(gvoff,le)/tv.getUint32(gvoff+4,le);
+                const min=tv.getUint32(gvoff+8,le)/tv.getUint32(gvoff+12,le);
+                const sec=tv.getUint32(gvoff+16,le)/tv.getUint32(gvoff+20,le);
+                const dd=deg+min/60+sec/3600;
+                if(gt===2)lat=dd;else lng=dd;
+              }
+            }
+            if(lat!=null&&lng!=null){
+              const finalLat=latRef==='S'?-lat:lat;
+              const finalLng=lngRef==='W'?-lng:lng;
+              if($('lf-lat'))$('lf-lat').value=finalLat.toFixed(6);
+              if($('lf-lng'))$('lf-lng').value=finalLng.toFixed(6);
+              setGPSStatus('✅ GPS: '+finalLat.toFixed(5)+', '+finalLng.toFixed(5),'green');
+              return;
+            }
+            setGPSStatus('GPS tags found but coordinates empty','red');return;
           }
-          off+=len;
-        } else if((mk&0xFF00)===0xFF00){off+=v.getUint16(off);}else break;
+          off+=2+segLen;
+        } else if((mk&0xFF00)===0xFF00){
+          off+=2+v.getUint16(off+2);
+        } else break;
       }
-    }catch(e2){}
-    const s=$('lf-status');if(s){s.textContent='No GPS found in this photo. Enter coordinates manually.';s.style.color='var(--red)';}
+    }catch(err){console.warn('EXIF parse error:',err);}
+    setGPSStatus('No GPS found in this photo. Enter coordinates manually.','red');
   };
   r.readAsArrayBuffer(file);
 }
-
-function parseEXIFgps(buf,start,len){
-  try{
-    const v=new DataView(buf,start);
-    const le=v.getUint16(6)===0x4949;
-    const ifd=v.getUint32(10,le)+6;
-    const n=v.getUint16(ifd,le);
-    for(let i=0;i<n;i++){
-      const o=ifd+2+i*12;
-      if(v.getUint16(o,le)===0x8825){
-        const go=v.getUint32(o+8,le)+6;
-        const gn=v.getUint16(go,le);
-        let latR='N',lngR='E',lat=null,lng=null;
-        for(let j=0;j<gn;j++){
-          const ko=go+2+j*12;const kt=v.getUint16(ko,le);
-          if(kt===1)latR=String.fromCharCode(v.getUint8(ko+8));
-          if(kt===3)lngR=String.fromCharCode(v.getUint8(ko+8));
-          if(kt===2||kt===4){
-            const do2=v.getUint32(ko+8,le)+6;
-            const deg=v.getUint32(do2,le)/v.getUint32(do2+4,le);
-            const min=v.getUint32(do2+8,le)/v.getUint32(do2+12,le);
-            const sec=v.getUint32(do2+16,le)/v.getUint32(do2+20,le);
-            if(kt===2)lat=deg+min/60+sec/3600;else lng=deg+min/60+sec/3600;
-          }
-        }
-        if(lat&&lng)return{lat:latR==='S'?-lat:lat,lng:lngR==='W'?-lng:lng};
-      }
-    }
-  }catch(e){}return null;
+function setGPSStatus(msg,color){
+  const s=$('lf-status');
+  if(s){s.textContent=msg;s.style.color=color==='green'?'var(--green)':'var(--red)';}
 }
+function parseEXIFgps(){} // legacy stub
 
 async function delLoc(id,coId){
   if(!confirm('Delete this location?'))return;
@@ -2597,7 +2661,7 @@ function openCoForm_prefill(pre,lead,leadId){
       <div class="fg"><label class="fl">Status</label><select class="fc" id="cf-status"><option>Prospect</option>${STATUSES.filter(s=>s!=='Prospect').map(s=>`<option>${s}</option>`).join('')}</select></div>
     </div>
     <div class="fr">
-      <div class="fg"><label class="fl">Phone</label><input class="fc" id="cf-phone" value="${pre.phone||''}"></div>
+      <div class="fg"><label class="fl">Phone</label><input class="fc" id="cf-phone" value="${pre.phone||''}" placeholder="+374…" oninput="onPhoneInput(this)" onblur="onPhoneBlur(this)"></div>
       <div class="fg"><label class="fl">City</label><input class="fc" id="cf-city" value=""></div>
     </div>
     <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="cf-agent">${AGENTS().map(a=>`<option ${(pre.assigned_agent||me?.name)===a?'selected':''}>${a}</option>`).join('')}</select></div>
@@ -2748,7 +2812,7 @@ function openLeadForm(id){
         ⚠ Клиент уже в базе${existCo0?' — <strong>'+existCo0.name+'</strong>':''}. Конвертируй в сделку.
       </div>
     </div><div class="fg"><label class="fl">Contact Name</label><input class="fc" id="lf2-ct" value="${l.contact||''}" placeholder="Person name"></div></div>
-    <div class="fr"><div class="fg"><label class="fl">Phone</label><input class="fc" id="lf2-ph" value="${l.phone||''}" placeholder="+374…"></div><div class="fg"><label class="fl">Email</label><input class="fc" id="lf2-em" value="${l.email||''}"></div></div>
+    <div class="fr"><div class="fg"><label class="fl">Phone</label><input class="fc" id="lf2-ph" value="${l.phone||''}" placeholder="+374…" oninput="onPhoneInput(this)" onblur="onPhoneBlur(this)"></div><div class="fg"><label class="fl">Email</label><input class="fc" id="lf2-em" value="${l.email||''}"></div></div>
     <div class="fr"><div class="fg"><label class="fl">Source</label><select class="fc" id="lf2-src">${['Website','Instagram','Facebook','WhatsApp','Referral','Cold call','Exhibition','Other'].map(s=>`<option ${l.source===s?'selected':''}>${s}</option>`).join('')}</select></div><div class="fg"><label class="fl">Status</label><select class="fc" id="lf2-st">${['New','Contacted','Qualified','Converted','Trash'].map(s=>`<option ${(l.status||'New')===s?'selected':''}>${s}</option>`).join('')}</select></div></div>
     <div class="fr"><div class="fg"><label class="fl">Product Interest</label><input class="fc" id="lf2-pr" value="${l.product||''}" placeholder="ZX330, Atlas Copco…"></div><div class="fg"><label class="fl">Budget ($)</label><input class="fc" id="lf2-bu" type="number" value="${l.budget||''}"></div></div>
     <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="lf2-no" rows="2">${l.notes||''}</textarea></div>
