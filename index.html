@@ -280,6 +280,9 @@ textarea.fc{resize:vertical;min-height:72px}
   .card{overflow-x:auto}
 }
 
+/* ── Row actions ── */
+tr:hover .row-actions{opacity:1!important}
+
 /* ── Drag & Drop ── */
 .dragging{opacity:.5;cursor:grabbing}
 .drag-handle{cursor:grab;color:var(--text-l)}
@@ -534,13 +537,14 @@ let _fleetShowComp = false;
 const $ = id => document.getElementById(id);
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 const today = () => { const d=new Date(); return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'); };
-const fmtDate = s => { if(!s)return'—'; const d=new Date(s+'T00:00:00'); return d.toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'}); };
-const fmtDateShort = s => { if(!s)return'—'; const d=new Date(s+'T00:00:00'); return d.toLocaleDateString('en',{day:'numeric',month:'short'}); };
+const parseDate = s => { if(!s||typeof s!=='string')return null; const p=s.slice(0,10).split('-'); if(p.length<3)return null; return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2])); };
+const fmtDate = s => { const d=parseDate(s); if(!d||isNaN(d))return'—'; return d.toLocaleDateString('en',{day:'numeric',month:'short',year:'numeric'}); };
+const fmtDateShort = s => { const d=parseDate(s); if(!d||isNaN(d))return'—'; return d.toLocaleDateString('en',{day:'numeric',month:'short'}); };
 const fmtUSD = n => { const v=Number(n)||0; if(v>=1000000)return'$'+(v/1000000).toFixed(1)+'M'; if(v>=1000)return'$'+(v/1000).toFixed(0)+'K'; return'$'+v.toLocaleString(); };
 const ini = name => { if(!name)return'?'; const p=name.trim().split(/\s+/); return(p[0][0]+(p[1]?p[1][0]:'')).toUpperCase(); };
 const avColor = name => { const colors=['av-blue','av-green','av-purple','av-amber']; let h=0; for(let c of (name||''))h=(h*31+c.charCodeAt(0))&0xffff; return colors[h%colors.length]; };
-const dueFmt = due => { if(!due)return''; const t=today(); if(due<t)return'<span style="color:var(--red);font-weight:600">'+fmtDateShort(due)+'</span>'; if(due===t)return'<span style="color:var(--amber);font-weight:600">Today</span>'; return fmtDateShort(due); };
-const timeAgo = s => { if(!s)return'—'; const d=new Date(s),n=new Date(),diff=Math.floor((n-d)/1000); if(diff<60)return'just now'; if(diff<3600)return Math.floor(diff/60)+'m ago'; if(diff<86400)return Math.floor(diff/3600)+'h ago'; const days=Math.floor(diff/86400); if(days<7)return days+'d ago'; return fmtDateShort(s.slice?s.slice(0,10):s); };
+const dueFmt = due => { if(!due||due==='Invalid Date')return'<span style="color:var(--text-l)">No date</span>'; const t=today(); if(due<t)return'<span style="color:var(--red);font-weight:600">'+fmtDateShort(due)+'</span>'; if(due===t)return'<span style="color:var(--amber);font-weight:600">Today</span>'; return fmtDateShort(due)||'No date'; };
+const timeAgo = s => { if(!s)return'—'; const d=new Date(s);if(isNaN(d))return'—'; const n=new Date(),diff=Math.floor((n-d)/1000); if(diff<60)return'just now'; if(diff<3600)return Math.floor(diff/60)+'m ago'; if(diff<86400)return Math.floor(diff/3600)+'h ago'; const days=Math.floor(diff/86400); if(days<7)return days+'d ago'; return fmtDateShort(s.slice?s.slice(0,10):s); };
 const clamp = (v,min,max) => Math.min(Math.max(v,min),max);
 const debounce = (fn,ms) => { let t; return (...a) => { clearTimeout(t); t=setTimeout(()=>fn(...a),ms); }; };
 const AGENTS = () => (db.users&&db.users.length) ? db.users.filter(u=>String(u.active)!=='false').map(u=>u.name) : (currentUser?[currentUser.name]:[]);
@@ -807,7 +811,7 @@ function renderDashboard() {
 
   // Recent activities
   const recentActs = db.activities
-    .filter(a => currentUser?.role==='manager' || a.agent===currentUser?.name)
+    .filter(a => (currentUser?.role==='manager' || a.agent===currentUser?.name) && a.type!=='stage' && a.type!=='note' && !((a.note||a.text||'').startsWith('Updated:')))
     .sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''))
     .slice(0, 5);
 
@@ -828,6 +832,23 @@ function renderDashboard() {
           <div class="metric-value" style="color:${m.color}">${m.val}</div>
           <div class="metric-sub">${m.sub}</div>
         </div>`).join('')}
+      </div>
+
+      <!-- Today stats -->
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        ${(()=>{
+          const todayActs=db.activities.filter(a=>(a.date||a.created||'').slice(0,10)===t&&(currentUser?.role==='manager'||a.agent===currentUser?.name));
+          const calls=todayActs.filter(a=>a.type==='Call').length;
+          const meetings=todayActs.filter(a=>a.type==='Meeting').length;
+          const emails=todayActs.filter(a=>a.type==='Email'||a.type==='Proposal').length;
+          if(!todayActs.length) return '';
+          return `<div style="font-size:12px;color:var(--text-m);background:var(--bg);padding:6px 12px;border-radius:20px;display:flex;gap:10px">
+            <span>Today:</span>
+            ${calls?`<span><i class="ti ti-phone" style="color:var(--blue)"></i> ${calls} calls</span>`:''}
+            ${meetings?`<span><i class="ti ti-users" style="color:var(--green)"></i> ${meetings} meetings</span>`:''}
+            ${emails?`<span><i class="ti ti-mail" style="color:var(--purple)"></i> ${emails} sent</span>`:''}
+          </div>`;
+        })()}
       </div>
 
       <!-- Log activity CTA -->
@@ -921,15 +942,29 @@ function taskRow(task, t) {
   const co = db.companies.find(c=>c.id===task.company_id);
   const cat = co?.category||'';
   const catColor = CO_CATS[cat]?.color||'var(--text-l)';
+  const typeIcon = ACT_ICON[task.type]||'ti-checkbox';
+  const isOverdue = task.due && task.due < t;
+  const isToday = task.due === t;
   return `<div class="today-task" onclick="openTaskModal('${task.id}')">
     <div class="task-check ${task.done?'checked':''}" onclick="event.stopPropagation();quickDoneTask('${task.id}',this)">
       ${task.done?'<i class="ti ti-check" style="font-size:10px"></i>':''}
     </div>
+    <div style="width:28px;height:28px;border-radius:50%;background:${catColor}15;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <i class="ti ${typeIcon}" style="font-size:13px;color:${catColor}"></i>
+    </div>
     <div style="flex:1;min-width:0">
       <div class="task-title">${task.title||'Task'}</div>
-      <div class="task-co" style="color:${catColor}">${task.company||''}${cat?' · Cat. '+cat:''}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+        <span style="font-size:12px;color:var(--blue);cursor:pointer" onclick="event.stopPropagation();go('companies');openCompany('${task.company_id}')">${task.company||''}</span>
+        ${cat?`<span style="font-size:10px;font-weight:700;color:${catColor};background:${catColor}15;padding:1px 5px;border-radius:10px">Cat. ${cat}</span>`:''}
+      </div>
     </div>
-    <div class="task-due ${task.due<t?'overdue':task.due===t?'today':''}">${dueFmt(task.due)||'—'}</div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <div class="task-due ${isOverdue?'overdue':isToday?'today':''}">${task.due?fmtDateShort(task.due):'No date'}</div>
+      <button class="btn btn-xs btn-primary" style="font-size:10px;padding:2px 6px" onclick="event.stopPropagation();openTaskModal('${task.id}')">
+        <i class="ti ti-pencil"></i> Done
+      </button>
+    </div>
   </div>`;
 }
 
@@ -1232,6 +1267,7 @@ function renderCompanies() {
         <th>Fleet</th>
         <th>Last Contact</th>
         <th>Status</th>
+        <th></th>
       </tr></thead>
       <tbody id="co-rows"></tbody>
     </table>
@@ -1261,7 +1297,7 @@ function renderCoRows() {
     const contacts = db.contacts.filter(c=>c.company_id===co.id).length;
     const deals = db.deals.filter(d=>d.company_id===co.id&&isActive(d.stage)).length;
     const fleet = db.fleet.filter(f=>f.company_id===co.id&&f.condition!=='Competitor').length;
-    const lastAct = db.activities.filter(a=>a.company_id===co.id).sort((a,b)=>(b.created||'').localeCompare(a.created||'')).shift();
+    const lastAct = db.activities.filter(a=>a.company_id===co.id&&a.type!=='stage'&&!((a.note||a.text||'').startsWith('Updated:'))).sort((a,b)=>(b.created||b.date||'').localeCompare(a.created||a.date||'')).shift();
     const cat = co.category;
     const catColor = cat&&CO_CATS[cat]?CO_CATS[cat].color:'var(--text-l)';
     const statusBadge = {Active:'badge-green',Prospect:'badge-blue',Negotiating:'badge-amber',Partner:'badge-purple',Inactive:'badge-gray',Cold:'badge-gray'}[co.status]||'badge-gray';
@@ -1278,6 +1314,12 @@ function renderCoRows() {
       <td style="text-align:center">${fleet?`<span style="color:var(--green)">${fleet}</span>`:'—'}</td>
       <td style="font-size:12px">${lastAct?`<span style="color:${lastAct.created&&lastAct.created.slice(0,10)<t?'var(--text-m)':'var(--text)'}">${timeAgo(lastAct.created||lastAct.date)}</span>`:'—'}</td>
       <td><span class="badge ${statusBadge}">${co.status||'Prospect'}</span></td>
+      <td style="width:80px" onclick="event.stopPropagation()">
+        <div style="display:flex;gap:4px;opacity:0;transition:opacity .15s" class="row-actions">
+          <button class="btn btn-xs btn-primary" title="Log Activity" onclick="openLogActivity('${co.id}')"><i class="ti ti-phone"></i></button>
+          <button class="btn btn-xs" title="Add Deal" onclick="openDealForm('${co.id}')"><i class="ti ti-plus"></i></button>
+        </div>
+      </td>
     </tr>`;
   }).join('') || '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text-m)">No companies found</td></tr>';
 }
