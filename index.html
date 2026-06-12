@@ -535,6 +535,11 @@ const myDeals=()=>me?.role==='manager'?db.deals:db.deals.filter(d=>d.agent===me?
 const isActive=s=>ACT_STAGES.includes(s);
 
 // ─── API ────────────────────────────────────────────────────
+// Global loading indicator
+let _apiCallsInFlight=0;
+function showAPILoader(){if(++_apiCallsInFlight===1){const t=$('toast');if(t&&!t.classList.contains('show')){/* subtle indicator */}}}
+function hideAPILoader(){_apiCallsInFlight=Math.max(0,_apiCallsInFlight-1);}
+
 async function apiCall(params,retries=2){
   const url=API+'?payload='+encodeURIComponent(JSON.stringify(params));
   for(let i=0;i<=retries;i++){
@@ -548,7 +553,8 @@ async function apiCall(params,retries=2){
 }
 async function persist(sheet,row){
   if(!row.id)row.id=uid();
-  await apiCall({action:'upsert',sheet,row});
+  try{await apiCall({action:'upsert',sheet,row});}
+  catch(e){toast('⚠️ Save error: '+e.message,4000);throw e;}
   return row;
 }
 async function del(sheet,id){await apiCall({action:'delete',sheet,id});}
@@ -880,6 +886,8 @@ async function quickDone(id,el){
   await persist('tasks',{...tk});
   updateBadges();
   if(tk.done)openTaskM(id);
+  else if(page==='dashboard')renderDashboard();
+  else if(coPage)openCo(coPage);
 }
 
 
@@ -1057,7 +1065,9 @@ function openTaskM(id){
       toast(done?'✅ Done + next task created':'💾 Saved + next task created');
     }else toast(done?'✅ Task completed':'💾 Saved');
     updateBadges();
-    if(coPage===tk.company_id)openCo(tk.company_id);else renderDashboard();
+    if(coPage&&coPage===tk.company_id)openCo(tk.company_id);
+    else if(page==='pipeline')renderPipeline();
+    else renderDashboard();
   },tk.done?'Save':'Mark as Done');
 }
 
@@ -1130,8 +1140,11 @@ function kCard(d,t){
     <div class="k-card-model">${d.model||'—'}</div>
     <div class="k-card-amount">${fmtUSD(d.amount)}</div>
     <div class="k-card-meta">
-      <span>${d.agent||'—'}</span>
-      <span style="color:${stale?'var(--red)':'inherit'}">${stale?'⚠ ':''}${days}d</span>
+      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100px">${d.agent||'—'}</span>
+      <div style="display:flex;align-items:center;gap:6px">
+        ${d.probability&&d.probability!=={Lead:10,Qualified:25,Proposal:50,Negotiation:75}[d.stage]?`<span style="font-size:10px;background:var(--blue-lt);color:var(--blue);padding:1px 5px;border-radius:10px">${d.probability}%</span>`:''}
+        <span style="color:${stale?'var(--red)':'inherit'}">${stale?'⚠ ':''}${days}d</span>
+      </div>
     </div>
     ${d.next_date?`<div style="font-size:11px;color:var(--text-m);margin-top:6px;padding-top:6px;border-top:1px solid var(--bdr)"><i class="ti ti-calendar" style="font-size:10px"></i> ${d.next_action||'Next'}: ${fmtDS(d.next_date)}</div>`:''}
   </div>`;
@@ -1287,6 +1300,7 @@ function renderCompanies(){
       </select>
     </div>
     <div class="card" style="overflow:hidden">
+      <div id="co-count-bar" style="padding:7px 14px;border-bottom:1px solid var(--bdr);background:var(--sur2);font-size:12px;color:var(--text-m)">Loading…</div>
       <table class="tbl tbl-hover">
         <thead><tr>
           <th onclick="sortCo('name')" style="cursor:pointer">Company <i class="ti ti-arrows-sort"></i></th>
@@ -1323,6 +1337,9 @@ function renderCoRows(){
     return true;
   }).sort((a,b)=>(a[_coSort.col]||'').localeCompare(b[_coSort.col]||'')*_coSort.dir);
   const t=today();
+  // Update count
+  const countBar=document.getElementById('co-count-bar');
+  if(countBar){const total=db.companies.length;const shown=list.length;countBar.textContent=shown===total?`${total} companies`:`${shown} of ${total} companies`;}
   $('co-rows').innerHTML=list.map(co=>{
     const contacts=db.contacts.filter(c=>c.company_id===co.id).length;
     const deals=db.deals.filter(d=>d.company_id===co.id&&isActive(d.stage)).length;
@@ -1343,7 +1360,7 @@ function renderCoRows(){
       <td style="text-align:center">${contacts||'—'}</td>
       <td style="text-align:center">${deals?`<span style="color:var(--blue);font-weight:600">${deals}</span>`:'—'}</td>
       <td style="text-align:center">${fleet?`<span style="color:var(--green)">${fleet}</span>`:'—'}</td>
-      <td style="font-size:12px;color:${contactColor}">${lastAct?timeAgo(lastAct.created||lastAct.date):'—'}</td>
+      <td style="font-size:12px;color:${contactColor}" title="${lastAct?('Last: '+(lastAct.type||'')+(lastAct.agent?' by '+lastAct.agent:'')):'No activity'}">${lastAct?timeAgo(lastAct.created||lastAct.date):'<span style="color:var(--text-l)">Never</span>'}</td>
       <td><span class="badge ${sb}">${co.status||'Prospect'}</span></td>
       <td onclick="event.stopPropagation()" style="width:80px">
         <div style="display:flex;gap:4px;opacity:0;transition:opacity .15s" class="row-act">
@@ -1352,7 +1369,7 @@ function renderCoRows(){
         </div>
       </td>
     </tr>`;
-  }).join('')||`<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--text-m)">No companies found</td></tr>`;
+  }).join('')||`<tr><td colspan="10" style="text-align:center;padding:32px"><div style="font-size:32px;opacity:.15;margin-bottom:8px">🏢</div><div style="font-weight:600;color:var(--text)">No companies found</div><div style="font-size:12px;color:var(--text-m);margin-top:4px">Try different search or filters</div></td></tr>`;
 }
 
 function openCo(id){coPage=id;renderCoCard(id);}
@@ -1484,7 +1501,7 @@ function renderCoCard(id){
       <div class="log-cta-icon"><i class="ti ti-phone" style="color:#fff;font-size:18px"></i></div>
       <div>
         <div class="log-cta-title">Log a call, meeting or activity</div>
-        <div class="log-cta-sub">${lastAct?'Last: '+timeAgo(lastAct.created||lastAct.date):'No activity logged yet'}</div>
+        <div class="log-cta-sub">${lastAct?'Last: '+timeAgo(lastAct.created||lastAct.date)+' · '+lastAct.type+' · '+(lastAct.agent||''):'First activity — start here'}</div>
       </div>
     </div>
     <div id="co-feed" style="padding:0 16px">${actFeed(acts,id)}</div>
@@ -1607,7 +1624,7 @@ function initMiniMap(cId,locs){
 }
 
 // Row hover CSS
-document.head.insertAdjacentHTML('beforeend','<style>tr:hover .row-act{opacity:1!important}</style>');
+document.head.insertAdjacentHTML('beforeend','<style>tr:hover .row-act{opacity:1!important}@media(max-width:768px){.row-act{opacity:1!important}}</style>');
 
 
 // ─── FORMS: COMPANY, CONTACT, DEAL, FLEET ───────────────────
@@ -1644,26 +1661,28 @@ function openCoForm(id){
     if(id)Object.assign(db.companies.find(c=>c.id===id)||{},row);else{db.companies.push(row);}
     toast('Company saved');updateBadges();
     if(id)openCo(id);else renderCompanies();
-  });
+  },'Save',id?[{label:'Delete',danger:true,action:async()=>{if(!confirm('Delete '+co.name+'? This will not delete their deals, contacts or activities.'))return;await del('companies',id);db.companies=db.companies.filter(c=>c.id!==id);closeModal();coPage=null;renderCompanies();toast('Company deleted');}}]:undefined);
 }
 
 function openContactForm(coId,cid){
   const c=cid?db.contacts.find(x=>x.id===cid):{};
-  const co=db.companies.find(x=>x.id===coId);
+  const co=coId?db.companies.find(x=>x.id===coId):null;
   showModal((cid?'Edit':'Add')+' Contact',`
     <div class="fr"><div class="fg"><label class="fl">First Name *</label><input class="fc" id="ctf-fn" value="${c.first_name||''}"></div><div class="fg"><label class="fl">Last Name</label><input class="fc" id="ctf-ln" value="${c.last_name||''}"></div></div>
-    <div class="fg"><label class="fl">Company</label><input class="fc" value="${co?.name||c.company||''}" readonly></div>
+    <div class="fg"><label class="fl">Company</label>${co?`<input class="fc" value="${co.name}" readonly><input type="hidden" id="ctf-coid" value="${coId}">`:`<select class="fc" id="ctf-coid"><option value="">— select —</option>${db.companies.map(x=>`<option value="${x.id}" ${c.company_id===x.id?'selected':''}>${x.name}</option>`).join('')}</select>`}</div>
     <div class="fg"><label class="fl">Position</label><input class="fc" id="ctf-pos" value="${c.position||''}" placeholder="Director, Engineer…"></div>
     <div class="fr"><div class="fg"><label class="fl">Phone</label><input class="fc" id="ctf-phone" value="${c.phone||''}" placeholder="+374…"></div><div class="fg"><label class="fl">Email</label><input class="fc" id="ctf-email" value="${c.email||''}"></div></div>
     <div class="fr"><div class="fg"><label class="fl">Channel</label><select class="fc" id="ctf-ch">${['WhatsApp','Phone','Email','Telegram'].map(x=>`<option ${c.channel===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="fg"><label class="fl">Language</label><select class="fc" id="ctf-lang">${['Russian','Armenian','English'].map(x=>`<option ${c.language===x?'selected':''}>${x}</option>`).join('')}</select></div></div>
     <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="ctf-notes" rows="2">${c.notes||''}</textarea></div>
   `,async()=>{
     const fn=($('ctf-fn').value||'').trim();if(!fn){alert('Enter first name');return false;}
-    const row={...(c||{}),id:cid||uid(),company_id:coId,company:co?.name||'',first_name:fn,last_name:$('ctf-ln').value,position:$('ctf-pos').value,phone:$('ctf-phone').value,email:$('ctf-email').value,channel:$('ctf-ch').value,language:$('ctf-lang').value,notes:$('ctf-notes').value,created:c.created||today()};
+    const coidFinal=coId||$('ctf-coid')?.value;
+    const coObj=db.companies.find(x=>x.id===coidFinal);
+    const row={...(c||{}),id:cid||uid(),company_id:coidFinal,company:coObj?.name||co?.name||'',first_name:fn,last_name:$('ctf-ln').value,position:$('ctf-pos').value,phone:$('ctf-phone').value,email:$('ctf-email').value,channel:$('ctf-ch').value,language:$('ctf-lang').value,notes:$('ctf-notes').value,created:c.created||today()};
     await persist('contacts',row);
     if(cid)Object.assign(db.contacts.find(x=>x.id===cid)||{},row);else db.contacts.push(row);
-    toast('Contact saved');updateBadges();if(coPage===coId)openCo(coId);else renderContacts();
-  });
+    toast('Contact saved');updateBadges();const _coidF=coId||$('ctf-coid')?.value;if(coPage&&coPage===_coidF)openCo(_coidF);else if(coPage)openCo(coPage);else renderContacts();
+  },'Save',cid?[{label:'Delete',danger:true,action:async()=>{if(!confirm('Delete this contact?'))return;await del('contacts',cid);db.contacts=db.contacts.filter(x=>x.id!==cid);closeModal();if(coPage)openCo(coPage);else renderContacts();toast('Contact deleted');}}]:undefined);
 }
 
 function openDealForm(coId,did){
@@ -1681,6 +1700,9 @@ function openDealForm(coId,did){
     <div class="fr">
       <div class="fg"><label class="fl">Stage</label><select class="fc" id="df-stage" onchange="onDStage(this.value)">${STAGES.map(s=>`<option ${(d.stage||'Lead')===s?'selected':''}>${s}</option>`).join('')}</select></div>
       <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="df-agent">${AGENTS().map(a=>`<option ${(d.agent||me?.name)===a?'selected':''}>${a}</option>`).join('')}</select></div>
+    </div>
+    <div class="fg"><label class="fl">Probability: <span id="df-prob-val">${d.probability||{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[d.stage||'Lead']||10}%</span></label>
+      <input type="range" id="df-prob" min="0" max="100" step="5" value="${d.probability||{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0}[d.stage||'Lead']||10}" oninput="document.getElementById('df-prob-val').textContent=this.value+'%'" style="width:100%;accent-color:var(--blue)">
     </div>
     <div class="fr">
       <div class="fg"><label class="fl">Next Action</label><input class="fc" id="df-next" value="${d.next_action||''}" placeholder="Follow up, Send proposal…"></div>
@@ -1700,14 +1722,20 @@ function openDealForm(coId,did){
     const coObj=db.companies.find(c=>c.id===coid);
     const stage=$('df-stage').value;
     if(stage==='Disqualified'&&!$('df-dr')?.value){alert('Select disqualification reason');return false;}
-    const row={...(d||{}),id:did||uid(),company_id:coid,company:coObj?.name||'',model:$('df-model').value.trim(),amount:+$('df-amount').value||0,currency:'USD',stage,agent:$('df-agent').value||me?.name||'',next_action:$('df-next').value,next_date:$('df-ndate').value,competitor:$('df-comp').value,lost_reason:$('df-lr')?.value||'',competitor_price:+$('df-lp')?.value||0,disq_reason:$('df-dr')?.value||'',disq_comment:$('df-dc')?.value||'',probability:{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0,Disqualified:0}[stage]||0,created:d.created||today()};
+    const row={...(d||{}),id:did||uid(),company_id:coid,company:coObj?.name||'',model:$('df-model').value.trim(),amount:+$('df-amount').value||0,currency:'USD',stage,agent:$('df-agent').value||me?.name||'',next_action:$('df-next').value,next_date:$('df-ndate').value,competitor:$('df-comp').value,lost_reason:$('df-lr')?.value||'',competitor_price:+$('df-lp')?.value||0,disq_reason:$('df-dr')?.value||'',disq_comment:$('df-dc')?.value||'',probability:+($('df-prob')?.value)||{Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0,Disqualified:0}[stage]||0,created:d.created||today()};
     await persist('deals',row);
     if(did)Object.assign(db.deals.find(x=>x.id===did)||{},row);else db.deals.push(row);
     toast('Deal saved');updateBadges();
     if(coPage===coid)openCo(coid);else renderPipeline();
   });
 }
-function onDStage(s){$('df-lost').style.display=s==='Lost'?'block':'none';$('df-disq').style.display=s==='Disqualified'?'block':'none';}
+function onDStage(s){
+  $('df-lost').style.display=s==='Lost'?'block':'none';
+  $('df-disq').style.display=s==='Disqualified'?'block':'none';
+  const prob={Lead:10,Qualified:25,Proposal:50,Negotiation:75,Won:100,Lost:0,Disqualified:0}[s]||10;
+  const sl=$('df-prob');const lbl=$('df-prob-val');
+  if(sl){sl.value=prob;}if(lbl)lbl.textContent=prob+'%';
+}
 
 function openFleetForm(coId,uid2){
   const u=uid2?db.fleet.find(f=>f.id===uid2):{};
@@ -2182,6 +2210,13 @@ function viewPhoto(url){showModal('Photo',`<div style="text-align:center"><img s
 
 
 // ─── FLEET ───────────────────────────────────────────────────
+async function delFleet(id){
+  if(!confirm('Delete this equipment record?'))return;
+  await del('fleet',id);db.fleet=db.fleet.filter(f=>f.id!==id);
+  toast('Deleted');updateBadges();
+  if(coPage){const u=db.fleet.find(f=>f.company_id===coPage);openCo(coPage);}else renderFleet();
+}
+
 function renderFleet(){
   $('tb-right').innerHTML=`
     <button class="btn ${_showComp?'btn-danger':''}" onclick="_showComp=!_showComp;renderFleet()"><i class="ti ti-sword"></i> Competitors (${db.fleet.filter(f=>f.condition==='Competitor').length})</button>
@@ -2214,7 +2249,10 @@ function renderFleet(){
         <td style="font-size:12px;font-family:monospace;color:var(--text-m)">${u.serial||'—'}</td>
         <td><span class="badge ${{New:'b-blue',Excellent:'b-green',Good:'b-green',Fair:'b-amber',Poor:'b-red'}[u.condition]||'b-gray'}">${u.condition||'Good'}</span></td>
         <td style="font-size:12px;color:var(--text-m)">${u.notes||'—'}</td>
-        <td onclick="event.stopPropagation()"><button class="btn btn-xs btn-ghost" onclick="openFleetForm('${u.company_id}','${u.id}')"><i class="ti ti-edit"></i></button></td>
+        <td onclick="event.stopPropagation()" style="white-space:nowrap">
+          <button class="btn btn-xs btn-ghost" onclick="openFleetForm('${u.company_id}','${u.id}')"><i class="ti ti-edit"></i></button>
+          <button class="btn btn-xs btn-ghost" style="color:var(--red)" onclick="delFleet('${u.id}')"><i class="ti ti-trash"></i></button>
+        </td>
       </tr>`).join('')||'<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text-m)">No equipment recorded</td></tr>'}
       </tbody>
     </table>
@@ -2229,6 +2267,51 @@ function renderFleet(){
 }
 
 // ─── LEADS ───────────────────────────────────────────────────
+function convertLead(id){
+  const l=db.leads.find(x=>x.id===id);if(!l)return;
+  // Создаём компанию из лида
+  const coId=uid();
+  const co={id:coId,name:l.company||l.contact||'New Company',phone:l.phone||'',status:'Prospect',notes:l.notes||'',assigned_agent:l.agent||me?.name||'',created:today()};
+  openCoForm_prefill(co,l,id);
+}
+
+function openCoForm_prefill(pre,lead,leadId){
+  const id=null; // new company
+  showModal('Convert Lead → Company',`
+    <div class="fg"><label class="fl">Company Name *</label><input class="fc" id="cf-name" value="${pre.name||''}" placeholder="Company LLC"></div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Industry</label><select class="fc" id="cf-ind">${['—',...INDUSTRIES].map(x=>`<option>${x}</option>`).join('')}</select></div>
+      <div class="fg"><label class="fl">Status</label><select class="fc" id="cf-status"><option>Prospect</option>${STATUSES.filter(s=>s!=='Prospect').map(s=>`<option>${s}</option>`).join('')}</select></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Phone</label><input class="fc" id="cf-phone" value="${pre.phone||''}"></div>
+      <div class="fg"><label class="fl">City</label><input class="fc" id="cf-city" value=""></div>
+    </div>
+    <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="cf-agent">${AGENTS().map(a=>`<option ${(pre.assigned_agent||me?.name)===a?'selected':''}>${a}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="cf-notes" rows="2">${pre.notes||''}</textarea></div>
+  `,async()=>{
+    const name=($('cf-name').value||'').trim();if(!name){alert('Enter company name');return false;}
+    const coId=uid();
+    const row={id:coId,name,industry:$('cf-ind').value==='—'?'':$('cf-ind').value,status:'Prospect',phone:$('cf-phone').value,city:$('cf-city').value,assigned_agent:$('cf-agent').value,notes:$('cf-notes').value,created:today()};
+    await persist('companies',row);db.companies.push(row);
+    // Add contact if lead has contact name
+    if(lead?.contact){
+      const parts=(lead.contact||'').split(' ');
+      const ct={id:uid(),company_id:coId,company:name,first_name:parts[0]||'',last_name:parts.slice(1).join(' ')||'',phone:lead.phone||'',agent:row.assigned_agent,created:today()};
+      await persist('contacts',ct);db.contacts.push(ct);
+    }
+    // Add deal if product
+    if(lead?.product){
+      const deal={id:uid(),company_id:coId,company:name,model:lead.product,amount:lead.budget||0,currency:'USD',stage:'Lead',agent:row.assigned_agent,probability:10,created:today()};
+      await persist('deals',deal);db.deals.push(deal);
+    }
+    // Mark lead as converted
+    if(leadId){const ld=db.leads.find(x=>x.id===leadId);if(ld){ld.status='Converted';await persist('leads',{...ld});}}
+    toast('✅ Lead converted to company');updateBadges();
+    go('companies');openCo(coId);
+  },'Convert');
+}
+
 function renderLeads(){
   $('tb-right').innerHTML='<button class="btn btn-primary" onclick="openLeadForm()"><i class="ti ti-plus"></i> Add Lead</button><button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
   const leads=db.leads.sort((a,b)=>(b.created||'').localeCompare(a.created||''));
@@ -2258,7 +2341,7 @@ function openLeadForm(id){
     await persist('leads',row);
     if(id)Object.assign(db.leads.find(x=>x.id===id)||{},row);else db.leads.push(row);
     toast('Lead saved');updateBadges();renderLeads();
-  });
+  },'Save',id?[{label:'Convert → Company',success:true,action:()=>{closeModal();convertLead(id);}}]:undefined);
 }
 
 // ─── CONTRACTS ───────────────────────────────────────────────
@@ -2323,6 +2406,18 @@ function renderSettings(){
   $('tb-right').innerHTML='<button class="btn btn-primary" onclick="openUserForm()"><i class="ti ti-plus"></i> Add User</button><button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
   setTimeout(checkAIKey,100);
   $('page').innerHTML=`<div class="page-pad" style="max-width:720px">
+    <!-- Data controls -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-head"><div class="card-title"><i class="ti ti-database"></i> Data</div></div>
+      <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="refreshData()"><i class="ti ti-refresh"></i> Refresh Data</button>
+        <button class="btn" onclick="exportData()"><i class="ti ti-download"></i> Export to JSON</button>
+        <div style="font-size:12px;color:var(--text-m);margin-left:auto;align-self:center">
+          ${db.companies.length} companies · ${db.deals.length} deals · ${db.activities.filter(isRealAct).length} activities
+        </div>
+      </div>
+    </div>
+
     <!-- Invite link -->
     <div class="card" style="margin-bottom:16px">
       <div class="card-head"><div class="card-title"><i class="ti ti-link"></i> Invite Link</div></div>
@@ -2396,6 +2491,22 @@ function openUserForm(id){
     if(id)Object.assign(db.users.find(x=>x.id===id)||{},row);else db.users.push(row);
     toast('User saved');renderSettings();
   });
+}
+
+async function refreshData(){
+  toast('Refreshing…');
+  _dataLoaded=false;
+  try{await loadAll();toast('✅ Data refreshed — '+db.companies.length+' companies loaded');}
+  catch(e){toast('Error: '+e.message);}
+  if(page==='settings')renderSettings();
+  else go(page);
+}
+
+function exportData(){
+  const data={companies:db.companies,contacts:db.contacts,deals:db.deals,activities:db.activities.filter(isRealAct),tasks:db.tasks,fleet:db.fleet,exported:new Date().toISOString()};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='wayland-crm-'+today()+'.json';a.click();
+  toast('Exported');
 }
 
 function saveAIKey(){
