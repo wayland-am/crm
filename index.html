@@ -1296,7 +1296,7 @@ function renderCompanies(){
         <option value="">All statuses</option>${STATUSES.map(s=>`<option ${_coStatusF===s?'selected':''}>${s}</option>`).join('')}
       </select>
       <select class="fc" style="width:120px" onchange="_coCatF=this.value;renderCoRows()">
-        <option value="">All categories</option>${['A','B','C','D'].map(c=>`<option value="${c}" ${_coCatF===c?'selected':''}>Cat. ${c} — ${CATS[c].label}</option>`).join('')}
+        <option value="">All categories</option>${['A','B','C','D'].map(c=>`<option value="${c}" ${_coCatF===c?'selected':''}>Cat. ${c} — ${CATS[c]?.label||c}</option>`).join('')}
       </select>
     </div>
     <div class="card" style="overflow:hidden">
@@ -1355,7 +1355,7 @@ function renderCoRows(){
         <div><div style="font-weight:600">${co.name}</div><div style="font-size:11px;color:var(--text-m)">${co.assigned_agent||''}</div></div>
       </div></td>
       <td style="color:var(--text-m);font-size:12px">${co.industry||'—'}</td>
-      <td>${cat?`<span class="badge" style="background:${CATS[cat].bg};color:${cc}">${cat}</span>`:'—'}</td>
+      <td>${cat?`<span class="badge" style="background:${CATS[cat]?.bg||'#f1f5f9'};color:${cc}">${cat}</span>`:'—'}</td>
       <td style="color:var(--text-m)">${co.city||'—'}</td>
       <td style="text-align:center">${contacts||'—'}</td>
       <td style="text-align:center">${deals?`<span style="color:var(--blue);font-weight:600">${deals}</span>`:'—'}</td>
