@@ -1101,6 +1101,7 @@ function openTaskM(id){
 }
 
 // ─── PIPELINE ────────────────────────────────────────────────
+let _pipeAgent='',_pipeSearch='';
 function renderPipeline(){
   if(!_dataLoaded){
     $('page').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:12px"><i class="ti ti-loader-2 spin" style="font-size:36px;color:var(--blue)"></i><div style="color:var(--text-m)">Loading…</div></div>';
@@ -1108,11 +1109,18 @@ function renderPipeline(){
   }
   const tr=$('tb-right');
   tr.innerHTML=`
+    <div style="position:relative">
+      <i class="ti ti-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text-l);font-size:13px;pointer-events:none"></i>
+      <input class="fc" style="padding-left:28px;width:160px;height:32px" placeholder="Search deals…" value="${_pipeSearch}" oninput="_pipeSearch=this.value;renderPipeline()">
+    </div>
+    ${me?.role==='manager'?`<select class="btn" onchange="_pipeAgent=this.value;renderPipeline()"><option value="">All agents</option>${AGENTS().map(a=>`<option ${_pipeAgent===a?'selected':''}>${a}</option>`).join('')}</select>`:''}
     <button class="btn ${_showLost?'btn-danger':''}" onclick="_showLost=!_showLost;renderPipeline()"><i class="ti ti-eye"></i> Lost</button>
     <button class="btn btn-primary" onclick="openDealForm()"><i class="ti ti-plus"></i> Add Deal</button>
     <button class="btn" onclick="exportDeals()" title="Export CSV"><i class="ti ti-download"></i></button>
     <button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
-  const myD=myDeals();
+  let myD=myDeals();
+  if(_pipeAgent)myD=myD.filter(d=>d.agent===_pipeAgent);
+  if(_pipeSearch){const q=_pipeSearch;myD=myD.filter(d=>_matches(d.company,q)||_matches(d.model,q)||_matches(d.agent,q));}
   const active=myD.filter(d=>isActive(d.stage));
   const t=today();
   const pipeBar=`<div class="pipe-bar" style="margin:16px 20px 0">
@@ -1815,7 +1823,7 @@ function onFFBrand(b){
   if(w)w.style.display=o?'block':'none';
 }
 
-function openTaskForm(coId,tid){
+function openTaskForm(coId,tid,prefillDate){
   const tk=tid?db.tasks.find(t=>t.id===tid):{};
   const co=db.companies.find(c=>c.id===coId);
   showModal((tid?'Edit':'Add')+' Task',`
@@ -1823,7 +1831,7 @@ function openTaskForm(coId,tid){
     <div class="fg"><label class="fl">Company</label><input class="fc" value="${co?.name||tk.company||''}" readonly></div>
     <div class="fr">
       <div class="fg"><label class="fl">Type</label><select class="fc" id="tf-type">${ACT_TYPES.map(t=>`<option ${tk.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
-      <div class="fg"><label class="fl">Due Date</label><input class="fc" id="tf-due" type="date" value="${tk.due||''}"></div>
+      <div class="fg"><label class="fl">Due Date</label><input class="fc" id="tf-due" type="date" value="${tk.due||prefillDate||today()}"></div>
     </div>
     <div class="fr">
       <div class="fg"><label class="fl">Priority</label><select class="fc" id="tf-pri"><option value="high" ${tk.priority==='high'?'selected':''}>High</option><option value="medium" ${(tk.priority||'medium')==='medium'?'selected':''}>Medium</option><option value="low" ${tk.priority==='low'?'selected':''}>Low</option></select></div>
@@ -1839,22 +1847,47 @@ function openTaskForm(coId,tid){
 }
 
 // ─── CONTACTS PAGE ───────────────────────────────────────────
+let _ctFilter='',_ctChan='';
 function renderContacts(){
   $('tb-right').innerHTML='<button class="btn" onclick="exportContacts()" title="Export CSV"><i class="ti ti-download"></i></button><button class="btn btn-primary" onclick="openContactForm()"><i class="ti ti-plus"></i> Contact</button><button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
-  const list=db.contacts.sort((a,b)=>(a.first_name||'').localeCompare(b.first_name||''));
+  const channels=[...new Set(db.contacts.filter(x=>x.channel).map(x=>x.channel))];
   $('page').innerHTML=`<div class="page-pad"><div class="card" style="overflow:hidden">
+    <div style="padding:10px 14px;border-bottom:1px solid var(--bdr);background:var(--sur2);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="position:relative;flex:1;min-width:180px">
+        <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-l);font-size:13px"></i>
+        <input class="fc" id="ct-q" placeholder="Search by name, company, phone…" oninput="_ctFilter=this.value;renderCtRows()" value="${_ctFilter}" style="padding-left:30px;margin:0;height:34px">
+      </div>
+      <select class="fc" style="width:140px;margin:0;height:34px" onchange="_ctChan=this.value;renderCtRows()">
+        <option value="">All channels</option>
+        ${channels.map(ch=>`<option ${_ctChan===ch?'selected':''}>${ch}</option>`).join('')}
+      </select>
+      <span id="ct-count" style="font-size:12px;color:var(--text-m);white-space:nowrap"></span>
+    </div>
     <table class="tbl tbl-hover">
       <thead><tr><th>Name</th><th>Company</th><th>Position</th><th>Phone</th><th>Email</th><th>Channel</th></tr></thead>
-      <tbody>${list.map(c=>`<tr onclick="go('companies');openCo('${c.company_id}')">
-        <td><div style="display:flex;align-items:center;gap:8px"><div class="av av-sm ${avCls(c.first_name+c.last_name)}">${ini(c.first_name+' '+c.last_name)}</div><strong>${c.first_name} ${c.last_name}</strong></div></td>
-        <td style="color:var(--blue)">${c.company||'—'}</td>
-        <td style="color:var(--text-m)">${c.position||'—'}</td>
-        <td>${c.phone?`<a href="tel:${c.phone}" style="color:var(--blue)" onclick="event.stopPropagation()">${c.phone}</a>`:'—'}</td>
-        <td style="font-size:12px;color:var(--text-m)">${c.email||'—'}</td>
-        <td>${c.channel?`<span class="badge b-gray">${c.channel}</span>`:'—'}</td>
-      </tr>`).join('')}</tbody>
+      <tbody id="ct-rows"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-m)">Loading…</td></tr></tbody>
     </table>
   </div></div>`;
+  renderCtRows();
+}
+function renderCtRows(){
+  const q=_ctFilter,ch=_ctChan;
+  const list=db.contacts.filter(x=>{
+    if(ch&&x.channel!==ch)return false;
+    if(!q)return true;
+    return _matches((x.first_name||'')+' '+(x.last_name||''),q)||_matches(x.company,q)||(x.phone||'').includes(q)||(x.email||'').toLowerCase().includes(q.toLowerCase());
+  }).sort((a,b)=>(a.first_name||'').localeCompare(b.first_name||''));
+  const rows=document.getElementById('ct-rows');
+  const cnt=document.getElementById('ct-count');
+  if(cnt)cnt.textContent=q||ch?`${list.length} of ${db.contacts.length}`:`${db.contacts.length} contacts`;
+  if(rows)rows.innerHTML=list.map(x=>`<tr onclick="go('companies');openCo('${x.company_id}')">
+        <td><div style="display:flex;align-items:center;gap:8px"><div class="av av-sm ${avCls(x.first_name+x.last_name)}">${ini(x.first_name+' '+x.last_name)}</div><strong>${x.first_name} ${x.last_name}</strong></div></td>
+        <td style="color:var(--blue)">${x.company||'—'}</td>
+        <td style="color:var(--text-m)">${x.position||'—'}</td>
+        <td>${x.phone?`<a href="tel:${x.phone}" style="color:var(--blue)" onclick="event.stopPropagation()">${x.phone}</a>`:'—'}</td>
+        <td style="font-size:12px;color:var(--text-m)">${x.email||'—'}</td>
+        <td>${x.channel?`<span class="badge b-gray">${x.channel}</span>`:'—'}</td>
+      </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-m)">No contacts found</td></tr>';
 }
 
 
@@ -2007,13 +2040,14 @@ function renderCalendar(){
     const isT=dStr===todayStr,isW=day.getDay()===0||day.getDay()===6;
     const grp=tByDay[dStr]?Object.values(tByDay[dStr]).sort((a,b)=>a.t.company.localeCompare(b.t.company)):[];
     const max=3,extra=grp.length>max?grp.length-max:0;
-    return`<div class="cal-cell" style="background:${isT?'var(--blue-lt)':isW?'var(--sur2)':'var(--sur)'};opacity:${inP?1:0.35}">
+    return`<div class="cal-cell" style="background:${isT?'var(--blue-lt)':isW?'var(--sur2)':'var(--sur)'};opacity:${inP?1:0.35};cursor:${inP?'default':'default'}" ondblclick="${inP?`openTaskFormOnDay('${dStr}')`:''}">
       <div style="margin-bottom:2px"><span style="font-size:12px;font-weight:${isT?700:400};color:${isT?'#fff':'var(--text)'};background:${isT?'var(--blue)':'transparent'};width:${isT?'22px':'auto'};height:${isT?'22px':'auto'};border-radius:50%;display:inline-flex;align-items:center;justify-content:center;padding:${isT?'0':'0 2px'}">${day.getDate()}</span></div>
       ${grp.slice(0,max).map(item=>{const co=db.companies.find(c=>c.id===item.t.company_id);const cat=co?.category||'';const color=catC[cat]||'var(--text-l)';return`<div class="cal-event" style="border-left-color:${color};background:${color}12;color:${color}" data-coid="${co?.id||''}" onclick="if(this.dataset.coid){go('companies');openCo(this.dataset.coid)}" title="${item.t.company}">${cat?`<strong>${cat}</strong> `:''}${item.t.company}${item.n>1?` +${item.n-1}`:''}</div>`;}).join('')}
       ${extra?`<div style="font-size:10px;color:var(--text-l);padding:1px 3px">+${extra} more</div>`:''}
     </div>`;
   }).join('');
   $('page').innerHTML=`<div class="page-pad">
+    <div style="font-size:11px;color:var(--text-l);margin-bottom:8px"><i class="ti ti-mouse"></i> Double-click a day to add a task</div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div style="font-size:18px;font-weight:700">${label}</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">${legend}</div>
@@ -2251,13 +2285,24 @@ async function delFleet(id){
   if(coPage){const u=db.fleet.find(f=>f.company_id===coPage);openCo(coPage);}else renderFleet();
 }
 
+let _fleetSearch='',_fleetBrand='';
 function renderFleet(){
   $('tb-right').innerHTML=`
+    <div style="position:relative">
+      <i class="ti ti-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text-l);font-size:13px;pointer-events:none"></i>
+      <input class="fc" style="padding-left:28px;width:150px;height:32px" placeholder="Search fleet…" value="${_fleetSearch}" oninput="_fleetSearch=this.value;renderFleet()">
+    </div>
+    <select class="btn" onchange="_fleetBrand=this.value;renderFleet()">
+      <option value="">All brands</option>
+      ${[...new Set(db.fleet.map(f=>f.brand).filter(Boolean))].sort().map(b=>`<option ${_fleetBrand===b?'selected':''}>${b}</option>`).join('')}
+    </select>
     <button class="btn ${_showComp?'btn-danger':''}" onclick="_showComp=!_showComp;renderFleet()"><i class="ti ti-sword"></i> Competitors (${db.fleet.filter(f=>f.condition==='Competitor').length})</button>
     <button class="btn btn-primary" onclick="openFleetForm()"><i class="ti ti-plus"></i> Add Equipment</button>
+    <button class="btn" onclick="exportFleet()" title="Export CSV"><i class="ti ti-download"></i></button>
     <button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
-  const our=db.fleet.filter(f=>f.condition!=='Competitor');
-  const comp=db.fleet.filter(f=>f.condition==='Competitor');
+  const flQ=_fleetSearch,flB=_fleetBrand;
+  const our=db.fleet.filter(f=>f.condition!=='Competitor'&&(!flB||f.brand===flB)&&(!flQ||_matches(f.company,flQ)||_matches(f.model,flQ)||_matches(f.brand,flQ)));
+  const comp=db.fleet.filter(f=>f.condition==='Competitor'&&(!flB||f.brand===flB)&&(!flQ||_matches(f.company,flQ)||_matches(f.model,flQ)||_matches(f.brand,flQ)));
   const byBrand={};our.forEach(u=>{byBrand[u.brand]=(byBrand[u.brand]||0)+1;});
   const opp=our.filter(u=>u.condition==='Poor'||u.condition==='Fair').length;
   const compByBrand={};comp.forEach(u=>{compByBrand[u.brand]=(compByBrand[u.brand]||0)+1;});
@@ -2344,6 +2389,20 @@ function exportLeads(){
     {key:'notes',label:'Notes'},{key:'created',label:'Created'}
   ]);
 }
+function exportFleet(){
+  exportCSV(db.fleet.filter(f=>f.condition!=='Competitor'),'fleet',[
+    {key:'company',label:'Company'},{key:'brand',label:'Brand'},{key:'model',label:'Model'},
+    {key:'type',label:'Type'},{key:'year',label:'Year'},{key:'serial',label:'Serial'},
+    {key:'condition',label:'Condition'},{key:'notes',label:'Notes'}
+  ]);
+}
+function exportContracts(){
+  exportCSV(db.contracts,'contracts',[
+    {key:'company',label:'Company'},{key:'type',label:'Type'},{key:'number',label:'Number'},
+    {key:'subject',label:'Subject'},{key:'amount',label:'Amount'},{key:'status',label:'Status'},
+    {key:'signed_date',label:'Signed'},{key:'delivery_date',label:'Delivery'},{key:'agent',label:'Agent'}
+  ]);
+}
 
 // ─── LEADS ───────────────────────────────────────────────────
 function convertLead(id){
@@ -2356,6 +2415,7 @@ function convertLead(id){
 
 function openCoForm_prefill(pre,lead,leadId){
   const id=null; // new company
+  // lead передаётся для создания сделки после компании
   showModal('Convert Lead → Company',`
     <div class="fg"><label class="fl">Company Name *</label><input class="fc" id="cf-name" value="${pre.name||''}" placeholder="Company LLC"></div>
     <div class="fr">
@@ -2418,6 +2478,7 @@ function renderLeads(){
       ${l.phone?`<div style="font-size:12px"><a href="tel:${l.phone}" style="color:var(--blue)">${l.phone}</a></div>`:''}
       ${l.product?`<div style="font-size:12px;color:var(--text-m)">${l.product}${l.budget?' · '+fmtUSD(l.budget):''}</div>`:''}
       <div style="font-size:11px;color:var(--text-l);margin-top:4px">${l.source||''} · ${timeAgo(l.created)}</div>
+      ${l.status==='Trash'&&me?.role==='manager'?`<div style="display:flex;gap:6px;margin-top:10px"><button class="btn btn-xs btn-ghost" style="color:var(--red)" onclick="deleteLead('${l.id}')"><i class="ti ti-trash"></i> Delete permanently</button></div>`:''}
       ${l.status!=='Converted'&&l.status!=='Trash'?`<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
         ${existCo
           ? `<button class="btn btn-xs btn-success" onclick="convertLeadToDeal('${l.id}','${existCo.id}')"><i class="ti ti-arrows-right"></i> Convert → Deal</button>
@@ -2456,6 +2517,12 @@ function trashLead(id){
   if(!confirm('Move to Trash?'))return;
   l.status='Trash';persist('leads',{...l}).then(()=>{updateBadges();renderLeads();});
 }
+async function deleteLead(id){
+  if(!confirm('Delete permanently?'))return;
+  await del('leads',id);
+  db.leads=db.leads.filter(x=>x.id!==id);
+  updateBadges();renderLeads();toast('Lead deleted');
+}
 
 function openLeadForm(id){
   const l=id?db.leads.find(x=>x.id===id):{};
@@ -2484,6 +2551,10 @@ function openLeadForm(id){
   ]:undefined);
 }
 
+function openTaskFormOnDay(date){
+  openTaskForm(null,null,date);
+}
+
 function lf2CoCheck(val){
   const warn=$('lf2-co-warn');if(!warn)return;
   const co=val.trim().length>1?db.companies.find(c=>(c.name||'').toLowerCase()===val.trim().toLowerCase()):null;
@@ -2492,17 +2563,30 @@ function lf2CoCheck(val){
 }
 
 // ─── CONTRACTS ───────────────────────────────────────────────
+let _conSearch='',_conStatus='';
 function renderContracts(){
-  $('tb-right').innerHTML='<button class="btn btn-primary" onclick="openContractForm()"><i class="ti ti-plus"></i> Contract</button><button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
-  const list=db.contracts.sort((a,b)=>(b.created||'').localeCompare(a.created||''));
+  $('tb-right').innerHTML=`
+    <div style="position:relative">
+      <i class="ti ti-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text-l);font-size:13px;pointer-events:none"></i>
+      <input class="fc" style="padding-left:28px;width:150px;height:32px" placeholder="Search contracts…" value="${_conSearch}" oninput="_conSearch=this.value;renderContracts()">
+    </div>
+    <select class="btn" onchange="_conStatus=this.value;renderContracts()">
+      <option value="">All statuses</option>
+      ${['Draft','Signed','Active','Completed','Expired'].map(s=>`<option ${_conStatus===s?'selected':''}>${s}</option>`).join('')}
+    </select>
+    <button class="btn" onclick="exportContracts()" title="Export CSV"><i class="ti ti-download"></i></button>
+    <button class="btn btn-primary" onclick="openContractForm()"><i class="ti ti-plus"></i> Contract</button>
+    <button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
   const sc={Active:'b-green',Draft:'b-gray',Signed:'b-blue',Completed:'b-gray',Expired:'b-red'};
+  const q=_conSearch,st=_conStatus;
+  const list=db.contracts.filter(cn=>(!st||cn.status===st)&&(!q||_matches(cn.company,q)||_matches(cn.subject,q)||_matches(cn.number,q))).sort((a,b)=>(b.created||'').localeCompare(a.created||''));
   $('page').innerHTML=`<div class="page-pad"><div class="card" style="overflow:hidden">
     <table class="tbl tbl-hover"><thead><tr><th>Company</th><th>Type</th><th>Subject</th><th>Amount</th><th>Signed</th><th>Delivery</th><th>Status</th></tr></thead>
-    <tbody>${list.map(c=>`<tr onclick="go('companies');openCo('${c.company_id}')">
-      <td><strong>${c.company}</strong></td><td style="color:var(--text-m)">${c.type||'—'}</td>
-      <td>${c.subject||c.number||'—'}</td><td style="font-weight:600">${fmtUSD(c.amount)}</td>
-      <td style="color:var(--text-m)">${fmtD(c.signed_date)}</td><td style="color:var(--text-m)">${fmtD(c.delivery_date)}</td>
-      <td><span class="badge ${sc[c.status]||'b-gray'}">${c.status||'Draft'}</span></td>
+    <tbody>${list.map(cn=>`<tr onclick="go('companies');openCo('${cn.company_id}')">
+      <td><strong>${cn.company}</strong></td><td style="color:var(--text-m)">${cn.type||'—'}</td>
+      <td>${cn.subject||cn.number||'—'}</td><td style="font-weight:600">${fmtUSD(cn.amount)}</td>
+      <td style="color:var(--text-m)">${fmtD(cn.signed_date)}</td><td style="color:var(--text-m)">${fmtD(cn.delivery_date)}</td>
+      <td><span class="badge ${sc[cn.status]||'b-gray'}">${cn.status||'Draft'}</span></td>
     </tr>`).join('')||'<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--text-m)">No contracts</td></tr>'}
     </tbody></table>
   </div></div>`;
