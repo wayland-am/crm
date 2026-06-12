@@ -485,7 +485,7 @@ let coPage=null; // open company id
 let _mapInst=null,_mapLayer='Streets';
 let _calView='month',_calOff=0,_calCats=new Set(['A','B','C','D']);
 let _mapFilter=new Set(['Active','Prospect','Partner','Negotiating','Cold','Inactive']);
-let _showComp=false,_showLost=false;
+let _showComp=false,_showLost=false,_dataLoaded=false;
 let _modalCb=null;
 
 // ─── UTILS ─────────────────────────────────────────────────
@@ -560,16 +560,22 @@ async function loadAll(){
   db.tasks=db.tasks.map(t=>({...t,done:t.done===true||t.done==='true'||t.done==='TRUE',auto_scheduled:t.auto_scheduled===true||t.auto_scheduled==='true'||t.auto_scheduled==='TRUE',amount:+t.amount||0}));
   db.deals=db.deals.map(d=>({...d,amount:+d.amount||0,probability:+d.probability||0}));
   db.users=db.users.map(u=>({...u,active:u.active!==false&&u.active!=='false'&&u.active!=='FALSE'}));
+  _dataLoaded=true;
   updateBadges();
 }
 
 // ─── AUTH ────────────────────────────────────────────────────
 function simpleHash(s){let h=0;for(let i=0;i<s.length;i++)h=((h<<5)-h+s.charCodeAt(i))|0;return Math.abs(h).toString(36);}
 
-function doLogin(){
+async function doLogin(){
   const name=($('l-name').value||'').trim();
   const pass=$('l-pass').value;
   if(!name){showErr('Enter your name');return;}
+  // Если пользователи не загружены - грузим сначала
+  if(!db.users.length){
+    showErr('Connecting…');
+    try{await loadAll();}catch(e){showErr('Connection failed: '+e.message);return;}
+  }
   const u=db.users.find(x=>x.name.toLowerCase()===name.toLowerCase()&&(simpleHash(pass)===x.password_hash||pass===x.password_hash));
   if(!u){showErr('Wrong name or password');return;}
   if(!u.active){showErr('Account is disabled');return;}
@@ -607,7 +613,11 @@ async function init(){
   const urlP=new URLSearchParams(location.search);
   const apiUrl=urlP.get('api');
   if(apiUrl){API=decodeURIComponent(apiUrl);localStorage.setItem('wcrm_url',API);}
+  // Показываем экран загрузки
+  $('login').style.display='none';
+  document.body.insertAdjacentHTML('beforeend','<div id="boot-loader" style="position:fixed;inset:0;background:linear-gradient(135deg,#0f172a,#1e3a5f);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;gap:16px"><div style="width:52px;height:52px;background:var(--blue);border-radius:14px;display:flex;align-items:center;justify-content:center"><i class="ti ti-building-factory" style="color:#fff;font-size:26px"></i></div><div style="color:#fff;font-size:16px;font-weight:700">Wayland CRM</div><i class="ti ti-loader-2 spin" style="color:rgba(255,255,255,.5);font-size:28px"></i></div>');
   try{await loadAll();}catch(e){console.warn('Init load:',e.message);}
+  const bootEl=document.getElementById('boot-loader');if(bootEl)bootEl.remove();
   const sess=localStorage.getItem('wcrm_s');
   if(sess){
     try{
@@ -643,7 +653,11 @@ function startApp(){
     const pp=$('page');if(pp)pp.style.paddingBottom=mob?'80px':'';
     if(!mob)$('nav').classList.remove('open');
   });
-  go('dashboard');
+  if(_dataLoaded){go('dashboard');}
+  else{
+    $('page').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:80vh;flex-direction:column;gap:12px"><i class="ti ti-loader-2 spin" style="font-size:40px;color:var(--blue)"></i><div style="font-size:14px;color:var(--text-m)">Loading data…</div></div>';
+    loadAll().then(()=>{_dataLoaded=true;go('dashboard');}).catch(e=>{toast('Load error: '+e.message);go('dashboard');});
+  }
 }
 
 function go(p,el){
@@ -736,6 +750,11 @@ document.addEventListener('keydown',e=>{
 
 // ─── DASHBOARD ───────────────────────────────────────────────
 function renderDashboard(){
+  if(!_dataLoaded){
+    $('page').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:12px"><i class="ti ti-loader-2 spin" style="font-size:36px;color:var(--blue)"></i><div style="color:var(--text-m)">Loading data…</div></div>';
+    loadAll().then(()=>{_dataLoaded=true;renderDashboard();}).catch(e=>toast('Load error: '+e.message));
+    return;
+  }
   $('tb-right').innerHTML='<button class="btn btn-primary" onclick="openLogAct()"><i class="ti ti-phone"></i> Log Activity</button><button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
   const t=today();
   const myD=myDeals();
@@ -1044,6 +1063,10 @@ function openTaskM(id){
 
 // ─── PIPELINE ────────────────────────────────────────────────
 function renderPipeline(){
+  if(!_dataLoaded){
+    $('page').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:12px"><i class="ti ti-loader-2 spin" style="font-size:36px;color:var(--blue)"></i><div style="color:var(--text-m)">Loading…</div></div>';
+    loadAll().then(()=>{_dataLoaded=true;renderPipeline();});return;
+  }
   const tr=$('tb-right');
   tr.innerHTML=`
     <button class="btn ${_showLost?'btn-danger':''}" onclick="_showLost=!_showLost;renderPipeline()"><i class="ti ti-eye"></i> Lost</button>
@@ -1285,6 +1308,13 @@ function renderCompanies(){
 function sortCo(col){if(_coSort.col===col)_coSort.dir*=-1;else{_coSort.col=col;_coSort.dir=1;}renderCoRows();}
 
 function renderCoRows(){
+  // Если данные ещё не загружены
+  if(!_dataLoaded){
+    const el=$('co-rows');
+    if(el)el.innerHTML='<tr><td colspan="10" style="text-align:center;padding:32px"><i class="ti ti-loader-2 spin" style="font-size:24px;color:var(--blue)"></i><div style="margin-top:8px;color:var(--text-m)">Loading…</div></td></tr>';
+    loadAll().then(()=>{_dataLoaded=true;renderCoRows();}).catch(e=>toast('Load error: '+e.message));
+    return;
+  }
   const q=_coFilter.toLowerCase();
   let list=db.companies.filter(c=>{
     if(_coStatusF&&c.status!==_coStatusF)return false;
