@@ -668,7 +668,7 @@ function startApp(){
 
 function go(p,el){
   page=p;
-  if(p!=='companies')coPage=null;
+  coPage=null; // always reset when navigating
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('on'));
   (el||document.querySelector(`.nav-btn[data-page="${p}"]`))?.classList.add('on');
   $('tb-right').innerHTML='<button class="tb-icon-btn" onclick="toggleNotif()" id="notif-btn"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
@@ -1444,7 +1444,7 @@ function renderCoCard(id){
     <button class="btn btn-primary" onclick="openLogAct('${id}')"><i class="ti ti-phone"></i> Log Activity</button>
     <button class="btn" onclick="openContactForm('${id}')"><i class="ti ti-user-plus"></i> Contact</button>
     <button class="btn btn-primary" onclick="openDealForm('${id}')"><i class="ti ti-plus"></i> Deal</button>
-    <button class="btn btn-icon" onclick="openCoForm('${id}')"><i class="ti ti-edit"></i></button>
+    <button class="btn" onclick="openCoForm('${id}')" title="Edit company"><i class="ti ti-edit"></i> Edit</button>
     <button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
 
   const deals=db.deals.filter(d=>d.company_id===id);
@@ -1469,7 +1469,7 @@ function renderCoCard(id){
       <div style="display:flex;gap:12px;margin-bottom:14px">
         <div class="av av-lg ${avCls(co.name)}">${ini(co.name)}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-size:17px;font-weight:800;line-height:1.2">${co.name}</div>
+          <div style="font-size:17px;font-weight:800;line-height:1.2;cursor:pointer" onclick="openCoForm('${id}')" title="Edit company">${co.name} <i class="ti ti-pencil" style="font-size:12px;color:var(--text-l);vertical-align:middle"></i></div>
           <div style="font-size:12px;color:var(--text-m);margin-top:3px">${co.industry||''} ${co.city?'· '+co.city:''}</div>
         </div>
       </div>
