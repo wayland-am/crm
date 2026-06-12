@@ -1110,6 +1110,7 @@ function renderPipeline(){
   tr.innerHTML=`
     <button class="btn ${_showLost?'btn-danger':''}" onclick="_showLost=!_showLost;renderPipeline()"><i class="ti ti-eye"></i> Lost</button>
     <button class="btn btn-primary" onclick="openDealForm()"><i class="ti ti-plus"></i> Add Deal</button>
+    <button class="btn" onclick="exportDeals()" title="Export CSV"><i class="ti ti-download"></i></button>
     <button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
   const myD=myDeals();
   const active=myD.filter(d=>isActive(d.stage));
@@ -1190,6 +1191,9 @@ async function dropToStage(stage,e){
 
 async function moveToStage(deal,stage){
   const prev=deal.stage;
+  // Записываем историю стадий
+  if(!deal.stage_history)deal.stage_history=[];
+  deal.stage_history.push({from:prev,to:stage,date:today(),by:me?.name||''});
   if(stage==='Won'){
     if(!confirm('Move to WON?\n\n• Equipment will be added to '+deal.company+' fleet\n• Company status → Active'))return;
   }
@@ -1295,6 +1299,7 @@ function openDeal(id){
     </div>
     ${d.lost_reason?`<div style="padding:8px 10px;background:var(--red-lt);border-radius:var(--r);font-size:13px;color:var(--red);margin-bottom:10px"><strong>Lost:</strong> ${d.lost_reason}${d.competitor?' · Competitor: '+d.competitor:''}${d.competitor_price?' · $'+d.competitor_price:''}</div>`:''}
     ${d.disq_reason?`<div style="padding:8px 10px;background:var(--sur2);border-radius:var(--r);font-size:13px;color:var(--gray);margin-bottom:10px"><strong>Disqualified:</strong> ${d.disq_reason}${d.disq_comment?' — '+d.disq_comment:''}</div>`:''}
+    ${d.stage_history&&d.stage_history.length?`<div style="border-top:1px solid var(--bdr);padding-top:12px;margin-bottom:12px"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--text-m);margin-bottom:8px">Stage history</div><div style="display:flex;flex-direction:column;gap:4px">${d.stage_history.map(h=>`<div style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="color:var(--text-l)">${h.date}</span><span style="color:var(--text-m)">${h.from}</span><i class="ti ti-arrow-right" style="font-size:10px;color:var(--text-l)"></i><span style="font-weight:600;color:${SC[h.to]||'var(--text)'}">${h.to}</span>${h.by?`<span style="color:var(--text-l);font-size:11px">· ${h.by}</span>`:''}</div>`).join('')}</div></div>`:''}
     ${isActive(d.stage)?`<div style="border-top:1px solid var(--bdr);padding-top:14px"><div style="font-size:11px;color:var(--text-m);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Move to</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         ${ACT_STAGES.filter(s=>s!==d.stage).map(s=>`<button class="btn btn-sm" style="color:${SC[s]};border-color:${SC[s]}20;background:${SBG[s]}" onclick="closeModal();moveToStage(db.deals.find(x=>x.id==='${id}'),'${s}')">${s}</button>`).join('')}
@@ -1313,7 +1318,7 @@ function openDeal(id){
 let _coFilter='',_coSort={col:'name',dir:1},_coStatusF='',_coCatF='';
 
 function renderCompanies(){
-  $('tb-right').innerHTML=`<button class="btn btn-primary" onclick="openCoForm()"><i class="ti ti-plus"></i> Company</button><button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
+  $('tb-right').innerHTML=`<button class="btn" onclick="exportCompanies()" title="Export CSV"><i class="ti ti-download"></i></button><button class="btn btn-primary" onclick="openCoForm()"><i class="ti ti-plus"></i> Company</button><button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
   if(coPage){renderCoCard(coPage);return;}
   $('page').innerHTML=`<div class="page-pad">
     <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
@@ -1835,7 +1840,7 @@ function openTaskForm(coId,tid){
 
 // ─── CONTACTS PAGE ───────────────────────────────────────────
 function renderContacts(){
-  $('tb-right').innerHTML='<button class="btn btn-primary" onclick="openContactForm()"><i class="ti ti-plus"></i> Contact</button><button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
+  $('tb-right').innerHTML='<button class="btn" onclick="exportContacts()" title="Export CSV"><i class="ti ti-download"></i></button><button class="btn btn-primary" onclick="openContactForm()"><i class="ti ti-plus"></i> Contact</button><button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
   const list=db.contacts.sort((a,b)=>(a.first_name||'').localeCompare(b.first_name||''));
   $('page').innerHTML=`<div class="page-pad"><div class="card" style="overflow:hidden">
     <table class="tbl tbl-hover">
@@ -2295,6 +2300,51 @@ function renderFleet(){
   </div>`;
 }
 
+
+// ─── EXPORT ──────────────────────────────────────────────────
+function exportCSV(data, filename, cols){
+  const header=cols.map(c=>c.label).join(',');
+  const rows=data.map(row=>cols.map(c=>{
+    const v=(row[c.key]||'').toString().replace(/"/g,'""');
+    return v.includes(',')||v.includes('"')||v.includes('\n')?`"${v}"`:v;
+  }).join(','));
+  const csv='\uFEFF'+header+'\n'+rows.join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download=filename+'_'+today()+'.csv';a.click();
+  toast('📥 '+filename+'.csv exported');
+}
+function exportCompanies(){
+  exportCSV(db.companies,'companies',[
+    {key:'name',label:'Company'},{key:'industry',label:'Industry'},{key:'status',label:'Status'},
+    {key:'category',label:'Category'},{key:'city',label:'City'},{key:'phone',label:'Phone'},
+    {key:'email',label:'Email'},{key:'website',label:'Website'},{key:'assigned_agent',label:'Agent'},
+    {key:'notes',label:'Notes'},{key:'created',label:'Created'}
+  ]);
+}
+function exportContacts(){
+  exportCSV(db.contacts.map(c=>({...c,name:(c.first_name||'')+' '+(c.last_name||'')})),'contacts',[
+    {key:'name',label:'Name'},{key:'company',label:'Company'},{key:'position',label:'Position'},
+    {key:'phone',label:'Phone'},{key:'email',label:'Email'},{key:'channel',label:'Channel'}
+  ]);
+}
+function exportDeals(){
+  exportCSV(db.deals,'deals',[
+    {key:'company',label:'Company'},{key:'model',label:'Model'},{key:'amount',label:'Amount'},
+    {key:'currency',label:'Currency'},{key:'stage',label:'Stage'},{key:'agent',label:'Agent'},
+    {key:'probability',label:'Probability %'},{key:'competitor',label:'Competitor'},
+    {key:'next_action',label:'Next Action'},{key:'next_date',label:'Next Date'},{key:'created',label:'Created'}
+  ]);
+}
+function exportLeads(){
+  exportCSV(db.leads,'leads',[
+    {key:'company',label:'Company'},{key:'contact',label:'Contact'},{key:'phone',label:'Phone'},
+    {key:'email',label:'Email'},{key:'source',label:'Source'},{key:'status',label:'Status'},
+    {key:'product',label:'Product'},{key:'budget',label:'Budget'},{key:'agent',label:'Sales Rep'},
+    {key:'notes',label:'Notes'},{key:'created',label:'Created'}
+  ]);
+}
+
 // ─── LEADS ───────────────────────────────────────────────────
 function convertLead(id){
   const l=db.leads.find(x=>x.id===id);if(!l)return;
@@ -2341,9 +2391,17 @@ function openCoForm_prefill(pre,lead,leadId){
   },'Convert');
 }
 
+let _ldFilter='';
 function renderLeads(){
-  $('tb-right').innerHTML='<button class="btn btn-primary" onclick="openLeadForm()"><i class="ti ti-plus"></i> Add Lead</button><button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
-  const leads=db.leads.sort((a,b)=>(b.created||'').localeCompare(a.created||''));
+  $('tb-right').innerHTML=`
+    <select class="btn" onchange="_ldFilter=this.value;renderLeads()">
+      <option value="">All statuses</option>
+      ${['New','Contacted','Qualified','Converted','Trash'].map(s=>`<option ${_ldFilter===s?'selected':''}>${s}</option>`).join('')}
+    </select>
+    <button class="btn btn-primary" onclick="openLeadForm()"><i class="ti ti-plus"></i> Add Lead</button>
+    <button class="btn" onclick="exportLeads()" title="Export CSV"><i class="ti ti-download"></i></button>
+    <button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
+  const leads=db.leads.filter(l=>!_ldFilter||l.status===_ldFilter).sort((a,b)=>(b.created||'').localeCompare(a.created||''));
   const sc={New:'b-red',Contacted:'b-amber',Qualified:'b-blue',Converted:'b-green',Trash:'b-gray'};
   $('page').innerHTML=`<div class="page-pad"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
     ${leads.map(l=>{
