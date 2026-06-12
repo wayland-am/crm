@@ -248,12 +248,36 @@ textarea.fc{resize:vertical;min-height:72px}
 
 /* ── Responsive ── */
 @media(max-width:768px){
+  .mobile-stage-btns{display:flex!important}
+  .kanban{scroll-snap-type:x mandatory}
+  .k-col{scroll-snap-align:start;min-width:260px}
   :root{--sidebar:0px}
   #sidebar{position:fixed;left:-220px;top:0;bottom:0;width:220px;z-index:200;transition:left .25s}
   #sidebar.open{left:0}
-  .co-layout{grid-template-columns:1fr}
+  #mobile-menu-btn{display:flex!important}
+  /* Dashboard */
+  .dash-main{grid-template-columns:1fr!important}
+  .dash-metrics{grid-template-columns:1fr 1fr!important}
+  /* Company card */
+  .co-layout{grid-template-columns:1fr!important;grid-template-rows:auto}
+  .co-left{border-right:none;border-bottom:1px solid var(--bdr)}
+  .co-center{order:2}
   .co-right{border-left:none;border-top:1px solid var(--bdr)}
-  .dash-grid{grid-template-columns:1fr 1fr}
+  /* Pipeline */
+  .pipe-summary{overflow-x:auto}
+  .pipe-stage-stat{min-width:90px}
+  /* Content padding */
+  #content{padding:12px}
+  /* Modal */
+  .modal{width:95vw!important;margin:16px}
+  .fr{grid-template-columns:1fr!important}
+  .f3{grid-template-columns:1fr!important}
+  /* Topbar */
+  #search-wrap{max-width:none;flex:1}
+  #topbar-right .btn:not(:last-child){display:none}
+  #topbar-right .btn:last-child{display:inline-flex}
+  /* Table scroll */
+  .card{overflow-x:auto}
 }
 
 /* ── Drag & Drop ── */
@@ -694,7 +718,13 @@ function updateBadges() {
 }
 
 function setupMobile() {
-  if(window.innerWidth<=768) $('mobile-menu-btn').style.display='flex';
+  if(window.innerWidth<=768) {
+    $('mobile-menu-btn').style.display='flex';
+  }
+  window.addEventListener('resize',()=>{
+    $('mobile-menu-btn').style.display=window.innerWidth<=768?'flex':'none';
+    if(window.innerWidth>768) document.getElementById('sidebar').classList.remove('open');
+  });
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -782,12 +812,12 @@ function renderDashboard() {
     .slice(0, 5);
 
   $('content').innerHTML = `
-  <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;max-width:1200px">
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;max-width:1200px" class="dash-main">
 
     <!-- LEFT: Tasks -->
     <div>
       <!-- Metrics row -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px" class="dash-metrics">
         ${[
           {label:'Active Pipeline',val:fmtUSD(pipeline),sub:active.length+' deals',cls:'',color:'var(--blue)'},
           {label:'Won This Month',val:fmtUSD(wonVal),sub:wonThis.length+' deals',cls:'green',color:'var(--green)'},
@@ -999,6 +1029,10 @@ function dealCard(d, t) {
       <span class="${stale?'k-card-stale':''}">${stale?'⚠ '+daysSince+'d':''+daysSince+'d'}</span>
     </div>
     ${d.next_date?`<div style="font-size:11px;color:var(--text-m);margin-top:4px"><i class="ti ti-calendar" style="font-size:10px"></i> ${fmtDateShort(d.next_date)} · ${d.next_action||''}</div>`:''}
+    <div class="mobile-stage-btns" style="display:none;gap:4px;margin-top:8px;flex-wrap:wrap">
+      ${ACTIVE_STAGES.filter(s=>s!==d.stage).slice(0,2).map(s=>`<button class="btn btn-xs" style="color:${STAGE_COLOR[s]}" onclick="event.stopPropagation();moveDealToStage(db.deals.find(x=>x.id==='${d.id}'),'${s}')">${s}</button>`).join('')}
+      ${isActive(d.stage)?`<button class="btn btn-xs btn-success" onclick="event.stopPropagation();moveDealToStage(db.deals.find(x=>x.id==='${d.id}'),'Won')">Won</button>`:''}
+    </div>
   </div>`;
 }
 
@@ -1578,8 +1612,12 @@ function openLogActivity(coId) {
     </div>
 
     <div class="fg">
-      <label class="fl">📝 What happened? <span style="font-weight:400;color:var(--text-m)">(notes / outcome)</span></label>
+      <label class="fl" style="display:flex;align-items:center;justify-content:space-between">
+        <span>📝 What happened? <span style="font-weight:400;color:var(--text-m)">(notes / outcome)</span></span>
+        <button type="button" class="btn btn-xs" id="ai-parse-btn" onclick="aiParseNote()" style="font-size:10px"><i class="ti ti-sparkles" style="color:#7c3aed"></i> AI Parse</button>
+      </label>
       <textarea class="fc" id="la-note" rows="4" placeholder="Spoke with director. Interested in ZX330, budget ~$180k. Wants proposal by end of month..."></textarea>
+      <div id="ai-parse-result" style="display:none;margin-top:6px;padding:8px;background:var(--purple-lt);border-radius:var(--radius);font-size:12px;color:var(--text-m)"></div>
     </div>
 
     <div style="background:var(--bg);border-radius:var(--radius);padding:12px;border:1px solid var(--bdr)">
@@ -1640,6 +1678,38 @@ function openLogActivity(coId) {
     if(_coPage===coIdVal) openCompany(coIdVal);
     else if(currentPage==='dashboard') renderDashboard();
   });
+}
+
+async function aiParseNote() {
+  const note = $('la-note')?.value.trim();
+  if(!note || note.length < 20) { toast('Write at least a few sentences first'); return; }
+  const btn = $('ai-parse-btn');
+  const result = $('ai-parse-result');
+  btn.innerHTML='<i class="ti ti-loader-2 spin"></i>';
+  btn.disabled=true;
+  try {
+    const prompt='Extract from this sales call note:\n1. Sentiment (Positive/Neutral/Negative)\n2. Next step (what was agreed)\n3. Next date (if mentioned)\n4. Budget (if mentioned)\n5. Key facts (2-3 bullet points)\n\nNote: "'+note+'"\n\nReply ONLY in JSON: {"sentiment":"","next_step":"","next_date":"","budget":"","facts":[]}';
+    const data = await apiCall({action:'claude', prompt});
+    const text = data?.text || '';
+    const clean = text.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+    if(result) {
+      result.style.display='block';
+      result.innerHTML = '<div style="font-weight:600;color:var(--purple);margin-bottom:6px"><i class="ti ti-sparkles"></i> AI extracted:</div>'+
+        (parsed.sentiment?'<div>😊 Sentiment: <strong>'+parsed.sentiment+'</strong></div>':'')+
+        (parsed.next_step?'<div>→ Next: <strong>'+parsed.next_step+'</strong></div>':'')+
+        (parsed.next_date?'<div>📅 Date: <strong>'+parsed.next_date+'</strong></div>':'')+
+        (parsed.budget?'<div>💰 Budget: <strong>'+parsed.budget+'</strong></div>':'')+
+        (parsed.facts?.length?'<ul style="margin:4px 0 0 14px">'+parsed.facts.map(f=>'<li>'+f+'</li>').join('')+'</ul>':'');
+      // Auto-fill fields
+      if(parsed.next_step && $('la-next')) $('la-next').value = parsed.next_step;
+      if(parsed.sentiment && $('la-sentiment')) $('la-sentiment').value = parsed.sentiment;
+    }
+  } catch(e) {
+    toast('AI parse failed. Check API key in Settings.');
+  }
+  btn.innerHTML='<i class="ti ti-sparkles" style="color:#7c3aed"></i> AI Parse';
+  btn.disabled=false;
 }
 
 function selectActType(btn, type) {
@@ -2649,6 +2719,7 @@ function renderParts(){
 
 function renderSettings(){
   $('topbar-right').innerHTML='<button class="btn btn-primary" onclick="openUserForm()"><i class="ti ti-plus"></i> Add User</button>';
+  setTimeout(checkAIKey, 100);
   const apiKey=$('api-key-val');
   $('content').innerHTML=`
   <div style="max-width:700px">
@@ -2677,6 +2748,19 @@ function renderSettings(){
       </tr>`).join('')}</tbody></table>
     </div>
 
+    <!-- Claude AI -->
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-header"><div class="card-title"><i class="ti ti-sparkles" style="color:#7c3aed"></i> Claude AI Integration</div></div>
+      <div class="card-body">
+        <div style="font-size:13px;color:var(--text-m);margin-bottom:10px">Enables AI note analysis — automatically extracts next steps, sentiment and key facts from call notes.</div>
+        <div id="ai-key-status" style="font-size:12px;margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px">
+          <input class="fc" id="ai-key-input" type="password" placeholder="sk-ant-api03-..." style="flex:1">
+          <button class="btn btn-primary" onclick="saveAIKey()"><i class="ti ti-check"></i> Save Key</button>
+          <a href="https://console.anthropic.com/keys" target="_blank" class="btn"><i class="ti ti-external-link"></i> Get key</a>
+        </div>
+      </div>
+    </div>
     <!-- Access rights -->
     <div class="card">
       <div class="card-header"><div class="card-title">Access Rights</div></div>
@@ -2774,6 +2858,25 @@ async function init(){
 
   // If no users yet, show simple connect screen
   $('login-screen').style.display='flex';
+}
+
+function saveAIKey() {
+  const key = $('ai-key-input')?.value.trim();
+  if(!key.startsWith('sk-ant-')) { toast('Invalid key format. Must start with sk-ant-'); return; }
+  apiCall({action:'setApiKey', key}).then(()=>{
+    toast('✅ API key saved securely');
+    checkAIKey();
+  }).catch(e=>toast('Error: '+e.message));
+}
+
+async function checkAIKey() {
+  try {
+    const r = await apiCall({action:'hasApiKey'});
+    const el = $('ai-key-status');
+    if(el) el.innerHTML = r.has
+      ? '<span style="color:var(--green)">✅ API key configured</span>'
+      : '<span style="color:var(--text-m)">No API key set</span>';
+  } catch(e) {}
 }
 
 // Keyboard shortcuts
