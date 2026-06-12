@@ -692,12 +692,41 @@ function updateBadges(){
 }
 
 // ─── SEARCH ────────────────────────────────────────────────
+// ── Транслитерация для поиска ───────────────────────────────
+const _CYR2LAT={а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'zh',з:'z',и:'i',й:'j',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'kh',ц:'ts',ч:'ch',ш:'sh',щ:'sch',ъ:'',ы:'y',ь:'',э:'e',ю:'yu',я:'ya'};
+const _LAT2CYR={a:'а',b:'б',v:'в',g:'г',d:'д',e:'е',z:'з',i:'и',j:'й',k:'к',l:'л',m:'м',n:'н',o:'о',p:'п',r:'р',s:'с',t:'т',u:'у',f:'ф',y:'у'};
+// Армянский → латиница (базовые)
+const _ARM2LAT={ա:'a',բ:'b',գ:'g',դ:'d',ե:'e',զ:'z',է:'e',ը:'e',թ:'t',ժ:'zh',ի:'i',լ:'l',խ:'kh',ծ:'ts',կ:'k',հ:'h',ձ:'dz',ղ:'gh',ճ:'ch',մ:'m',յ:'y',ն:'n',շ:'sh',ո:'vo',չ:'ch',պ:'p',ջ:'j',ռ:'r',ս:'s',վ:'v',տ:'t',ր:'r',ց:'ts',ու:'u',փ:'p',ք:'k',և:'ev',օ:'o',ֆ:'f'};
+function _translit(s){
+  if(!s)return '';
+  s=s.toLowerCase();
+  // армянский → латиница
+  let r='';
+  for(let i=0;i<s.length;i++){
+    const two=s[i]+(s[i+1]||'');
+    if(_ARM2LAT[two]){r+=_ARM2LAT[two];i++;continue;}
+    r+=_ARM2LAT[s[i]]||_CYR2LAT[s[i]]||s[i];
+  }
+  return r;
+}
+function _latFromCyr(s){return _translit(s);}
+function _cyrFromLat(s){
+  if(!s)return '';
+  s=s.toLowerCase();
+  return s.split('').map(c=>_LAT2CYR[c]||c).join('');
+}
+function _matches(text,q){
+  if(!text)return false;
+  const t=text.toLowerCase(), tl=_translit(text);
+  const ql=q.toLowerCase(), qtl=_translit(q), qCyr=_cyrFromLat(q);
+  return t.includes(ql)||t.includes(qCyr)||tl.includes(qtl)||tl.includes(ql);
+}
 function doSearch(q){
   if(!q.trim()){hideDrop();return;}
-  const lq=q.toLowerCase(),res=[];
-  db.companies.filter(c=>(c.name||'').toLowerCase().includes(lq)||(c.city||'').toLowerCase().includes(lq)).slice(0,4).forEach(c=>res.push({type:'Company',label:c.name,sub:c.industry||c.city||'',id:c.id,page:'companies'}));
-  db.contacts.filter(c=>(c.first_name+' '+c.last_name).toLowerCase().includes(lq)||(c.phone||'').includes(q)).slice(0,3).forEach(c=>res.push({type:'Contact',label:(c.first_name+' '+c.last_name).trim(),sub:c.company||'',id:c.company_id,page:'companies'}));
-  db.deals.filter(d=>(d.company||'').toLowerCase().includes(lq)||(d.model||'').toLowerCase().includes(lq)).slice(0,3).forEach(d=>res.push({type:'Deal',label:d.company,sub:(d.model||'')+'  '+fmtUSD(d.amount),id:d.id,page:'pipeline'}));
+  const res=[];
+  db.companies.filter(c=>_matches(c.name,q)||_matches(c.city,q)).slice(0,4).forEach(c=>res.push({type:'Company',label:c.name,sub:c.industry||c.city||'',id:c.id,page:'companies'}));
+  db.contacts.filter(c=>_matches((c.first_name||'')+' '+(c.last_name||''),q)||(c.phone||'').includes(q)).slice(0,3).forEach(c=>res.push({type:'Contact',label:((c.first_name||'')+' '+(c.last_name||'')).trim(),sub:c.company||'',id:c.company_id,page:'companies'}));
+  db.deals.filter(d=>_matches(d.company,q)||_matches(d.model,q)).slice(0,3).forEach(d=>res.push({type:'Deal',label:d.company,sub:(d.model||'')+'  '+fmtUSD(d.amount),id:d.id,page:'pipeline'}));
   const el=$('search-drop');
   el.innerHTML=res.length?res.map(r=>`<div class="sr-item" onclick="srClick('${r.page}','${r.id}')"><span class="sr-type">${r.type}</span><div><div style="font-weight:600">${r.label}</div><div style="font-size:11px;color:var(--text-m)">${r.sub}</div></div></div>`).join(''):'<div style="padding:12px 14px;color:var(--text-l);font-size:13px">No results</div>';
   el.style.display='block';
@@ -1329,11 +1358,11 @@ function renderCoRows(){
     loadAll().then(()=>{_dataLoaded=true;renderCoRows();}).catch(e=>toast('Load error: '+e.message));
     return;
   }
-  const q=_coFilter.toLowerCase();
+  const q=_coFilter;
   let list=db.companies.filter(c=>{
     if(_coStatusF&&c.status!==_coStatusF)return false;
     if(_coCatF&&c.category!==_coCatF)return false;
-    if(q&&!(c.name||'').toLowerCase().includes(q)&&!(c.city||'').toLowerCase().includes(q)&&!(c.industry||'').toLowerCase().includes(q))return false;
+    if(q&&!_matches(c.name,q)&&!_matches(c.city,q)&&!_matches(c.industry,q))return false;
     return true;
   }).sort((a,b)=>(a[_coSort.col]||'').localeCompare(b[_coSort.col]||'')*_coSort.dir);
   const t=today();
@@ -2316,21 +2345,72 @@ function renderLeads(){
   $('tb-right').innerHTML='<button class="btn btn-primary" onclick="openLeadForm()"><i class="ti ti-plus"></i> Add Lead</button><button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
   const leads=db.leads.sort((a,b)=>(b.created||'').localeCompare(a.created||''));
   const sc={New:'b-red',Contacted:'b-amber',Qualified:'b-blue',Converted:'b-green',Trash:'b-gray'};
-  $('page').innerHTML=`<div class="page-pad"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">
-    ${leads.map(l=>`<div class="card" style="padding:14px;cursor:pointer" onclick="openLeadForm('${l.id}')">
-      <div style="display:flex;justify-content:space-between;margin-bottom:8px"><div style="font-weight:700">${l.company||l.contact||'Lead'}</div><span class="badge ${sc[l.status]||'b-gray'}">${l.status||'New'}</span></div>
+  $('page').innerHTML=`<div class="page-pad"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+    ${leads.map(l=>{
+      const existCo=db.companies.find(c=>(c.name||'').toLowerCase()===(l.company||'').toLowerCase());
+      const existDeals=existCo?db.deals.filter(d=>d.company_id===existCo.id):[];
+      const dupWarn=existCo?`<div style="font-size:11px;color:var(--amber);margin:4px 0"><i class="ti ti-alert-triangle"></i> Компания уже существует</div>`:'';
+      return `<div class="card" style="padding:14px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <div style="font-weight:700;cursor:pointer" onclick="openLeadForm('${l.id}')">${l.company||l.contact||'Lead'}</div>
+        <span class="badge ${sc[l.status]||'b-gray'}">${l.status||'New'}</span>
+      </div>
+      ${dupWarn}
       ${l.contact?`<div style="font-size:12px;color:var(--text-m)">${l.contact}</div>`:''}
       ${l.phone?`<div style="font-size:12px"><a href="tel:${l.phone}" style="color:var(--blue)">${l.phone}</a></div>`:''}
       ${l.product?`<div style="font-size:12px;color:var(--text-m)">${l.product}${l.budget?' · '+fmtUSD(l.budget):''}</div>`:''}
-      <div style="font-size:11px;color:var(--text-l);margin-top:6px">${l.source||''} · ${timeAgo(l.created)}</div>
-    </div>`).join('')||'<div class="empty" style="grid-column:1/-1"><i class="ti ti-user-plus"></i><div class="empty-title">No leads yet</div><button class="btn btn-primary" onclick="openLeadForm()"><i class="ti ti-plus"></i> Add Lead</button></div>'}
+      <div style="font-size:11px;color:var(--text-l);margin-top:4px">${l.source||''} · ${timeAgo(l.created)}</div>
+      ${l.status!=='Converted'&&l.status!=='Trash'?`<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        ${existCo
+          ? `<button class="btn btn-xs btn-success" onclick="convertLeadToDeal('${l.id}','${existCo.id}')"><i class="ti ti-arrows-right"></i> Convert → Deal</button>
+             <button class="btn btn-xs" onclick="go('companies');openCo('${existCo.id}')"><i class="ti ti-building"></i> Open Co</button>`
+          : `<button class="btn btn-xs btn-success" onclick="closeModal();convertLead('${l.id}')"><i class="ti ti-building-plus"></i> Convert → Company</button>`
+        }
+        <button class="btn btn-xs btn-ghost" onclick="openLeadForm('${l.id}')"><i class="ti ti-edit"></i></button>
+        <button class="btn btn-xs btn-ghost" style="color:var(--red)" onclick="trashLead('${l.id}')"><i class="ti ti-trash"></i></button>
+      </div>`:''}
+    </div>`;}).join('')||'<div class="empty" style="grid-column:1/-1"><i class="ti ti-user-plus"></i><div class="empty-title">No leads yet</div><button class="btn btn-primary" onclick="openLeadForm()"><i class="ti ti-plus"></i> Add Lead</button></div>'}
   </div></div>`;
+}
+function convertLeadToDeal(leadId,coId){
+  const l=db.leads.find(x=>x.id===leadId);
+  const co=db.companies.find(x=>x.id===coId);
+  if(!l||!co)return;
+  showModal('Convert Lead → Deal',`
+    <div style="margin-bottom:12px;padding:10px;background:var(--blue-lt);border-radius:var(--r);font-size:13px">
+      <strong>${co.name}</strong> — компания уже существует. Создаём сделку.
+    </div>
+    <div class="fg"><label class="fl">Model / Product</label><input class="fc" id="ctd-model" value="${l.product||''}" placeholder="ZX330, Atlas Copco…"></div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Amount ($)</label><input class="fc" id="ctd-amt" type="number" value="${l.budget||''}"></div>
+      <div class="fg"><label class="fl">Stage</label><select class="fc" id="ctd-stage">${['Lead','Qualified','Proposal','Negotiation','Won','Lost'].map(s=>`<option>${s}</option>`).join('')}</select></div>
+    </div>
+  `,async()=>{
+    const deal={id:uid(),company_id:coId,company:co.name,model:$('ctd-model').value,amount:+$('ctd-amt').value||0,currency:'USD',stage:$('ctd-stage').value,agent:l.agent||me?.name||'',probability:20,created:today()};
+    await persist('deals',deal);db.deals.push(deal);
+    const ld=db.leads.find(x=>x.id===leadId);
+    if(ld){ld.status='Converted';await persist('leads',{...ld});}
+    toast('✅ Deal created');updateBadges();renderLeads();
+  },'Create Deal');
+}
+function trashLead(id){
+  const l=db.leads.find(x=>x.id===id);if(!l)return;
+  if(!confirm('Move to Trash?'))return;
+  l.status='Trash';persist('leads',{...l}).then(()=>{updateBadges();renderLeads();});
 }
 
 function openLeadForm(id){
   const l=id?db.leads.find(x=>x.id===id):{};
+  const existCo0=l.company?db.companies.find(c=>(c.name||'').toLowerCase()===(l.company||'').toLowerCase()):null;
   showModal((id?'Edit':'Add')+' Lead',`
-    <div class="fr"><div class="fg"><label class="fl">Company</label><input class="fc" id="lf2-co" value="${l.company||''}" placeholder="Company name"></div><div class="fg"><label class="fl">Contact Name</label><input class="fc" id="lf2-ct" value="${l.contact||''}" placeholder="Person name"></div></div>
+    <div class="fr"><div class="fg" style="position:relative">
+      <label class="fl">Company</label>
+      <input class="fc" id="lf2-co" value="${l.company||''}" placeholder="Company name" autocomplete="off" list="lf2-co-dl" oninput="lf2CoCheck(this.value)">
+      <datalist id="lf2-co-dl">${db.companies.map(c=>`<option value="${c.name}"></option>`).join('')}</datalist>
+      <div id="lf2-co-warn" style="font-size:11px;margin-top:3px;display:${existCo0?'block':'none'};padding:5px 8px;background:#fef3c7;border-radius:4px;color:#92400e">
+        ⚠ Клиент уже в базе${existCo0?' — <strong>'+existCo0.name+'</strong>':''}. Конвертируй в сделку.
+      </div>
+    </div><div class="fg"><label class="fl">Contact Name</label><input class="fc" id="lf2-ct" value="${l.contact||''}" placeholder="Person name"></div></div>
     <div class="fr"><div class="fg"><label class="fl">Phone</label><input class="fc" id="lf2-ph" value="${l.phone||''}" placeholder="+374…"></div><div class="fg"><label class="fl">Email</label><input class="fc" id="lf2-em" value="${l.email||''}"></div></div>
     <div class="fr"><div class="fg"><label class="fl">Source</label><select class="fc" id="lf2-src">${['Website','Instagram','Facebook','WhatsApp','Referral','Cold call','Exhibition','Other'].map(s=>`<option ${l.source===s?'selected':''}>${s}</option>`).join('')}</select></div><div class="fg"><label class="fl">Status</label><select class="fc" id="lf2-st">${['New','Contacted','Qualified','Converted','Trash'].map(s=>`<option ${(l.status||'New')===s?'selected':''}>${s}</option>`).join('')}</select></div></div>
     <div class="fr"><div class="fg"><label class="fl">Product Interest</label><input class="fc" id="lf2-pr" value="${l.product||''}" placeholder="ZX330, Atlas Copco…"></div><div class="fg"><label class="fl">Budget ($)</label><input class="fc" id="lf2-bu" type="number" value="${l.budget||''}"></div></div>
@@ -2341,7 +2421,16 @@ function openLeadForm(id){
     await persist('leads',row);
     if(id)Object.assign(db.leads.find(x=>x.id===id)||{},row);else db.leads.push(row);
     toast('Lead saved');updateBadges();renderLeads();
-  },'Save',id?[{label:'Convert → Company',success:true,action:()=>{closeModal();convertLead(id);}}]:undefined);
+  },'Save',id?[
+    ...(()=>{const l2=db.leads.find(x=>x.id===id);const existCo=l2&&db.companies.find(c=>(c.name||'').toLowerCase()===(l2.company||'').toLowerCase());return existCo?[{label:'Convert → Deal',success:true,action:()=>{closeModal();convertLeadToDeal(id,existCo.id);}}]:[{label:'Convert → Company',success:true,action:()=>{closeModal();convertLead(id);}}];})()
+  ]:undefined);
+}
+
+function lf2CoCheck(val){
+  const warn=$('lf2-co-warn');if(!warn)return;
+  const co=val.trim().length>1?db.companies.find(c=>(c.name||'').toLowerCase()===val.trim().toLowerCase()):null;
+  if(co){warn.innerHTML=`⚠ Клиент уже в базе — <strong>${co.name}</strong>. Конвертируй в сделку.`;warn.style.display='block';}
+  else{warn.style.display='none';}
 }
 
 // ─── CONTRACTS ───────────────────────────────────────────────
