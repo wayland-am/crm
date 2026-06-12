@@ -1792,7 +1792,26 @@ function openCoForm(id){
     const row={...(co||{}),id:id||uid(),name,industry:$('cf-ind').value==='—'?'':$('cf-ind').value,status:$('cf-status').value,address:$('cf-addr').value,city:$('cf-city').value,country:$('cf-country').value,phone:$('cf-phone').value,website:$('cf-web').value,taxid:$('cf-tax').value,category:$('cf-cat').value,assigned_agent:$('cf-agent').value,budget:$('cf-budget').value,notes:$('cf-notes').value,created:co.created||today()};
     await persist('companies',row);
     if(id)Object.assign(db.companies.find(c=>c.id===id)||{},row);else{db.companies.push(row);}
-    toast('Company saved');updateBadges();
+    // Если категория только что присвоена или изменилась — создаём первую задачу
+    const prevCat=co.category||'';
+    const newCat=row.category||'';
+    if(newCat&&newCat!==prevCat&&CATS[newCat]){
+      const cat=CATS[newCat];
+      const agent=row.assigned_agent&&row.assigned_agent!=='— not assigned —'?row.assigned_agent:(me?.name||'');
+      // Первый контакт через 1 месяц для A, иначе по расписанию категории (но не более 12 мес)
+      const dueDate=new Date();
+      dueDate.setMonth(dueDate.getMonth()+Math.min(cat.mo,3));
+      const dow=dueDate.getDay();
+      if(dow===6)dueDate.setDate(dueDate.getDate()+2);
+      else if(dow===0)dueDate.setDate(dueDate.getDate()+1);
+      const due=[dueDate.getFullYear(),String(dueDate.getMonth()+1).padStart(2,'0'),String(dueDate.getDate()).padStart(2,'0')].join('-');
+      const tk={id:uid(),company_id:row.id,company:row.name,title:'Contact with '+row.name+' (Cat. '+newCat+')',type:'Call',priority:newCat==='A'?'high':'medium',agent,due,done:false,auto_scheduled:true,created:today()};
+      db.tasks.push(tk);await persist('tasks',tk);
+      toast('Company saved · 📅 Task created for '+fmtD(due));
+    }else{
+      toast('Company saved');
+    }
+    updateBadges();
     if(id)openCo(id);else renderCompanies();
   },'Save',id?[{label:'Delete',danger:true,action:async()=>{if(!confirm('Delete '+co.name+'? This will not delete their deals, contacts or activities.'))return;await del('companies',id);db.companies=db.companies.filter(c=>c.id!==id);closeModal();coPage=null;renderCompanies();toast('Company deleted');}}]:undefined);
 }
