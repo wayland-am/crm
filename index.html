@@ -1838,6 +1838,12 @@ function openCoForm(id){
     // Если категория только что присвоена или изменилась — создаём первую задачу
     const prevCat=_prevCat; // захвачено до Object.assign
     const newCat=row.category||'';
+    if(newCat!==prevCat){
+      // Удаляем все старые авто-задачи этой компании
+      const oldAutoTasks=db.tasks.filter(t=>t.company_id===row.id&&t.auto_scheduled&&!t.done);
+      for(const t of oldAutoTasks){await del('tasks',t.id);}
+      db.tasks=db.tasks.filter(t=>!(t.company_id===row.id&&t.auto_scheduled&&!t.done));
+    }
     if(newCat&&newCat!==prevCat&&CATS[newCat]){
       const cat=CATS[newCat];
       const agent=row.assigned_agent&&row.assigned_agent!=='— not assigned —'?row.assigned_agent:(me?.name||'');
