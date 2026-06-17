@@ -1628,7 +1628,8 @@ function renderCoCard(id){
   $('tb-right').innerHTML=`
     <button class="btn" onclick="coPage=null;renderCompanies()"><i class="ti ti-arrow-left"></i> Back</button>
     <button class="btn btn-primary" onclick="openLogAct('${id}')"><i class="ti ti-phone"></i> Log Activity</button>
-    <button class="btn" onclick="openContactForm('${id}')"><i class="ti ti-user-plus"></i> Contact</button>
+    <button class="btn" onclick="openContactForm('${id}')"><i class="ti ti-user-plus"></i> New Contact</button>
+    <button class="btn" onclick="linkExistingContact('${id}')"><i class="ti ti-link"></i> Link Existing</button>
     <button class="btn btn-primary" onclick="openDealForm('${id}')"><i class="ti ti-plus"></i> Deal</button>
     <button class="btn" onclick="openCoForm('${id}')" title="Edit company"><i class="ti ti-edit"></i> Edit</button>
     <button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
@@ -1781,6 +1782,7 @@ function renderCoCard(id){
     <div class="co-sec">
       <div class="co-sec-title">Contacts <span style="color:var(--text-l)">${contacts.length}</span>
         <button class="btn btn-xs btn-primary" onclick="openContactForm('${id}')"><i class="ti ti-plus"></i></button>
+        <button class="btn btn-xs" onclick="linkExistingContact('${id}')" title="Link existing contact"><i class="ti ti-link"></i></button>
       </div>
       ${contacts.map(c=>`<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr);align-items:flex-start">
         <div class="av av-sm ${avCls(c.first_name+c.last_name)}">${ini(c.first_name+' '+c.last_name)}</div>
@@ -1946,7 +1948,49 @@ function openCoForm(id){
   },'Save',id?[{label:'Delete',danger:true,action:async()=>{if(!confirm('Delete '+co.name+'? This will not delete their deals, contacts or activities.'))return;await del('companies',id);db.companies=db.companies.filter(c=>c.id!==id);closeModal();coPage=null;renderCompanies();toast('Company deleted');}}]:undefined);
 }
 
+function linkExistingContact(coId){
+  const co=db.companies.find(x=>x.id===coId);if(!co)return;
+  // Контакты без компании или с другой компанией
+  const unlinked=db.contacts.filter(c=>!c.company_id||c.company_id!==coId)
+    .sort((a,b)=>(a.first_name||'').localeCompare(b.first_name||''));
+  if(!unlinked.length){toast('No contacts available to link');return;}
+  showModal('Link Contact to '+co.name,`
+    <div class="fg" style="margin-bottom:8px">
+      <input class="fc" id="lec-q" placeholder="Search by name or phone…" oninput="lecFilter(this.value)" autocomplete="off">
+    </div>
+    <div id="lec-list" style="max-height:320px;overflow-y:auto">
+      ${unlinked.map(c=>`<div class="sr-item" style="cursor:pointer;padding:10px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px" onclick="doLinkContact('${c.id}','${coId}')">
+        <div class="av av-sm ${avCls(c.first_name+c.last_name)}">${ini(c.first_name+' '+c.last_name)}</div>
+        <div>
+          <div style="font-weight:600">${c.first_name} ${c.last_name}</div>
+          <div style="font-size:11px;color:var(--text-m)">${c.company||'No company'} ${c.phone?'· '+c.phone:''}</div>
+        </div>
+      </div>`).join('')}
+    </div>
+  `,null,null,[{label:'Close',action:closeModal}]);
+}
+
+function lecFilter(q){
+  const list=document.getElementById('lec-list');if(!list)return;
+  list.querySelectorAll('.sr-item').forEach(el=>{
+    el.style.display=q?(_matches(el.textContent,q)?'flex':'none'):'flex';
+  });
+}
+
+async function doLinkContact(cid,coId){
+  const c=db.contacts.find(x=>x.id===cid);
+  const co=db.companies.find(x=>x.id===coId);
+  if(!c||!co)return;
+  c.company_id=coId;c.company=co.name;
+  await persist('contacts',{...c});
+  Object.assign(db.contacts.find(x=>x.id===cid)||{},c);
+  closeModal();openCo(coId);
+  toast('✅ '+c.first_name+' linked to '+co.name);
+}
+
 function openContactForm(coId,cid){
+  // Если передан один аргумент и это id контакта (не компании) — открываем редактирование
+  if(coId&&!cid&&db.contacts.find(x=>x.id===coId)){cid=coId;coId=db.contacts.find(x=>x.id===cid)?.company_id||null;}
   const c=cid?db.contacts.find(x=>x.id===cid):{};
   const co=coId?db.companies.find(x=>x.id===coId):null;
   showModal((cid?'Edit':'Add')+' Contact',`
@@ -2127,7 +2171,7 @@ function renderCtRows(){
   const rows=document.getElementById('ct-rows');
   const cnt=document.getElementById('ct-count');
   if(cnt)cnt.textContent=q||ch?`${list.length} of ${db.contacts.length}`:`${db.contacts.length} contacts`;
-  if(rows)rows.innerHTML=list.map(x=>`<tr onclick="go('companies');openCo('${x.company_id}')">
+  if(rows)rows.innerHTML=list.map(x=>`<tr onclick="${x.company_id?`go('companies');openCo('${x.company_id}')`:`openContactForm('${x.id}')`}" style="cursor:pointer">>
         <td><div style="display:flex;align-items:center;gap:8px"><div class="av av-sm ${avCls(x.first_name+x.last_name)}">${ini(x.first_name+' '+x.last_name)}</div><strong>${x.first_name} ${x.last_name}</strong></div></td>
         <td style="color:var(--blue)">${x.company||'—'}</td>
         <td style="color:var(--text-m)">${x.position||'—'}</td>
