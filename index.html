@@ -1843,7 +1843,7 @@ function openCoForm(id){
       const agent=row.assigned_agent&&row.assigned_agent!=='— not assigned —'?row.assigned_agent:(me?.name||'');
       // Первый контакт через 1 месяц для A, иначе по расписанию категории (но не более 12 мес)
       const dueDate=new Date();
-      dueDate.setMonth(dueDate.getMonth()+Math.min(cat.mo,3));
+      dueDate.setMonth(dueDate.getMonth()+cat.mo);
       const dow=dueDate.getDay();
       if(dow===6)dueDate.setDate(dueDate.getDate()+2);
       else if(dow===0)dueDate.setDate(dueDate.getDate()+1);
