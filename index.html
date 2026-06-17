@@ -1891,15 +1891,16 @@ function openCoForm(id){
     </div>
     <div class="fr">
       <div class="fg"><label class="fl">Website</label><input class="fc" id="cf-web" value="${co.website||''}" placeholder="https://"></div>
-    <div class="fr">
       <div class="fg"><label class="fl">Tax ID (НЗОУ)</label><input class="fc" id="cf-tax" value="${co.taxid||''}" style="font-family:monospace"></div>
-      <div class="fg"><label class="fl">Category</label><select class="fc" id="cf-cat"><option value="">— none —</option>${Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${co.category===k?'selected':''}>Cat. ${k} — ${v.label}</option>`).join('')}</select></div>
     </div>
     <div class="fr">
+      <div class="fg"><label class="fl">Category</label><select class="fc" id="cf-cat"><option value="">— none —</option>${Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${co.category===k?'selected':''}>Cat. ${k} — ${v.label}</option>`).join('')}</select></div>
       <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="cf-agent"><option value="">— not assigned —</option>${AGENTS().map(a=>`<option ${co.assigned_agent===a?'selected':''}>${a}</option>`).join('')}</select></div>
+    </div>
+    <div class="fr">
       <div class="fg"><label class="fl">Annual Budget ($)</label><input class="fc" id="cf-budget" type="number" value="${co.budget||''}"></div>
     </div>
-    <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="cf-notes" rows="2">${co.notes||''}</textarea></div>
+    <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="cf-notes" rows="3">${co.notes||''}</textarea></div>
   `,async()=>{
     const name=($('cf-name').value||'').trim();if(!name){alert('Enter company name');return false;}
     const row={...(co||{}),id:id||uid(),name,industry:$('cf-ind').value==='—'?'':$('cf-ind').value,status:$('cf-status').value,address:$('cf-addr').value,city:$('cf-city').value,country:$('cf-country').value,phone:$('cf-phone').value,email:$('cf-email').value,website:$('cf-web').value,taxid:$('cf-tax').value,category:$('cf-cat').value,assigned_agent:$('cf-agent').value,budget:$('cf-budget').value,notes:$('cf-notes').value,created:co.created||today()};
@@ -2130,11 +2131,41 @@ function renderCtRows(){
 // ─── REPORTS ─────────────────────────────────────────────────
 function renderReports(){
   const isManager=me?.role==='manager';
-  $('tb-right').innerHTML=(isManager?`<select class="btn" id="rp-f" onchange="renderReports()"><option value="">👥 All managers</option>${AGENTS().map(a=>`<option>${a}</option>`).join('')}</select>`:'')+'<button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
-  const repF=$('rp-f')?.value||'';
+  const prevRepF=$('rp-f')?.value||'';
+  const prevPeriod=$('rp-period')?.value||'ytd';
+  $('tb-right').innerHTML=`
+    <select class="btn" id="rp-period" onchange="renderReports()">
+      <option value="month" ${prevPeriod==='month'?'selected':''}>This month</option>
+      <option value="quarter" ${prevPeriod==='quarter'?'selected':''}>This quarter</option>
+      <option value="ytd" ${prevPeriod==='ytd'?'selected':''}>This year</option>
+      <option value="year" ${prevPeriod==='year'?'selected':''}>Last 12 months</option>
+      <option value="all" ${prevPeriod==='all'?'selected':''}>All time</option>
+    </select>
+    ${isManager?`<select class="btn" id="rp-f" onchange="renderReports()"><option value="">👥 All managers</option>${AGENTS().map(a=>`<option ${prevRepF===a?'selected':''}>${a}</option>`).join('')}</select>`:''}
+    <button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
+
+  const repF=prevRepF;
+  const period=prevPeriod;
+
+  // Вычисляем границы периода
+  const now=new Date(),y=now.getFullYear(),m=now.getMonth();
+  let periodStart;
+  if(period==='month') periodStart=new Date(y,m,1);
+  else if(period==='quarter') periodStart=new Date(y,Math.floor(m/3)*3,1);
+  else if(period==='ytd') periodStart=new Date(y,0,1);
+  else if(period==='year') periodStart=new Date(Date.now()-365*864e5);
+  else periodStart=new Date(0);
+  const psStr=periodStart.toISOString().slice(0,10);
+
   const base=isManager?db.deals:myDeals();
-  const filtered=repF?base.filter(d=>d.agent===repF):base;
-  const won=filtered.filter(d=>d.stage==='Won'),lost=filtered.filter(d=>d.stage==='Lost'),disq=filtered.filter(d=>d.stage==='Disqualified'),active=filtered.filter(d=>isActive(d.stage));
+  // Фильтр по агенту
+  const byAgent=repF?base.filter(d=>d.agent===repF):base;
+  // Фильтр по периоду — по дате создания сделки
+  const filtered=period==='all'?byAgent:byAgent.filter(d=>(d.created||'')>=psStr);
+  // Активные сделки — без фильтра по периоду (они текущие)
+  const active=byAgent.filter(d=>isActive(d.stage));
+
+  const won=filtered.filter(d=>d.stage==='Won'),lost=filtered.filter(d=>d.stage==='Lost'),disq=filtered.filter(d=>d.stage==='Disqualified');
   const wonVal=won.reduce((s,d)=>s+d.amount,0),lostVal=lost.reduce((s,d)=>s+d.amount,0),pipeVal=active.reduce((s,d)=>s+d.amount,0);
   const wr=won.length+lost.length?Math.round(won.length/(won.length+lost.length)*100):0;
   const compMap={};lost.forEach(d=>{if(d.competitor){if(!compMap[d.competitor])compMap[d.competitor]={n:0,v:0};compMap[d.competitor].n++;compMap[d.competitor].v+=d.amount;}});
@@ -2142,11 +2173,11 @@ function renderReports(){
   const reasonMap={};lost.forEach(d=>{const r=d.lost_reason||'Unknown';reasonMap[r]=(reasonMap[r]||0)+1;});
   const reasonList=Object.entries(reasonMap).sort((a,b)=>b[1]-a[1]);
   const agents=AGENTS();
-  const cutStr=new Date(Date.now()-30*864e5).toISOString().slice(0,10);
+  const cutStr=psStr; // Team Activity тоже по выбранному периоду
   const recentActs=db.activities.filter(a=>isRealAct(a)&&(a.date||a.created||'')>=cutStr);
-  const stageCnts=['Lead','Qualified','Proposal','Negotiation','Won'].map(s=>filtered.filter(d=>d.stage===s).length);
+  const stageCnts=['Lead','Qualified','Proposal','Negotiation','Won'].map(s=>byAgent.filter(d=>d.stage===s).length);
   const maxStage=Math.max(...stageCnts,1);
-  const fmap={};active.forEach(d=>{if(!d.next_date)return;const m=d.next_date.slice(0,7);if(!fmap[m])fmap[m]={v:0,n:0};fmap[m].v+=d.amount*(d.probability||50)/100;fmap[m].n++;});
+  const fmap={};active.forEach(d=>{if(!d.next_date)return;const mo=d.next_date.slice(0,7);if(!fmap[mo])fmap[mo]={v:0,n:0};fmap[mo].v+=d.amount*(d.probability||50)/100;fmap[mo].n++;});
   const fmonths=Object.entries(fmap).sort((a,b)=>a[0].localeCompare(b[0])).slice(0,6);
   const maxF=Math.max(...fmonths.map(x=>x[1].v),1);
 
