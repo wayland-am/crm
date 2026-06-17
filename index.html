@@ -925,6 +925,46 @@ function renderDashboard(){
         <div style="font-size:11px;color:var(--text-l);white-space:nowrap">${timeAgo(a.created||a.date)}</div>
       </div>`).join('')||'<div class="empty" style="padding:20px"><div class="empty-sub">No activities yet</div></div>'}
     </div>
+
+    <!-- Hot / Waking / Dormant -->
+    <div class="card" style="margin-top:14px">
+      <div class="card-head"><div class="card-title">🔥 Companies by Activity</div></div>
+      ${(()=>{
+        const t2=today();
+        const groups={hot:[],waking:[],dormant:[]};
+        db.companies.forEach(co=>{
+          const acts=db.activities.filter(a=>a.company_id===co.id&&isRealAct(a));
+          const last=acts.sort((a,b)=>(b.created||b.date||'').localeCompare(a.created||a.date||''))[0];
+          const d=last?Math.floor((Date.now()-new Date(last.created||last.date))/86400000):999;
+          const pipe=db.deals.filter(x=>x.company_id===co.id&&isActive(x.stage)).reduce((s,x)=>s+x.amount,0);
+          const obj={co,d,pipe,lastType:last?.type||''};
+          if(d<=30)groups.hot.push(obj);
+          else if(d<=90)groups.waking.push(obj);
+          else groups.dormant.push(obj);
+        });
+        const row=(g,color,icon)=>g.sort((a,b)=>a.d-b.d).slice(0,5).map(({co,d,pipe})=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 16px;border-bottom:1px solid var(--bdr);cursor:pointer" onclick="go('companies');openCo('${co.id}')">
+            <div class="av av-sm ${avCls(co.name)}">${ini(co.name)}</div>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${co.name}</div>
+              <div style="font-size:11px;color:var(--text-l)">${co.industry||''} ${co.city?'· '+co.city:''}</div>
+            </div>
+            ${pipe?`<div style="font-size:12px;font-weight:700;color:var(--blue)">${fmtUSD(pipe)}</div>`:''}
+            <div style="font-size:11px;color:${color};white-space:nowrap">${d===999?'Never':d+'d ago'}</div>
+          </div>`).join('');
+        return `
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;border-bottom:1px solid var(--bdr)">
+            <div style="padding:8px 16px;font-size:11px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.4px">🔥 Hot (${groups.hot.length})</div>
+            <div style="padding:8px 16px;font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:.4px">😴 Waking (${groups.waking.length})</div>
+            <div style="padding:8px 16px;font-size:11px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.4px">💤 Dormant (${groups.dormant.length})</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr">
+            <div style="border-right:1px solid var(--bdr)">${row(groups.hot,'var(--green)')||'<div style="padding:16px;font-size:12px;color:var(--text-l);text-align:center">None</div>'}</div>
+            <div style="border-right:1px solid var(--bdr)">${row(groups.waking,'var(--amber)')||'<div style="padding:16px;font-size:12px;color:var(--text-l);text-align:center">None</div>'}</div>
+            <div>${row(groups.dormant,'var(--red)')||'<div style="padding:16px;font-size:12px;color:var(--text-l);text-align:center">None</div>'}</div>
+          </div>`;
+      })()}
+    </div>
   </div>
 </div>`;
   updateBadges();
@@ -1765,6 +1805,7 @@ document.head.insertAdjacentHTML('beforeend','<style>tr:hover .row-act{opacity:1
 // ─── FORMS: COMPANY, CONTACT, DEAL, FLEET ───────────────────
 function openCoForm(id){
   const co=id?db.companies.find(c=>c.id===id):{};
+  const _prevCat=co.category||''; // Сохраняем ДО редактирования
   showModal((id?'Edit':'Add')+' Company',`
     <div class="fg"><label class="fl">Company Name *</label><input class="fc" id="cf-name" value="${co.name||''}" placeholder="Company LLC"></div>
     <div class="fr">
@@ -1773,7 +1814,7 @@ function openCoForm(id){
     </div>
     <div class="fg"><label class="fl">Street Address</label><input class="fc" id="cf-addr" value="${co.address||''}"></div>
     <div class="fr">
-      <div class="fg"><label class="fl">City</label><input class="fc" id="cf-city" value="${co.city||''}" list="city-dl" autocomplete="off"><datalist id="city-dl">${[...new Set([...db.companies.filter(c=>c.city).map(c=>c.city),'Yerevan','Gyumri','Vanadzor','Kapan','Goris','Ijevan','Dilijan','Abovyan'])].map(c=>`<option>${c}</option>`).join('')}</datalist></div>
+      <div class="fg"><label class="fl">City</label><input class="fc" id="cf-city" value="${co.city||''}" list="city-dl" autocomplete="off"><datalist id="city-dl">${[...new Set([...db.companies.filter(c=>c.city).map(c=>c.city),'Yerevan','Gyumri','Vanadzor','Kapan','Goris','Ijevan','Dilijan','Abovyan','Hrazdan','Sevan','Gavar','Martuni','Charentsavan','Ashtarak','Armavir','Artashat','Yeghegnadzor','Jermuk','Spitak','Stepanavan','Tashir','Noyemberyan','Alaverdi','Berd','Chambarak','Martakert','Askeran','Hadrut','Lernadzor','Kajaran'])].map(c=>`<option>${c}</option>`).join('')}</datalist></div>
       <div class="fg"><label class="fl">Country</label><input class="fc" id="cf-country" value="${co.country||'Armenia'}"></div>
     </div>
     <div class="fr">
@@ -1795,7 +1836,7 @@ function openCoForm(id){
     await persist('companies',row);
     if(id)Object.assign(db.companies.find(c=>c.id===id)||{},row);else{db.companies.push(row);}
     // Если категория только что присвоена или изменилась — создаём первую задачу
-    const prevCat=co.category||'';
+    const prevCat=_prevCat; // захвачено до Object.assign
     const newCat=row.category||'';
     if(newCat&&newCat!==prevCat&&CATS[newCat]){
       const cat=CATS[newCat];
@@ -2715,7 +2756,7 @@ function openCoForm_prefill(pre,lead,leadId){
     </div>
     <div class="fr">
       <div class="fg"><label class="fl">Phone</label><input class="fc" id="cf-phone" value="${pre.phone||''}" placeholder="+374…" oninput="onPhoneInput(this)" onblur="onPhoneBlur(this)"></div>
-      <div class="fg"><label class="fl">City</label><input class="fc" id="cf-city" value=""></div>
+      <div class="fg"><label class="fl">City</label><input class="fc" id="cf-city" value="" list="city-dl2" autocomplete="off"><datalist id="city-dl2">${[...new Set([...db.companies.filter(x=>x.city).map(x=>x.city),'Yerevan','Gyumri','Vanadzor','Kapan','Goris','Ijevan','Dilijan','Abovyan','Hrazdan','Sevan','Gavar','Martuni','Charentsavan','Ashtarak','Armavir','Artashat','Yeghegnadzor','Jermuk','Spitak','Stepanavan','Tashir','Noyemberyan','Alaverdi','Berd','Chambarak','Martakert','Askeran','Hadrut','Lernadzor','Kajaran'])].map(x=>`<option>${x}</option>`).join('')}</datalist></div>
     </div>
     <div class="fg"><label class="fl">Sales Rep</label><select class="fc" id="cf-agent">${AGENTS().map(a=>`<option ${(pre.assigned_agent||me?.name)===a?'selected':''}>${a}</option>`).join('')}</select></div>
     <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="cf-notes" rows="2">${pre.notes||''}</textarea></div>
@@ -2986,6 +3027,8 @@ function renderSettings(){
       <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn btn-primary" onclick="refreshData()"><i class="ti ti-refresh"></i> Refresh Data</button>
         <button class="btn" onclick="exportData()"><i class="ti ti-download"></i> Export to JSON</button>
+        <button class="btn" onclick="rebuildSched()" title="Rebuild auto-scheduled tasks for all categorized companies"><i class="ti ti-refresh"></i> Rebuild Schedule</button>
+        <button class="btn" style="color:var(--red)" onclick="clearAutoTasks()" title="Delete all auto-scheduled tasks"><i class="ti ti-trash"></i> Clear Auto Tasks</button>
         <div style="font-size:12px;color:var(--text-m);margin-left:auto;align-self:center">
           ${db.companies.length} companies · ${db.deals.length} deals · ${db.activities.filter(isRealAct).length} activities
         </div>
