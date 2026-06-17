@@ -2174,7 +2174,7 @@ function renderReports(){
   const reasonList=Object.entries(reasonMap).sort((a,b)=>b[1]-a[1]);
   const agents=AGENTS();
   const cutStr=psStr; // Team Activity тоже по выбранному периоду
-  const recentActs=db.activities.filter(a=>isRealAct(a)&&(a.date||a.created||'')>=cutStr);
+  const recentActs=db.activities.filter(a=>isRealAct(a)&&(a.date||a.created||'')>=cutStr&&(isManager||a.agent===me?.name));
   const stageCnts=['Lead','Qualified','Proposal','Negotiation','Won'].map(s=>byAgent.filter(d=>d.stage===s).length);
   const maxStage=Math.max(...stageCnts,1);
   const fmap={};active.forEach(d=>{if(!d.next_date)return;const mo=d.next_date.slice(0,7);if(!fmap[mo])fmap[mo]={v:0,n:0};fmap[mo].v+=d.amount*(d.probability||50)/100;fmap[mo].n++;});
@@ -2195,10 +2195,10 @@ function renderReports(){
   </div>
 
   <!-- Manager performance -->
-  <div class="card" style="margin-bottom:16px">
+  ${isManager?`<div class="card" style="margin-bottom:16px">
     <div class="card-head"><div class="card-title">📊 Manager Performance</div></div>
     <table class="tbl"><thead><tr><th>Manager</th><th style="text-align:center">Total</th><th style="text-align:center">Active</th><th style="text-align:center">Won</th><th style="text-align:center">Lost</th><th style="text-align:center">Disq</th><th style="text-align:center">Win Rate</th><th style="text-align:right">Won $</th><th style="text-align:right">Pipeline</th><th style="text-align:right">Avg Size</th></tr></thead><tbody>
-    ${agents.map(name=>{
+    ${(repF?[repF]:agents).map(name=>{
       const ad=base.filter(d=>d.agent===name);
       const aw=ad.filter(d=>d.stage==='Won'),al=ad.filter(d=>d.stage==='Lost'),adq=ad.filter(d=>d.stage==='Disqualified'),aact=ad.filter(d=>isActive(d.stage));
       const awr=aw.length+al.length?Math.round(aw.length/(aw.length+al.length)*100):0;
@@ -2217,7 +2217,7 @@ function renderReports(){
       </tr>`;
     }).join('')}
     </tbody></table>
-  </div>
+  </div>`:''}
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
     <!-- Funnel -->
@@ -2245,9 +2245,9 @@ function renderReports(){
 
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <!-- Activity -->
-    <div class="card"><div class="card-head"><div class="card-title">📞 Team Activity — Last 30 Days</div></div>
+    <div class="card"><div class="card-head"><div class="card-title">📞 Team Activity — ${period==='month'?'This Month':period==='quarter'?'This Quarter':period==='ytd'?'This Year':period==='year'?'Last 12 Months':'All Time'}</div></div>
       <table class="tbl"><thead><tr><th>Manager</th><th style="text-align:center">Calls</th><th style="text-align:center">Meetings</th><th style="text-align:center">Proposals</th><th style="text-align:center">Total</th></tr></thead><tbody>
-        ${agents.map(name=>{const a=recentActs.filter(x=>x.agent===name);return`<tr><td style="font-weight:600">${name}</td><td style="text-align:center">${a.filter(x=>x.type==='Call').length||'—'}</td><td style="text-align:center">${a.filter(x=>x.type==='Meeting').length||'—'}</td><td style="text-align:center">${a.filter(x=>x.type==='Proposal').length||'—'}</td><td style="text-align:center;font-weight:700">${a.length||'—'}</td></tr>`;}).join('')}
+        ${(repF?[repF]:isManager?agents:[me?.name||'']).map(name=>{const a=recentActs.filter(x=>x.agent===name);return`<tr><td style="font-weight:600">${name}</td><td style="text-align:center">${a.filter(x=>x.type==='Call').length||'—'}</td><td style="text-align:center">${a.filter(x=>x.type==='Meeting').length||'—'}</td><td style="text-align:center">${a.filter(x=>x.type==='Proposal').length||'—'}</td><td style="text-align:center;font-weight:700">${a.length||'—'}</td></tr>`;}).join('')}
       </tbody></table>
     </div>
 
