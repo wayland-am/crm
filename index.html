@@ -1398,6 +1398,12 @@ async function moveToStage(deal,stage){
   // Записываем историю стадий
   if(!deal.stage_history)deal.stage_history=[];
   deal.stage_history.push({from:prev,to:stage,date:today(),by:me?.name||''});
+  // Записываем дату закрытия
+  if(['Won','Lost','Disqualified'].includes(stage)&&!['Won','Lost','Disqualified'].includes(prev)){
+    deal.closed_date=today();
+  } else if(isActive(stage)){
+    delete deal.closed_date; // переоткрыта
+  }
   if(stage==='Won'){
     if(!confirm('Move to WON?\n\n• Equipment will be added to '+deal.company+' fleet\n• Company status → Active'))return;
   }
@@ -2160,10 +2166,14 @@ function renderReports(){
   const base=isManager?db.deals:myDeals();
   // Фильтр по агенту
   const byAgent=repF?base.filter(d=>d.agent===repF):base;
-  // Фильтр по периоду — по дате создания сделки
-  const filtered=period==='all'?byAgent:byAgent.filter(d=>(d.created||'')>=psStr);
-  // Активные сделки — без фильтра по периоду (они текущие)
+  // Активные сделки — всегда без фильтра по периоду (текущие)
   const active=byAgent.filter(d=>isActive(d.stage));
+  // Won/Lost/Disq — фильтруем по дате закрытия (closed_date или updated или created)
+  const closedDeals=byAgent.filter(d=>!isActive(d.stage)&&d.stage!=='');
+  const filtered=period==='all'?closedDeals:closedDeals.filter(d=>{
+    const dt=d.closed_date||d.updated||d.created||'';
+    return dt>=psStr;
+  });
 
   const won=filtered.filter(d=>d.stage==='Won'),lost=filtered.filter(d=>d.stage==='Lost'),disq=filtered.filter(d=>d.stage==='Disqualified');
   const wonVal=won.reduce((s,d)=>s+d.amount,0),lostVal=lost.reduce((s,d)=>s+d.amount,0),pipeVal=active.reduce((s,d)=>s+d.amount,0);
