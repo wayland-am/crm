@@ -1095,14 +1095,44 @@ function openLogAct(coId){
       created:new Date().toISOString()};
     await persist('activities',act);
     db.activities.push(act);
-    // Create follow-up task if date set
+
+    // Сдвигаем авто-задачу если у компании есть категория
+    const coObj2=db.companies.find(c=>c.id===coid);
+    const catInfo=coObj2?.category?CATS[coObj2.category]:null;
+    if(catInfo){
+      const autoTask=db.tasks.filter(t=>t.company_id===coid&&t.auto_scheduled&&!t.done)
+        .sort((a,b)=>(a.due||'').localeCompare(b.due||''))[0]; // ближайшая
+      const actDate=new Date($('la-date')?.value||today());
+      const newDue=new Date(actDate);
+      newDue.setMonth(newDue.getMonth()+catInfo.mo);
+      const dow=newDue.getDay();
+      if(dow===6)newDue.setDate(newDue.getDate()+2);
+      else if(dow===0)newDue.setDate(newDue.getDate()+1);
+      const newDueStr=[newDue.getFullYear(),String(newDue.getMonth()+1).padStart(2,'0'),String(newDue.getDate()).padStart(2,'0')].join('-');
+      if(autoTask){
+        autoTask.due=newDueStr;
+        await persist('tasks',{...autoTask});
+      } else {
+        // Авто-задачи не было — создаём
+        const nt={id:uid(),company_id:coid,company:coObj2.name,
+          title:'Contact with '+coObj2.name+' (Cat. '+coObj2.category+')',
+          type:'Call',agent:act.agent,due:newDueStr,
+          priority:coObj2.category==='A'?'high':'medium',done:false,auto_scheduled:true,created:today()};
+        db.tasks.push(nt);await persist('tasks',nt);
+      }
+    }
+
+    // Create follow-up task if date set manually
     if(ndate){
       const taskTitle=next||('Follow up · '+(coObj?.name||''));
       const tk={id:uid(),company_id:coid,company:coObj?.name||'',title:taskTitle,type:'Call',
         agent:act.agent,due:ndate,priority:'medium',done:false,auto_scheduled:false,created:today()};
       db.tasks.push(tk);await persist('tasks',tk);
       toast('✅ Activity logged + task for '+fmtDS(ndate));
-    }else toast('✅ Activity logged');
+    }else{
+      const msg=catInfo?(' · 📅 auto rescheduled'):'';
+      toast('✅ Activity logged'+msg);
+    }
     updateBadges();
     if(coPage===coid)openCo(coid);
     else if(page==='dashboard')renderDashboard();
@@ -1161,6 +1191,19 @@ async function bulkDoneTasks(ids){
 function openTaskM(id){
   const tk=db.tasks.find(t=>t.id===id);if(!tk)return;
   const co=db.companies.find(c=>c.id===tk.company_id);
+  const catInfo=co?.category?CATS[co.category]:null;
+
+  // Для авто-задач: следующая дата = today + интервал категории
+  let autoNextDate='';
+  if(tk.auto_scheduled&&catInfo){
+    const d=new Date();
+    d.setMonth(d.getMonth()+catInfo.mo);
+    const dow=d.getDay();
+    if(dow===6)d.setDate(d.getDate()+2);
+    else if(dow===0)d.setDate(d.getDate()+1);
+    autoNextDate=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+  }
+
   showModal('Complete Task',`
     <div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:${tk.done?'var(--green-lt)':'var(--blue-lt)'};border-radius:var(--r);margin-bottom:16px">
       <input type="checkbox" id="tm-done" ${tk.done?'checked':''} style="width:18px;height:18px;margin-top:2px">
@@ -1169,6 +1212,7 @@ function openTaskM(id){
         <div style="font-size:12px;color:var(--text-m);margin-top:2px">
           ${co?`<a href="#" onclick="closeModal();go('companies');openCo('${co.id}')" style="color:var(--blue)">${co.name}</a>`:''}
           ${tk.due?' · '+fmtD(tk.due):''}
+          ${tk.auto_scheduled?` · <span style="color:var(--text-l)">🔄 auto</span>`:''}
         </div>
       </div>
     </div>
@@ -1176,32 +1220,55 @@ function openTaskM(id){
       <label class="fl">📝 What happened? (outcome)</label>
       <textarea class="fc" id="tm-outcome" rows="3" placeholder="Spoke with director. They confirmed budget and want proposal by Friday…">${tk.outcome||''}</textarea>
     </div>
+    ${tk.auto_scheduled&&catInfo?`
     <div style="background:var(--sur2);border-radius:var(--r);padding:12px;border:1px solid var(--bdr)">
-      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-m);margin-bottom:10px">📅 Next Contact</div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-m);margin-bottom:6px">📅 Next Auto Contact</div>
+      <div style="font-size:13px;color:var(--text-m)">Cat. ${co.category} — ${catInfo.label} → следующий контакт будет создан на <strong>${fmtD(autoNextDate)}</strong></div>
+    </div>`:`
+    <div style="background:var(--sur2);border-radius:var(--r);padding:12px;border:1px solid var(--bdr)">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-m);margin-bottom:10px">📅 Next Contact (optional)</div>
       <div class="fr">
         <div class="fg" style="margin-bottom:0"><label class="fl">Action</label>
           <select class="fc" id="tm-ntype"><option value="">— no next step —</option>${ACT_TYPES.map(tp=>`<option ${tk.type===tp?'selected':''}>${tp}</option>`).join('')}</select>
         </div>
-        <div class="fg" style="margin-bottom:0"><label class="fl">Date</label><input class="fc" id="tm-ndate" type="date" value="${tk.due||''}"></div>
+        <div class="fg" style="margin-bottom:0"><label class="fl">Date</label><input class="fc" id="tm-ndate" type="date" value=""></div>
       </div>
-    </div>
+    </div>`}
   `,async()=>{
     const done=$('tm-done').checked;
     const outcome=($('tm-outcome').value||'').trim();
-    const ntype=$('tm-ntype').value;
-    const ndate=$('tm-ndate').value;
     tk.done=done;tk.outcome=outcome;
     await persist('tasks',{...tk});
     Object.assign(db.tasks.find(t=>t.id===id)||{},tk);
+
+    // Логируем активность если есть итог
     if(outcome){
-      const act={id:uid(),company_id:tk.company_id,company:tk.company||'',type:tk.type||'Call',note:outcome,next_step:ntype,next_date:ndate,date:today(),agent:tk.agent||me?.name||'',created:new Date().toISOString()};
+      const act={id:uid(),company_id:tk.company_id,company:tk.company||'',type:tk.type||'Call',note:outcome,date:today(),agent:tk.agent||me?.name||'',created:new Date().toISOString()};
       await persist('activities',act);db.activities.push(act);
     }
-    if(ntype&&ndate){
-      const nt={id:uid(),company_id:tk.company_id,company:tk.company||'',title:ntype+': '+tk.company,type:ntype,agent:tk.agent||me?.name||'',due:ndate,priority:tk.priority||'medium',done:false,auto_scheduled:false,created:today()};
+
+    // Авто-задача → создаём следующую по расписанию категории
+    if(done&&tk.auto_scheduled&&autoNextDate){
+      const nt={id:uid(),company_id:tk.company_id,company:tk.company||'',
+        title:'Contact with '+(co?.name||tk.company)+' (Cat. '+co?.category+')',
+        type:'Call',agent:tk.agent||me?.name||'',due:autoNextDate,
+        priority:co?.category==='A'?'high':'medium',done:false,auto_scheduled:true,created:today()};
       db.tasks.push(nt);await persist('tasks',nt);
-      toast(done?'✅ Done + next task created':'💾 Saved + next task created');
-    }else toast(done?'✅ Task completed':'💾 Saved');
+      toast('✅ Done · следующий контакт: '+fmtD(autoNextDate));
+    } else if(done){
+      // Ручная задача — проверяем Next Contact поля
+      const ntype=$('tm-ntype')?.value;
+      const ndate=$('tm-ndate')?.value;
+      if(ntype&&ndate){
+        const nt={id:uid(),company_id:tk.company_id,company:tk.company||'',
+          title:ntype+': '+tk.company,type:ntype,
+          agent:tk.agent||me?.name||'',due:ndate,priority:tk.priority||'medium',
+          done:false,auto_scheduled:false,created:today()};
+        db.tasks.push(nt);await persist('tasks',nt);
+        toast('✅ Done + следующая задача: '+fmtD(ndate));
+      } else toast('✅ Task completed');
+    } else toast('💾 Saved');
+
     updateBadges();
     if(coPage&&coPage===tk.company_id)openCo(tk.company_id);
     else if(page==='pipeline')renderPipeline();
@@ -1605,6 +1672,7 @@ function renderCoCard(id){
     <div class="co-sec">
       <div class="co-sec-title">Contact info</div>
       ${co.phone?`<div style="margin-bottom:6px;font-size:13px"><i class="ti ti-phone" style="color:var(--text-l);font-size:12px"></i> <a href="tel:${co.phone}" style="color:var(--blue)">${co.phone}</a></div>`:''}
+      ${co.email?`<div style="margin-bottom:6px;font-size:13px"><i class="ti ti-mail" style="color:var(--text-l);font-size:12px"></i> <a href="mailto:${co.email}" style="color:var(--blue)">${co.email}</a></div>`:''}
       ${co.website?`<div style="margin-bottom:6px;font-size:13px"><i class="ti ti-world" style="color:var(--text-l);font-size:12px"></i> <a href="${co.website}" target="_blank" style="color:var(--blue)">${co.website.replace(/^https?:\/\//,'')}</a></div>`:''}
       ${[co.address,co.city,co.country].filter(Boolean).join(', ')?`<div style="font-size:12px;color:var(--text-m)"><i class="ti ti-map-pin" style="font-size:12px"></i> ${[co.address,co.city,co.country].filter(Boolean).join(', ')}</div>`:''}
       ${co.taxid?`<div style="font-size:12px;color:var(--text-m);margin-top:4px"><i class="ti ti-id" style="font-size:12px"></i> НЗОУ: <strong>${co.taxid}</strong></div>`:''}
@@ -1819,8 +1887,10 @@ function openCoForm(id){
     </div>
     <div class="fr">
       <div class="fg"><label class="fl">Phone</label><input class="fc" id="cf-phone" value="${co.phone||''}" placeholder="+374…" oninput="onPhoneInput(this)" onblur="onPhoneBlur(this)"></div>
-      <div class="fg"><label class="fl">Website</label><input class="fc" id="cf-web" value="${co.website||''}" placeholder="https://"></div>
+      <div class="fg"><label class="fl">Email</label><input class="fc" id="cf-email" type="email" value="${co.email||''}" placeholder="info@company.am"></div>
     </div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Website</label><input class="fc" id="cf-web" value="${co.website||''}" placeholder="https://"></div>
     <div class="fr">
       <div class="fg"><label class="fl">Tax ID (НЗОУ)</label><input class="fc" id="cf-tax" value="${co.taxid||''}" style="font-family:monospace"></div>
       <div class="fg"><label class="fl">Category</label><select class="fc" id="cf-cat"><option value="">— none —</option>${Object.entries(CATS).map(([k,v])=>`<option value="${k}" ${co.category===k?'selected':''}>Cat. ${k} — ${v.label}</option>`).join('')}</select></div>
@@ -1832,7 +1902,7 @@ function openCoForm(id){
     <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="cf-notes" rows="2">${co.notes||''}</textarea></div>
   `,async()=>{
     const name=($('cf-name').value||'').trim();if(!name){alert('Enter company name');return false;}
-    const row={...(co||{}),id:id||uid(),name,industry:$('cf-ind').value==='—'?'':$('cf-ind').value,status:$('cf-status').value,address:$('cf-addr').value,city:$('cf-city').value,country:$('cf-country').value,phone:$('cf-phone').value,website:$('cf-web').value,taxid:$('cf-tax').value,category:$('cf-cat').value,assigned_agent:$('cf-agent').value,budget:$('cf-budget').value,notes:$('cf-notes').value,created:co.created||today()};
+    const row={...(co||{}),id:id||uid(),name,industry:$('cf-ind').value==='—'?'':$('cf-ind').value,status:$('cf-status').value,address:$('cf-addr').value,city:$('cf-city').value,country:$('cf-country').value,phone:$('cf-phone').value,email:$('cf-email').value,website:$('cf-web').value,taxid:$('cf-tax').value,category:$('cf-cat').value,assigned_agent:$('cf-agent').value,budget:$('cf-budget').value,notes:$('cf-notes').value,created:co.created||today()};
     await persist('companies',row);
     if(id)Object.assign(db.companies.find(c=>c.id===id)||{},row);else{db.companies.push(row);}
     // Если категория только что присвоена или изменилась — создаём первую задачу
