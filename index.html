@@ -355,6 +355,7 @@ textarea.fc{resize:vertical;min-height:80px;line-height:1.5}
     <div class="nav-section">
       <div class="nav-label">Clients</div>
       <button class="nav-btn" data-page="companies" onclick="go('companies',this)"><i class="ti ti-building"></i>Companies<span class="nav-badge" id="nb-co">0</span></button>
+      <button class="nav-btn" data-page="groups" onclick="go('groups',this)"><i class="ti ti-building-community"></i>Groups<span class="nav-badge" id="nb-gr"></span></button>
       <button class="nav-btn" data-page="contacts" onclick="go('contacts',this)"><i class="ti ti-users"></i>Contacts<span class="nav-badge" id="nb-ct">0</span></button>
       <button class="nav-btn" data-page="leads" onclick="go('leads',this)"><i class="ti ti-user-plus"></i>Leads<span class="nav-badge red" id="nb-ld" style="display:none">0</span></button>
       <button class="nav-btn" data-page="map" onclick="go('map',this)"><i class="ti ti-map-pin"></i>Client Map</button>
@@ -479,7 +480,7 @@ const LOST_REASONS=['Price too high','Chose competitor','Budget cut','Project ca
 
 // ─── STATE ─────────────────────────────────────────────────
 let API=localStorage.getItem('wcrm_url')||DEFAULT_API;
-let db={companies:[],contacts:[],deals:[],tasks:[],activities:[],fleet:[],locations:[],photos:[],contracts:[],leads:[],users:[],agents:[],automations:[]};
+let db={companies:[],contacts:[],deals:[],tasks:[],activities:[],fleet:[],locations:[],photos:[],contracts:[],leads:[],users:[],agents:[],automations:[],groups:[]};
 let me=null; // current user
 let page='dashboard';
 let coPage=null; // open company id
@@ -722,7 +723,7 @@ function go(p,el){
   (el||document.querySelector(`.nav-btn[data-page="${p}"]`))?.classList.add('on');
   $('tb-right').innerHTML='<button class="tb-icon-btn" onclick="toggleNotif()" id="notif-btn"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
   $('nav').classList.remove('open');
-  const pages={dashboard:renderDashboard,pipeline:renderPipeline,companies:renderCompanies,contacts:renderContacts,leads:renderLeads,map:renderMap,fleet:renderFleet,reports:renderReports,calendar:renderCalendar,tasks:renderTasks,contracts:renderContracts,parts:renderParts,settings:renderSettings};
+  const pages={dashboard:renderDashboard,pipeline:renderPipeline,companies:renderCompanies,contacts:renderContacts,leads:renderLeads,map:renderMap,fleet:renderFleet,reports:renderReports,calendar:renderCalendar,tasks:renderTasks,groups:renderGroups,contracts:renderContracts,parts:renderParts,settings:renderSettings};
   if(pages[p])pages[p]();
   updateBadges();
 }
@@ -1658,6 +1659,7 @@ function renderCoCard(id){
         <div style="flex:1;min-width:0">
           <div style="font-size:17px;font-weight:800;line-height:1.2;cursor:pointer" onclick="openCoForm('${id}')" title="Edit company">${co.name} <i class="ti ti-pencil" style="font-size:12px;color:var(--text-l);vertical-align:middle"></i></div>
           <div style="font-size:12px;color:var(--text-m);margin-top:3px">${co.industry||''} ${co.city?'· '+co.city:''}</div>
+          ${co.group_id&&db.groups.find(x=>x.id===co.group_id)?`<div style="font-size:11px;margin-top:1px;color:var(--blue)"><i class="ti ti-building-community"></i> ${db.groups.find(x=>x.id===co.group_id).name}</div>`:''}
         </div>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
@@ -1912,10 +1914,16 @@ function openCoForm(id){
     <div class="fr">
       <div class="fg"><label class="fl">Annual Budget ($)</label><input class="fc" id="cf-budget" type="number" value="${co.budget||''}"></div>
     </div>
+    <div class="fg"><label class="fl">Group / Holding</label>
+      <select class="fc" id="cf-group">
+        <option value="">— none —</option>
+        ${db.groups.map(g=>`<option value="${g.id}" ${co.group_id===g.id?'selected':''}>${g.name} (${g.type||''})</option>`).join('')}
+      </select>
+    </div>
     <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="cf-notes" rows="3">${co.notes||''}</textarea></div>
   `,async()=>{
     const name=($('cf-name').value||'').trim();if(!name){alert('Enter company name');return false;}
-    const row={...(co||{}),id:id||uid(),name,industry:$('cf-ind').value==='—'?'':$('cf-ind').value,status:$('cf-status').value,address:$('cf-addr').value,city:$('cf-city').value,country:$('cf-country').value,phone:$('cf-phone').value,email:$('cf-email').value,website:$('cf-web').value,taxid:$('cf-tax').value,category:$('cf-cat').value,assigned_agent:$('cf-agent').value,budget:$('cf-budget').value,notes:$('cf-notes').value,created:co.created||today()};
+    const row={...(co||{}),id:id||uid(),name,industry:$('cf-ind').value==='—'?'':$('cf-ind').value,status:$('cf-status').value,address:$('cf-addr').value,city:$('cf-city').value,country:$('cf-country').value,phone:$('cf-phone').value,email:$('cf-email').value,website:$('cf-web').value,taxid:$('cf-tax').value,category:$('cf-cat').value,assigned_agent:$('cf-agent').value,budget:$('cf-budget').value,notes:$('cf-notes').value,group_id:$('cf-group')?.value||co.group_id||'',created:co.created||today()};
     await persist('companies',row);
     if(id)Object.assign(db.companies.find(c=>c.id===id)||{},row);else{db.companies.push(row);}
     // Если категория только что присвоена или изменилась — создаём первую задачу
@@ -1978,14 +1986,25 @@ function lecFilter(q){
 }
 
 async function doLinkContact(cid,coId){
-  const c=db.contacts.find(x=>x.id===cid);
+  const ct=db.contacts.find(x=>x.id===cid);
   const co=db.companies.find(x=>x.id===coId);
-  if(!c||!co)return;
-  c.company_id=coId;c.company=co.name;
-  await persist('contacts',{...c});
-  Object.assign(db.contacts.find(x=>x.id===cid)||{},c);
+  if(!ct||!co)return;
+  // Инициализируем массив company_ids
+  if(!Array.isArray(ct.company_ids))ct.company_ids=ct.company_id?[ct.company_id]:[];
+  if(ct.company_ids.includes(coId)){toast('Already linked');closeModal();return;}
+  // Если уже привязан к другим компаниям — предупреждаем
+  if(ct.company_ids.length>0){
+    const existing=ct.company_ids.map(id=>db.companies.find(x=>x.id===id)?.name||id).join(', ');
+    if(!confirm(ct.first_name+' уже привязан к: '+existing+'\n\nДобавить ещё и '+co.name+'?'))return;
+  }
+  ct.company_ids.push(coId);
+  // Основная компания — первая в списке
+  ct.company_id=ct.company_ids[0];
+  ct.company=db.companies.find(x=>x.id===ct.company_ids[0])?.name||'';
+  await persist('contacts',{...ct});
+  Object.assign(db.contacts.find(x=>x.id===cid)||{},ct);
   closeModal();openCo(coId);
-  toast('✅ '+c.first_name+' linked to '+co.name);
+  toast('✅ '+ct.first_name+' linked to '+co.name);
 }
 
 function openContactForm(coId,cid){
@@ -2004,7 +2023,9 @@ function openContactForm(coId,cid){
     const fn=($('ctf-fn').value||'').trim();if(!fn){alert('Enter first name');return false;}
     const coidFinal=coId||$('ctf-coid')?.value;
     const coObj=db.companies.find(x=>x.id===coidFinal);
-    const row={...(c||{}),id:cid||uid(),company_id:coidFinal,company:coObj?.name||co?.name||'',first_name:fn,last_name:$('ctf-ln').value,position:$('ctf-pos').value,phone:$('ctf-phone').value,email:$('ctf-email').value,channel:$('ctf-ch').value,language:$('ctf-lang').value,notes:$('ctf-notes').value,created:c.created||today()};
+    const existIds=Array.isArray(c.company_ids)&&c.company_ids.length?c.company_ids:c.company_id?[c.company_id]:[];
+    const newIds=coidFinal&&!existIds.includes(coidFinal)?[...existIds,coidFinal]:existIds.length?existIds:(coidFinal?[coidFinal]:[]);
+    const row={...(c||{}),id:cid||uid(),company_ids:newIds,company_id:newIds[0]||'',company:db.companies.find(x=>x.id===newIds[0])?.name||coObj?.name||co?.name||'',first_name:fn,last_name:$('ctf-ln').value,position:$('ctf-pos').value,phone:$('ctf-phone').value,email:$('ctf-email').value,channel:$('ctf-ch').value,language:$('ctf-lang').value,notes:$('ctf-notes').value,created:c.created||today()};
     await persist('contacts',row);
     if(cid)Object.assign(db.contacts.find(x=>x.id===cid)||{},row);else db.contacts.push(row);
     toast('Contact saved');updateBadges();const _coidF=coId||$('ctf-coid')?.value;if(coPage&&coPage===_coidF)openCo(_coidF);else if(coPage)openCo(coPage);else renderContacts();
@@ -2173,7 +2194,11 @@ function renderCtRows(){
   if(cnt)cnt.textContent=q||ch?`${list.length} of ${db.contacts.length}`:`${db.contacts.length} contacts`;
   if(rows)rows.innerHTML=list.map(x=>`<tr onclick="${x.company_id?`go('companies');openCo('${x.company_id}')`:`openContactForm('${x.id}')`}" style="cursor:pointer">>
         <td><div style="display:flex;align-items:center;gap:8px"><div class="av av-sm ${avCls(x.first_name+x.last_name)}">${ini(x.first_name+' '+x.last_name)}</div><strong>${x.first_name} ${x.last_name}</strong></div></td>
-        <td style="color:var(--blue)">${x.company||'—'}</td>
+        <td style="color:var(--blue)">${(()=>{
+          const ids=Array.isArray(x.company_ids)&&x.company_ids.length?x.company_ids:[x.company_id].filter(Boolean);
+          if(!ids.length)return '—';
+          return ids.map(id=>{const co=db.companies.find(c=>c.id===id);return co?`<span style="cursor:pointer;color:var(--blue)" onclick="event.stopPropagation();go('companies');openCo('${id}')">${co.name}</span>`:'?';}).join(' <span style="color:var(--text-l)">·</span> ');
+        })()}</td>
         <td style="color:var(--text-m)">${x.position||'—'}</td>
         <td>${x.phone?`<a href="tel:${x.phone}" style="color:var(--blue)" onclick="event.stopPropagation()">${x.phone}</a>`:'—'}</td>
         <td style="font-size:12px;color:var(--text-m)">${x.email||'—'}</td>
@@ -3098,6 +3123,71 @@ function lf2CoCheck(val){
   if(co){warn.innerHTML=`⚠ Клиент уже в базе — <strong>${co.name}</strong>. Конвертируй в сделку.`;warn.style.display='block';}
   else{warn.style.display='none';}
 }
+
+// ─── GROUPS ──────────────────────────────────────────────────
+// ─── GROUPS ──────────────────────────────────────────────────
+const GROUP_TYPES=['Holding','Network','Family','JV','Other'];
+function renderGroups(){
+  $('tb-right').innerHTML='<button class="btn btn-primary" onclick="openGroupForm()"><i class="ti ti-plus"></i> New Group</button><button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
+  const list=[...db.groups].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  if(!list.length){$('page').innerHTML='<div class="page-pad"><div class="empty"><i class="ti ti-building-community"></i><div class="empty-title">No groups yet</div><button class="btn btn-primary" onclick="openGroupForm()">New Group</button></div></div>';return;}
+  $('page').innerHTML='<div class="page-pad">'+list.map(renderGroupCard).join('')+'</div>';
+}
+function renderGroupCard(g){
+  var cos=db.companies.filter(function(co){return co.group_id===g.id;});
+  var pipeline=cos.reduce(function(s,co){return s+db.deals.filter(function(d){return d.company_id===co.id&&isActive(d.stage);}).reduce(function(a,d){return a+d.amount;},0);},0);
+  var won=cos.reduce(function(s,co){return s+db.deals.filter(function(d){return d.company_id===co.id&&d.stage==='Won';}).reduce(function(a,d){return a+d.amount;},0);},0);
+  var coTagsArr=cos.map(function(co){
+    var el=document.createElement('span');
+    el.className='badge b-gray';
+    el.style.cssText='cursor:pointer;font-size:12px;margin:2px';
+    el.textContent=co.name;
+    el.setAttribute('onclick',"go('companies');openCo('"+co.id+"')");
+    return el.outerHTML;
+  });
+  var coTags=coTagsArr.join('');
+  var editBtn='<button class="btn btn-sm" data-gid="'+g.id+'" onclick="openGroupForm(this.dataset.gid)"><i class="ti ti-edit"></i></button>';
+  var pipeHtml=pipeline?'<div style="text-align:right"><div style="font-size:11px;color:var(--text-l)">Pipeline</div><div style="font-weight:700;color:var(--blue)">'+fmtUSD(pipeline)+'</div></div>':'';
+  var wonHtml=won?'<div style="text-align:right"><div style="font-size:11px;color:var(--text-l)">Won</div><div style="font-weight:700;color:var(--green)">'+fmtUSD(won)+'</div></div>':'';
+  return '<div class="card" style="margin-bottom:12px">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--bdr)">'
+    +'<div style="display:flex;align-items:center;gap:12px">'
+    +'<div class="av '+avCls(g.name)+'" style="width:40px;height:40px;font-size:16px">'+ini(g.name)+'</div>'
+    +'<div><div style="font-weight:800;font-size:16px">'+g.name+'</div>'
+    +'<div style="font-size:12px;color:var(--text-m)">'+(g.type||'')+' &middot; '+cos.length+' companies</div></div>'
+    +'</div><div style="display:flex;align-items:center;gap:16px">'+pipeHtml+wonHtml+editBtn+'</div></div>'
+    +'<div style="padding:10px 16px;display:flex;flex-wrap:wrap;gap:6px">'+(coTags||'<span style="font-size:12px;color:var(--text-l)">No companies assigned yet</span>')+'</div>'
+    +(g.notes?'<div style="padding:6px 16px 12px;font-size:12px;color:var(--text-m)">'+g.notes+'</div>':'')
+    +'</div>';
+}
+function openGroupForm(id){
+  const g=id?db.groups.find(x=>x.id===id):{};
+  const allCos=[...db.companies].sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  const memberIds=db.companies.filter(co=>co.group_id===id).map(co=>co.id);
+  const coChecks=allCos.map(co=>'<label style="display:flex;align-items:center;gap:8px;padding:5px 8px;cursor:pointer"><input type="checkbox" value="'+co.id+'" '+(memberIds.includes(co.id)?'checked':'')+' style="width:15px;height:15px"><span style="font-size:13px">'+co.name+'</span><span style="font-size:11px;color:var(--text-l)">'+(co.industry||'')+'</span></label>').join('');
+  showModal((id?'Edit':'New')+' Group',`
+    <div class="fg"><label class="fl">Group Name *</label><input class="fc" id="gf-name" value="${g.name||''}" placeholder="Vardanyan Holdings…"></div>
+    <div class="fg"><label class="fl">Type</label><select class="fc" id="gf-type">${GROUP_TYPES.map(t=>`<option ${(g.type||GROUP_TYPES[0])===t?'selected':''}>${t}</option>`).join('')}</select></div>
+    <div class="fg"><label class="fl">Companies</label><div style="max-height:200px;overflow-y:auto;border:1px solid var(--bdr);border-radius:var(--r);padding:6px">${coChecks}</div></div>
+    <div class="fg"><label class="fl">Notes</label><textarea class="fc" id="gf-notes" rows="2">${g.notes||''}</textarea></div>
+  `,async()=>{
+    const name=($('gf-name').value||'').trim();if(!name){alert('Enter group name');return false;}
+    const row={...(g||{}),id:id||uid(),name,type:$('gf-type').value,notes:$('gf-notes').value,created:g.created||today()};
+    await persist('groups',row);
+    if(id)Object.assign(db.groups.find(x=>x.id===id)||{},row);else db.groups.push(row);
+    const checked=[...document.querySelectorAll('#m-body input[type=checkbox]:checked')].map(cb=>cb.value);
+    const unchecked=[...document.querySelectorAll('#m-body input[type=checkbox]:not(:checked)')].map(cb=>cb.value);
+    for(const cid of checked){const co=db.companies.find(x=>x.id===cid);if(co&&co.group_id!==row.id){co.group_id=row.id;await persist('companies',{...co});}}
+    for(const cid of unchecked){const co=db.companies.find(x=>x.id===cid);if(co&&co.group_id===row.id){co.group_id='';await persist('companies',{...co});}}
+    toast('Group saved');renderGroups();
+  },'Save',id?[{label:'Delete',danger:true,action:async()=>{
+    if(!confirm('Delete group?'))return;
+    for(const co of db.companies.filter(x=>x.group_id===id)){co.group_id='';await persist('companies',{...co});}
+    await del('groups',id);db.groups=db.groups.filter(x=>x.id!==id);
+    closeModal();renderGroups();toast('Group deleted');
+  }}]:undefined);
+}
+
 
 // ─── CONTRACTS ───────────────────────────────────────────────
 let _conSearch='',_conStatus='';
