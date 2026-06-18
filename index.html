@@ -1068,13 +1068,10 @@ function openLogAct(coId){
       <textarea class="fc" id="la-note" rows="4" placeholder="Spoke with director. Interested in ZX330-5A, budget ~$180k. Wants proposal by end of month. Decision expected in 2 weeks…"></textarea>
       <div id="ai-result" style="display:none;margin-top:6px;padding:10px;background:var(--purple-lt);border-radius:var(--r);font-size:12px"></div>
     </div>
-    <!-- Next step -->
+    <!-- Next step — just a note, не создаёт задачи -->
     <div style="background:var(--sur2);border-radius:var(--r-lg);padding:14px;border:1px solid var(--bdr)">
-      <div style="font-size:12px;font-weight:700;color:var(--text-m);margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px">📅 Next Contact</div>
-      <div class="fr">
-        <div class="fg" style="margin-bottom:0"><label class="fl">What to do</label><input class="fc" id="la-next" placeholder="Call back, Send proposal, Visit site…"></div>
-        <div class="fg" style="margin-bottom:0"><label class="fl">When</label><input class="fc" id="la-ndate" type="date"></div>
-      </div>
+      <div style="font-size:12px;font-weight:700;color:var(--text-m);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">📅 Planned Next Step <span style="font-weight:400;font-size:11px;color:var(--text-l)">— note only</span></div>
+      <input class="fc" id="la-next" placeholder="Call back in 2 weeks · Send proposal · Visit site…">
     </div>
   `,async()=>{
     const coid=coId||$('la-coid')?.value;
@@ -1083,57 +1080,22 @@ function openLogAct(coId){
     const type=$('la-type').value;
     const note=($('la-note').value||'').trim();
     const next=($('la-next').value||'').trim();
-    const ndate=$('la-ndate').value||'';
     const ci=$('la-contact')?.value||'';
     const cont=ci?db.contacts.find(c=>c.id===ci):null;
     const act={id:uid(),company_id:coid,company:coObj?.name||'',type,note,
       date:$('la-date').value||today(),
       direction:$('la-dir')?.value||'',
       contact_id:ci,contact_name:cont?(cont.first_name+' '+cont.last_name).trim():'',
-      next_step:next,next_date:ndate,
+      next_step:next,
       sentiment:$('la-sentiment')?.value||'',
       agent:$('la-agent').value||me?.name||'',
       created:new Date().toISOString()};
     await persist('activities',act);
     db.activities.push(act);
-
-    // Сдвигаем авто-задачу если у компании есть категория
-    const coObj2=db.companies.find(c=>c.id===coid);
-    const catInfo=coObj2?.category?CATS[coObj2.category]:null;
-    if(catInfo){
-      const autoTask=db.tasks.filter(t=>t.company_id===coid&&t.auto_scheduled&&!t.done)
-        .sort((a,b)=>(a.due||'').localeCompare(b.due||''))[0]; // ближайшая
-      const actDate=new Date($('la-date')?.value||today());
-      const newDue=new Date(actDate);
-      newDue.setMonth(newDue.getMonth()+catInfo.mo);
-      const dow=newDue.getDay();
-      if(dow===6)newDue.setDate(newDue.getDate()+2);
-      else if(dow===0)newDue.setDate(newDue.getDate()+1);
-      const newDueStr=[newDue.getFullYear(),String(newDue.getMonth()+1).padStart(2,'0'),String(newDue.getDate()).padStart(2,'0')].join('-');
-      if(autoTask){
-        autoTask.due=newDueStr;
-        await persist('tasks',{...autoTask});
-      } else {
-        // Авто-задачи не было — создаём
-        const nt={id:uid(),company_id:coid,company:coObj2.name,
-          title:'Contact with '+coObj2.name+' (Cat. '+coObj2.category+')',
-          type:'Call',agent:act.agent,due:newDueStr,
-          priority:coObj2.category==='A'?'high':'medium',done:false,auto_scheduled:true,created:today()};
-        db.tasks.push(nt);await persist('tasks',nt);
-      }
-    }
-
-    // Create follow-up task if date set manually
-    if(ndate){
-      const taskTitle=next||('Follow up · '+(coObj?.name||''));
-      const tk={id:uid(),company_id:coid,company:coObj?.name||'',title:taskTitle,type:'Call',
-        agent:act.agent,due:ndate,priority:'medium',done:false,auto_scheduled:false,created:today()};
-      db.tasks.push(tk);await persist('tasks',tk);
-      toast('✅ Activity logged + task for '+fmtDS(ndate));
-    }else{
-      const msg=catInfo?(' · 📅 auto rescheduled'):'';
-      toast('✅ Activity logged'+msg);
-    }
+    // Log Activity просто сохраняет историю.
+    // Next Contact — только заметка, видна в ленте активностей.
+    // Задачи живут отдельно и сдвигаются через Complete Task.
+    toast('✅ Activity logged');
     updateBadges();
     if(coPage===coid)openCo(coid);
     else if(page==='dashboard')renderDashboard();
@@ -1171,8 +1133,7 @@ async function aiParse(){
       (p.next_date?'<div>📅 Date: <strong>'+fmtD(p.next_date)+'</strong></div>':'')+
       (p.budget?'<div>💰 Budget: <strong>'+p.budget+'</strong></div>':'')+
       (p.key_facts?.length?'<ul style="margin:4px 0 0 14px">'+p.key_facts.map(f=>'<li>'+f+'</li>').join('')+'</ul>':'');
-    if(p.next_step&&$('la-next'))$('la-next').value=p.next_step;
-    if(p.next_date&&$('la-ndate'))$('la-ndate').value=p.next_date;
+    if(p.next_step&&$('la-next'))$('la-next').value=p.next_step+(p.next_date?' · '+fmtD(p.next_date):'');
   }catch(e){toast('AI failed — write API key in Settings first');}
   btn.innerHTML='<i class="ti ti-sparkles" style="color:var(--purple)"></i> AI Extract';btn.disabled=false;
 }
