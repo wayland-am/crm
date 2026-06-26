@@ -761,6 +761,27 @@ function _translit(s){
   return r;
 }
 function _latFromCyr(s){return _translit(s);}
+
+// ── Транслитерация имени с сохранением капитализации (для названий компаний) ──
+function transliterateName(s){
+  if(!s)return '';
+  // Если уже латиница без кириллицы/армянского — не трогаем
+  if(!/[а-яА-ЯёЁ\u0531-\u0586]/.test(s))return s;
+  const words=s.split(/(\s+)/); // сохраняем пробелы как отдельные токены
+  return words.map(word=>{
+    if(/^\s+$/.test(word))return word;
+    const isUpper=word===word.toUpperCase()&&word!==word.toLowerCase();
+    let translit=_translit(word); // lowercase транслит
+    if(isUpper){
+      translit=translit.toUpperCase();
+    } else {
+      // Капитализируем первую букву слова
+      translit=translit.charAt(0).toUpperCase()+translit.slice(1);
+    }
+    return translit;
+  }).join('');
+}
+
 function _cyrFromLat(s){
   if(!s)return '';
   s=s.toLowerCase();
@@ -772,6 +793,46 @@ function _matches(text,q){
   const ql=q.toLowerCase(), qtl=_translit(q), qCyr=_cyrFromLat(q);
   return t.includes(ql)||t.includes(qCyr)||tl.includes(qtl)||tl.includes(ql);
 }
+
+const ARM_CITIES=[
+  {en:'Yerevan',ru:'Ереван'},{en:'Gyumri',ru:'Гюмри'},{en:'Vanadzor',ru:'Ванадзор'},
+  {en:'Kapan',ru:'Капан'},{en:'Goris',ru:'Горис'},{en:'Ijevan',ru:'Иджеван'},
+  {en:'Dilijan',ru:'Дилижан'},{en:'Abovyan',ru:'Абовян'},{en:'Hrazdan',ru:'Раздан'},
+  {en:'Sevan',ru:'Севан'},{en:'Gavar',ru:'Гавар'},{en:'Martuni',ru:'Мартуни'},
+  {en:'Charentsavan',ru:'Чаренцаван'},{en:'Ashtarak',ru:'Аштарак'},{en:'Armavir',ru:'Армавир'},
+  {en:'Artashat',ru:'Арташат'},{en:'Yeghegnadzor',ru:'Ехегнадзор'},{en:'Jermuk',ru:'Джермук'},
+  {en:'Spitak',ru:'Спитак'},{en:'Stepanavan',ru:'Степанаван'},{en:'Tashir',ru:'Ташир'},
+  {en:'Noyemberyan',ru:'Ноемберян'},{en:'Alaverdi',ru:'Алаверди'},{en:'Berd',ru:'Берд'},
+  {en:'Chambarak',ru:'Чамбарак'},{en:'Martakert',ru:'Мартакерт'},{en:'Askeran',ru:'Аскеран'},
+  {en:'Hadrut',ru:'Гадрут'},{en:'Lernadzor',ru:'Лернадзор'},{en:'Kajaran',ru:'Каджаран'},
+  {en:'Sisian',ru:'Сисиан'},{en:'Meghri',ru:'Мегри'},{en:'Vayk',ru:'Вайк'},
+  {en:'Talin',ru:'Талин'},{en:'Masis',ru:'Масис'},
+  {en:'Etchmiadzin',ru:'Эчмиадзин'},{en:'Aparan',ru:'Апаран'},{en:'Dzoraghbyur',ru:'Дзорахбюр'}
+];
+function cityAutocomplete(val){
+  const drop=$('cf-city-drop');if(!drop)return;
+  const q=(val||'').trim();
+  if(!q){drop.style.display='none';return;}
+  // Считаем частоту использования каждого города в базе
+  const freq={};
+  db.companies.forEach(c=>{if(c.city)freq[c.city]=(freq[c.city]||0)+1;});
+  const known=ARM_CITIES.filter(c=>_matches(c.en,q)||_matches(c.ru,q));
+  const fromDb=[...new Set(db.companies.filter(c=>c.city).map(c=>c.city))].filter(c=>_matches(c,q)&&!known.some(k=>k.en===c));
+  let results=[...known.map(c=>c.en),...fromDb];
+  // Уникализируем и сортируем по частоте (убыв.), при равенстве — по алфавиту
+  results=[...new Set(results)].sort((a,b)=>{
+    const fa=freq[a]||0,fb=freq[b]||0;
+    if(fb!==fa)return fb-fa;
+    return a.localeCompare(b);
+  });
+  if(!results.length){drop.style.display='none';return;}
+  drop.innerHTML=results.slice(0,10).map(c=>{
+    const cnt=freq[c]||0;
+    return `<div style="padding:8px 12px;cursor:pointer;font-size:13px;display:flex;justify-content:space-between" onmousedown="$('cf-city').value='${c}';$('cf-city-drop').style.display='none'" onmouseover="this.style.background='var(--sur2)'" onmouseout="this.style.background=''"><span>${c}</span>${cnt?`<span style="color:var(--text-l);font-size:11px">${cnt}</span>`:''}</div>`;
+  }).join('');
+  drop.style.display='block';
+}
+
 
 function toggleClearBtn(input,clearId){
   const el=document.getElementById(clearId);
@@ -1863,7 +1924,7 @@ document.head.insertAdjacentHTML('beforeend','<style>tr:hover .row-act{opacity:1
 
 // ─── FORMS: COMPANY, CONTACT, DEAL, FLEET ───────────────────
 function openCoForm(id,prefillName){
-  const co=id?db.companies.find(c=>c.id===id):{name:prefillName||''};
+  const co=id?db.companies.find(c=>c.id===id):{name:transliterateName(prefillName||'')};
   const _prevCat=co.category||''; // Сохраняем ДО редактирования
   let _justSavedId=null; // для предложения добавить контакт после сохранения новой компании
   showModal((id?'Edit':'Add')+' Company',`
@@ -1874,7 +1935,11 @@ function openCoForm(id,prefillName){
     </div>
     <div class="fg"><label class="fl">Street Address</label><input class="fc" id="cf-addr" value="${co.address||''}"></div>
     <div class="fr">
-      <div class="fg"><label class="fl">City</label><input class="fc" id="cf-city" value="${co.city||''}" list="city-dl" autocomplete="off"><datalist id="city-dl">${[...new Set([...db.companies.filter(c=>c.city).map(c=>c.city),'Yerevan','Gyumri','Vanadzor','Kapan','Goris','Ijevan','Dilijan','Abovyan','Hrazdan','Sevan','Gavar','Martuni','Charentsavan','Ashtarak','Armavir','Artashat','Yeghegnadzor','Jermuk','Spitak','Stepanavan','Tashir','Noyemberyan','Alaverdi','Berd','Chambarak','Martakert','Askeran','Hadrut','Lernadzor','Kajaran'])].map(c=>`<option>${c}</option>`).join('')}</datalist></div>
+      <div class="fg" style="position:relative">
+        <label class="fl">City</label>
+        <input class="fc" id="cf-city" value="${co.city||''}" autocomplete="off" oninput="cityAutocomplete(this.value)" onfocus="cityAutocomplete(this.value)" onblur="setTimeout(()=>{const d=$('cf-city-drop');if(d)d.style.display='none';},150)">
+        <div id="cf-city-drop" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r);box-shadow:0 4px 12px rgba(0,0,0,.1);max-height:220px;overflow-y:auto;z-index:50;margin-top:2px"></div>
+      </div>
       <div class="fg"><label class="fl">Country</label><input class="fc" id="cf-country" value="${co.country||'Armenia'}"></div>
     </div>
     <div class="fr">
