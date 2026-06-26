@@ -56,7 +56,7 @@ button{cursor:pointer;font-family:var(--font)}
 /* Topbar */
 .tb-title{font-size:15px;font-weight:700;white-space:nowrap}
 .tb-search{flex:1;max-width:380px;position:relative}
-.tb-search input{width:100%;padding:7px 12px 7px 34px;border:1.5px solid var(--bdr);border-radius:var(--r);background:var(--bg);font-size:13px;color:var(--text);outline:none;transition:all .15s;font-family:var(--font)}
+.tb-search input{width:100%;padding:7px 30px 7px 34px;border:1.5px solid var(--bdr);border-radius:var(--r);background:var(--bg);font-size:13px;color:var(--text);outline:none;transition:all .15s;font-family:var(--font)}
 .tb-search input:focus{border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
 .tb-search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-l);font-size:15px;pointer-events:none}
 .tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
@@ -468,8 +468,8 @@ const ACT_STAGES=['Lead','Qualified','Proposal','Negotiation'];
 const SC={Lead:'#6b7280',Qualified:'#7c3aed',Proposal:'#d97706',Negotiation:'#2563eb',Won:'#16a34a',Lost:'#dc2626',Disqualified:'#94a3b8'};
 const SBG={Lead:'#f9fafb',Qualified:'#f5f3ff',Proposal:'#fffbeb',Negotiation:'#eff6ff',Won:'#f0fdf4',Lost:'#fef2f2',Disqualified:'#f9fafb'};
 const CATS={A:{label:'Monthly',mo:1,color:'#ef4444',bg:'#fee2e2'},B:{label:'Quarterly',mo:3,color:'#f59e0b',bg:'#fef3c7'},C:{label:'Bi-annually',mo:6,color:'#2563eb',bg:'#eff6ff'},D:{label:'Annually',mo:12,color:'#6b7280',bg:'#f9fafb'}};
-const ACT_TYPES=['Call','Meeting','WhatsApp','Email','Proposal','Visit','Other'];
-const ACT_ICONS={Call:'ti-phone',Meeting:'ti-users',WhatsApp:'ti-brand-whatsapp',Email:'ti-mail',Proposal:'ti-file-text',Visit:'ti-map-pin',Other:'ti-dots'};
+const ACT_TYPES=['Call','Meeting','Email'];
+const ACT_ICONS={Call:'ti-phone',Meeting:'ti-users',Email:'ti-mail'};
 const ACT_CLS={Call:'act-call',Meeting:'act-meeting',WhatsApp:'act-whatsapp',Email:'act-email',Proposal:'act-proposal',Visit:'act-visit',Other:'act-other'};
 const WAYLAND=['Hitachi','Epiroc','Normet','Genie','Atlas Copco','Ingersoll Rand'];
 const ALL_BRANDS=[...WAYLAND,'Caterpillar','Komatsu','Volvo','Liebherr','Doosan','John Deere','Hyundai','Sany','XCMG','Other'];
@@ -1179,7 +1179,7 @@ function selActType(btn,type){
   btn.className='btn btn-sm btn-primary';
   $('la-type').value=type;
   const cr=$('la-dir-wrap');
-  if(cr)cr.style.display=(type==='Call'||type==='WhatsApp')?'block':'none';
+  if(cr)cr.style.display=(type==='Call')?'block':'none';
 }
 
 function loadActContacts(coId){
@@ -1730,11 +1730,11 @@ function renderCoCard(id){
     <!-- Fleet -->
     <div class="co-sec">
       <div class="co-sec-title">Fleet <button class="btn btn-xs btn-primary" onclick="openFleetForm('${id}')"><i class="ti ti-plus"></i></button></div>
-      ${fleet.length?fleet.map(u=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:12px">
+      ${fleet.length?fleet.map(u=>`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:12px;cursor:pointer" onclick="openFleetForm('${id}','${u.id}')">
         <div style="width:8px;height:8px;border-radius:50%;background:${BRAND_C[u.brand]||'#185FA5'};flex-shrink:0"></div>
         <div style="flex:1"><strong>${u.brand} ${u.model}</strong>${u.year?` <span style="color:var(--text-m)">${u.year}</span>`:''}</div>
         <span class="badge ${{New:'b-blue',Excellent:'b-green',Good:'b-green',Fair:'b-amber',Poor:'b-red'}[u.condition]||'b-gray'}" style="font-size:10px">${u.condition||'Good'}</span>
-        <button class="btn btn-xs btn-ghost" onclick="openFleetForm('${id}','${u.id}')"><i class="ti ti-edit"></i></button>
+        <i class="ti ti-edit" style="color:var(--text-l);font-size:13px"></i>
       </div>`).join(''):`<div style="text-align:center;padding:10px"><div style="font-size:12px;color:var(--text-m);margin-bottom:6px">No equipment</div><button class="btn btn-sm" onclick="openFleetForm('${id}')"><i class="ti ti-plus"></i> Add</button></div>`}
       ${compFleet.length?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr)">
         <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--red);margin-bottom:4px">⚔ Competitor equipment</div>
@@ -1824,7 +1824,7 @@ function renderCoCard(id){
           <button class="btn btn-xs btn-ghost" onclick="linkExistingContact('${id}')"><i class="ti ti-link"></i> Link existing</button>
         </span>
       </div>
-      ${contacts.map(c=>`<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr);align-items:flex-start">
+      ${contacts.map(c=>`<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr);align-items:flex-start;cursor:pointer" onclick="openContactForm('${id}','${c.id}')">
         <div class="av av-sm ${avCls(c.first_name+c.last_name)}">${ini(c.first_name+' '+c.last_name)}</div>
         <div style="flex:1;min-width:0">
           <div style="font-size:13px;font-weight:600">${c.first_name} ${c.last_name}</div>
@@ -1832,7 +1832,7 @@ function renderCoCard(id){
           ${c.phone?`<a href="tel:${c.phone}" style="font-size:12px;color:var(--blue);display:block" onclick="event.stopPropagation()">${c.phone}</a>`:''}
           ${c.email?`<div style="font-size:11px;color:var(--text-m);overflow:hidden;text-overflow:ellipsis">${c.email}</div>`:''}
         </div>
-        <button class="btn btn-xs btn-ghost" onclick="openContactForm('${id}','${c.id}')"><i class="ti ti-edit"></i></button>
+        <i class="ti ti-edit" style="color:var(--text-l);font-size:13px;flex-shrink:0"></i>
       </div>`).join('')}
       ${!contacts.length?`<button class="btn btn-sm" style="width:100%;justify-content:center" onclick="openContactForm('${id}')"><i class="ti ti-plus"></i> Add contact</button>`:''}
     </div>
