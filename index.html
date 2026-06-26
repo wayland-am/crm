@@ -392,7 +392,8 @@ textarea.fc{resize:vertical;min-height:80px;line-height:1.5}
       <button id="mob-search-btn" class="tb-icon-btn" style="display:none" onclick="toggleMobSearch()"><i class="ti ti-search"></i></button>
       <div class="tb-search" style="position:relative">
         <i class="ti ti-search tb-search-icon"></i>
-        <input id="s-input" placeholder="Search companies, contacts, deals…" oninput="doSearch(this.value)" onfocus="showDrop()" onblur="setTimeout(hideDrop,180)">
+        <input id="s-input" placeholder="Search companies, contacts, deals…" oninput="doSearch(this.value);toggleClearBtn(this,'s-clear')" onfocus="showDrop()" onblur="setTimeout(hideDrop,180)">
+        <i id="s-clear" class="ti ti-x" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-l);font-size:14px" onmousedown="event.preventDefault()" onclick="$('s-input').value='';doSearch('');this.style.display='none';$('s-input').focus()"></i>
         <div id="search-drop"></div>
       </div>
       <div class="tb-right" id="tb-right">
@@ -771,6 +772,11 @@ function _matches(text,q){
   const ql=q.toLowerCase(), qtl=_translit(q), qCyr=_cyrFromLat(q);
   return t.includes(ql)||t.includes(qCyr)||tl.includes(qtl)||tl.includes(ql);
 }
+
+function toggleClearBtn(input,clearId){
+  const el=document.getElementById(clearId);
+  if(el)el.style.display=input.value?'block':'none';
+}
 function doSearch(q){
   if(!q.trim()){hideDrop();return;}
   const res=[];
@@ -778,7 +784,12 @@ function doSearch(q){
   db.contacts.filter(c=>_matches((c.first_name||'')+' '+(c.last_name||''),q)||(c.phone||'').includes(q)).slice(0,3).forEach(c=>res.push({type:'Contact',label:((c.first_name||'')+' '+(c.last_name||'')).trim(),sub:c.company||'',id:c.company_id,page:'companies'}));
   db.deals.filter(d=>_matches(d.company,q)||_matches(d.model,q)).slice(0,3).forEach(d=>res.push({type:'Deal',label:d.company,sub:(d.model||'')+'  '+fmtUSD(d.amount),id:d.id,page:'pipeline'}));
   const el=$('search-drop');
-  el.innerHTML=res.length?res.map(r=>`<div class="sr-item" onclick="srClick('${r.page}','${r.id}')"><span class="sr-type">${r.type}</span><div><div style="font-weight:600">${r.label}</div><div style="font-size:11px;color:var(--text-m)">${r.sub}</div></div></div>`).join(''):'<div style="padding:12px 14px;color:var(--text-l);font-size:13px">No results</div>';
+  el.innerHTML=res.length?res.map(r=>`<div class="sr-item" onclick="srClick('${r.page}','${r.id}')"><span class="sr-type">${r.type}</span><div><div style="font-weight:600">${r.label}</div><div style="font-size:11px;color:var(--text-m)">${r.sub}</div></div></div>`).join(''):`
+    <div style="padding:14px">
+      <div style="font-size:12px;color:var(--text-l);margin-bottom:10px">No results for "<strong>${q}</strong>"</div>
+      <button class="btn btn-sm btn-primary" style="width:100%;justify-content:center;margin-bottom:6px" onclick="hideDrop();openCoForm(null,'${q.replace(/'/g,"\\'")}')"><i class="ti ti-building-plus"></i> Create company "${q}"</button>
+      <button class="btn btn-sm" style="width:100%;justify-content:center" onclick="hideDrop();openLeadForm(null,'${q.replace(/'/g,"\\'")}')"><i class="ti ti-user-plus"></i> Create lead "${q}"</button>
+    </div>`;
   el.style.display='block';
 }
 function showDrop(){if($('s-input').value.trim())$('search-drop').style.display='block';}
@@ -1265,7 +1276,8 @@ function renderPipeline(){
   tr.innerHTML=`
     <div style="position:relative">
       <i class="ti ti-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text-l);font-size:13px;pointer-events:none"></i>
-      <input class="fc" style="padding-left:28px;width:160px;height:32px" placeholder="Search deals…" value="${_pipeSearch}" oninput="_pipeSearch=this.value;renderPipeline()">
+      <input class="fc" style="padding-left:28px;width:160px;height:32px;padding-right:26px" placeholder="Search deals…" value="${_pipeSearch}" oninput="_pipeSearch=this.value;renderPipeline()">
+      ${_pipeSearch?`<i class="ti ti-x" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-l);font-size:13px" onclick="_pipeSearch='';renderPipeline()"></i>`:''}
     </div>
     ${me?.role==='manager'?`<select class="btn" onchange="_pipeAgent=this.value;renderPipeline()"><option value="">All agents</option>${AGENTS().map(a=>`<option ${_pipeAgent===a?'selected':''}>${a}</option>`).join('')}</select>`:''}
     <select class="btn" onchange="_pipeStage=this.value;renderPipeline()">
@@ -1500,7 +1512,8 @@ function renderCompanies(){
     <div style="display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap">
       <div style="position:relative;flex:1;min-width:220px">
         <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-l)"></i>
-        <input class="fc" id="co-q" placeholder="Search by name, industry, city…" oninput="_coFilter=this.value;renderCoRows()" value="${_coFilter}" style="padding-left:32px">
+        <input class="fc" id="co-q" placeholder="Search by name, industry, city…" oninput="_coFilter=this.value;renderCoRows()" value="${_coFilter}" style="padding-left:32px;padding-right:30px">
+        ${_coFilter?`<i class="ti ti-x" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-l);font-size:14px" onclick="_coFilter='';renderCoRows()"></i>`:''}
       </div>
       <select class="fc" style="width:130px" onchange="_coStatusF=this.value;renderCoRows()">
         <option value="">All statuses</option>${STATUSES.map(s=>`<option ${_coStatusF===s?'selected':''}>${s}</option>`).join('')}
@@ -1579,7 +1592,7 @@ function renderCoRows(){
         </div>
       </td>
     </tr>`;
-  }).join('')||`<tr><td colspan="10" style="text-align:center;padding:32px"><div style="font-size:32px;opacity:.15;margin-bottom:8px">🏢</div><div style="font-weight:600;color:var(--text)">No companies found</div><div style="font-size:12px;color:var(--text-m);margin-top:4px">Try different search or filters</div></td></tr>`;
+  }).join('')||`<tr><td colspan="10" style="text-align:center;padding:32px"><div style="font-size:32px;opacity:.15;margin-bottom:8px">🏢</div><div style="font-weight:600;color:var(--text)">No companies found</div><div style="font-size:12px;color:var(--text-m);margin-top:6px">Try different search or filters</div>${q?`<button class="btn btn-sm btn-primary" style="margin-top:10px" onclick="openCoForm(null,'${q.replace(/'/g,"\\'")}')"><i class="ti ti-plus"></i> Create "${q}"</button>`:''}</td></tr>`;
 }
 
 function openCo(id){coPage=id;renderCoCard(id);}
@@ -1743,9 +1756,12 @@ function renderCoCard(id){
 
     <!-- Contacts -->
     <div class="co-sec">
-      <div class="co-sec-title">Contacts <span style="color:var(--text-l)">${contacts.length}</span>
-        <button class="btn btn-xs btn-primary" onclick="openContactForm('${id}')"><i class="ti ti-plus"></i></button>
-        <button class="btn btn-xs" onclick="linkExistingContact('${id}')" title="Link existing contact"><i class="ti ti-link"></i></button>
+      <div class="co-sec-title" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px">
+        <span>Contacts <span style="color:var(--text-l)">${contacts.length}</span></span>
+        <span style="display:flex;gap:6px">
+          <button class="btn btn-xs" onclick="openContactForm('${id}')"><i class="ti ti-plus"></i> Add</button>
+          <button class="btn btn-xs btn-ghost" onclick="linkExistingContact('${id}')"><i class="ti ti-link"></i> Link existing</button>
+        </span>
       </div>
       ${contacts.map(c=>`<div style="display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--bdr);align-items:flex-start">
         <div class="av av-sm ${avCls(c.first_name+c.last_name)}">${ini(c.first_name+' '+c.last_name)}</div>
@@ -1846,9 +1862,10 @@ document.head.insertAdjacentHTML('beforeend','<style>tr:hover .row-act{opacity:1
 
 
 // ─── FORMS: COMPANY, CONTACT, DEAL, FLEET ───────────────────
-function openCoForm(id){
-  const co=id?db.companies.find(c=>c.id===id):{};
+function openCoForm(id,prefillName){
+  const co=id?db.companies.find(c=>c.id===id):{name:prefillName||''};
   const _prevCat=co.category||''; // Сохраняем ДО редактирования
+  let _justSavedId=null; // для предложения добавить контакт после сохранения новой компании
   showModal((id?'Edit':'Add')+' Company',`
     <div class="fg"><label class="fl">Company Name *</label><input class="fc" id="cf-name" value="${co.name||''}" placeholder="Company LLC"></div>
     <div class="fr">
@@ -1913,7 +1930,11 @@ function openCoForm(id){
       toast('Company saved');
     }
     updateBadges();
-    if(id)openCo(id);else renderCompanies();
+    if(id){
+      openCo(id);
+    }else{
+      go('companies');openCo(row.id);
+    }
   },'Save',id?[{label:'Delete',danger:true,action:async()=>{if(!confirm('Delete '+co.name+'? This will not delete their deals, contacts or activities.'))return;await del('companies',id);db.companies=db.companies.filter(c=>c.id!==id);closeModal();coPage=null;renderCompanies();toast('Company deleted');}}]:undefined);
 }
 
@@ -1925,7 +1946,8 @@ function linkExistingContact(coId){
   if(!unlinked.length){toast('No contacts available to link');return;}
   showModal('Link Contact to '+co.name,`
     <div class="fg" style="margin-bottom:8px">
-      <input class="fc" id="lec-q" placeholder="Search by name or phone…" oninput="lecFilter(this.value)" autocomplete="off">
+      <input class="fc" id="lec-q" placeholder="Search by name or phone…" oninput="lecFilter(this.value);this.nextElementSibling.style.display=this.value?'block':'none'" autocomplete="off" style="padding-right:30px">
+      <i class="ti ti-x" style="display:none;position:absolute;right:22px;top:21px;cursor:pointer;color:var(--text-l);font-size:14px" onclick="$('lec-q').value='';lecFilter('');this.style.display='none'"></i>
     </div>
     <div id="lec-list" style="max-height:320px;overflow-y:auto">
       ${unlinked.map(c=>`<div class="sr-item" style="cursor:pointer;padding:10px 12px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:10px" onclick="doLinkContact('${c.id}','${coId}')">
@@ -1968,10 +1990,10 @@ async function doLinkContact(cid,coId){
   toast('✅ '+ct.first_name+' linked to '+co.name);
 }
 
-function openContactForm(coId,cid){
+function openContactForm(coId,cid,prefillName){
   // Если передан один аргумент и это id контакта (не компании) — открываем редактирование
   if(coId&&!cid&&db.contacts.find(x=>x.id===coId)){cid=coId;coId=db.contacts.find(x=>x.id===cid)?.company_id||null;}
-  const c=cid?db.contacts.find(x=>x.id===cid):{};
+  const c=cid?db.contacts.find(x=>x.id===cid):{first_name:prefillName||''};
   const co=coId?db.companies.find(x=>x.id===coId):null;
   showModal((cid?'Edit':'Add')+' Contact',`
     <div class="fr"><div class="fg"><label class="fl">First Name *</label><input class="fc" id="ctf-fn" value="${c.first_name||''}"></div><div class="fg"><label class="fl">Last Name</label><input class="fc" id="ctf-ln" value="${c.last_name||''}"></div></div>
@@ -2128,7 +2150,8 @@ function renderContacts(){
     <div style="padding:10px 14px;border-bottom:1px solid var(--bdr);background:var(--sur2);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <div style="position:relative;flex:1;min-width:180px">
         <i class="ti ti-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text-l);font-size:13px"></i>
-        <input class="fc" id="ct-q" placeholder="Search by name, company, phone…" oninput="_ctFilter=this.value;renderCtRows()" value="${_ctFilter}" style="padding-left:30px;margin:0;height:34px">
+        <input class="fc" id="ct-q" placeholder="Search by name, company, phone…" oninput="_ctFilter=this.value;renderCtRows()" value="${_ctFilter}" style="padding-left:30px;padding-right:28px;margin:0;height:34px">
+        ${_ctFilter?`<i class="ti ti-x" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-l);font-size:13px" onclick="_ctFilter='';renderCtRows()"></i>`:''}
       </div>
       <select class="fc" style="width:140px;margin:0;height:34px" onchange="_ctChan=this.value;renderCtRows()">
         <option value="">All channels</option>
@@ -2164,7 +2187,7 @@ function renderCtRows(){
         <td>${x.phone?`<a href="tel:${x.phone}" style="color:var(--blue)" onclick="event.stopPropagation()">${x.phone}</a>`:'—'}</td>
         <td style="font-size:12px;color:var(--text-m)">${x.email||'—'}</td>
         <td>${x.channel?`<span class="badge b-gray">${x.channel}</span>`:'—'}</td>
-      </tr>`).join('')||'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-m)">No contacts found</td></tr>';
+      </tr>`).join('')||`<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-m)">No contacts found${q?`<div style="margin-top:10px"><button class="btn btn-sm btn-primary" onclick="openContactForm(null,null,'${q.replace(/'/g,"\\'")}')"><i class="ti ti-plus"></i> Create "${q}"</button></div>`:''}</td></tr>`;
 }
 
 
@@ -2761,7 +2784,8 @@ function renderFleet(){
   $('tb-right').innerHTML=`
     <div style="position:relative">
       <i class="ti ti-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text-l);font-size:13px;pointer-events:none"></i>
-      <input class="fc" style="padding-left:28px;width:150px;height:32px" placeholder="Search fleet…" value="${_fleetSearch}" oninput="_fleetSearch=this.value;renderFleet()">
+      <input class="fc" style="padding-left:28px;width:150px;height:32px;padding-right:26px" placeholder="Search fleet…" value="${_fleetSearch}" oninput="_fleetSearch=this.value;renderFleet()">
+      ${_fleetSearch?`<i class="ti ti-x" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-l);font-size:13px" onclick="_fleetSearch='';renderFleet()"></i>`:''}
     </div>
     <select class="btn" onchange="_fleetBrand=this.value;renderFleet()">
       <option value="">All brands</option>
@@ -2939,7 +2963,8 @@ function renderLeads(){
   $('tb-right').innerHTML=`
     <div style="position:relative">
       <i class="ti ti-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text-l);font-size:13px;pointer-events:none"></i>
-      <input class="fc" style="padding-left:28px;width:150px;height:32px" placeholder="Search leads…" value="${_ldSearch}" oninput="_ldSearch=this.value;renderLeads()">
+      <input class="fc" style="padding-left:28px;width:150px;height:32px;padding-right:26px" placeholder="Search leads…" value="${_ldSearch}" oninput="_ldSearch=this.value;renderLeads()">
+      ${_ldSearch?`<i class="ti ti-x" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-l);font-size:13px" onclick="_ldSearch='';renderLeads()"></i>`:''}
     </div>
     <select class="btn" onchange="_ldFilter=this.value;renderLeads()">
       <option value="">All statuses</option>
@@ -2980,7 +3005,7 @@ function renderLeads(){
         <button class="btn btn-xs btn-ghost" onclick="openLeadForm('${l.id}')"><i class="ti ti-edit"></i></button>
         <button class="btn btn-xs btn-ghost" style="color:var(--red)" onclick="trashLead('${l.id}')"><i class="ti ti-trash"></i></button>
       </div>`:''}
-    </div>`;}).join('')||'<div class="empty" style="grid-column:1/-1"><i class="ti ti-user-plus"></i><div class="empty-title">No leads yet</div><button class="btn btn-primary" onclick="openLeadForm()"><i class="ti ti-plus"></i> Add Lead</button></div>'}
+    </div>`;}).join('')||(_ldSearch?`<div class="empty" style="grid-column:1/-1"><i class="ti ti-search-off"></i><div class="empty-title">No leads match "${_ldSearch}"</div><button class="btn btn-primary" onclick="openLeadForm(null,'${_ldSearch.replace(/'/g,"\\'")}')"><i class="ti ti-plus"></i> Create lead "${_ldSearch}"</button></div>`:'<div class="empty" style="grid-column:1/-1"><i class="ti ti-user-plus"></i><div class="empty-title">No leads yet</div><button class="btn btn-primary" onclick="openLeadForm()"><i class="ti ti-plus"></i> Add Lead</button></div>')}
   </div></div>`;
 }
 function convertLeadToDeal(leadId,coId){
@@ -3045,8 +3070,8 @@ async function deleteLead(id){
   updateBadges();renderLeads();toast('Lead deleted');
 }
 
-function openLeadForm(id){
-  const l=id?db.leads.find(x=>x.id===id):{};
+function openLeadForm(id,prefillCompany){
+  const l=id?db.leads.find(x=>x.id===id):{company:prefillCompany||''};
   const existCo0=l.company?db.companies.find(c=>(c.name||'').toLowerCase()===(l.company||'').toLowerCase()):null;
   showModal((id?'Edit':'Add')+' Lead',`
     <div class="fr"><div class="fg" style="position:relative">
@@ -3156,7 +3181,8 @@ function renderContracts(){
   $('tb-right').innerHTML=`
     <div style="position:relative">
       <i class="ti ti-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text-l);font-size:13px;pointer-events:none"></i>
-      <input class="fc" style="padding-left:28px;width:150px;height:32px" placeholder="Search contracts…" value="${_conSearch}" oninput="_conSearch=this.value;renderContracts()">
+      <input class="fc" style="padding-left:28px;width:150px;height:32px;padding-right:26px" placeholder="Search contracts…" value="${_conSearch}" oninput="_conSearch=this.value;renderContracts()">
+      ${_conSearch?`<i class="ti ti-x" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-l);font-size:13px" onclick="_conSearch='';renderContracts()"></i>`:''}
     </div>
     <select class="btn" onchange="_conStatus=this.value;renderContracts()">
       <option value="">All statuses</option>
@@ -3207,7 +3233,8 @@ function renderParts(){
   $('tb-right').innerHTML=`
     <div style="position:relative">
       <i class="ti ti-search" style="position:absolute;left:8px;top:50%;transform:translateY(-50%);color:var(--text-l);font-size:13px;pointer-events:none"></i>
-      <input class="fc" style="padding-left:28px;width:150px;height:32px" placeholder="Search company…" value="${_partsSearch}" oninput="_partsSearch=this.value;renderParts()">
+      <input class="fc" style="padding-left:28px;width:150px;height:32px;padding-right:26px" placeholder="Search company…" value="${_partsSearch}" oninput="_partsSearch=this.value;renderParts()">
+      ${_partsSearch?`<i class="ti ti-x" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-l);font-size:13px" onclick="_partsSearch='';renderParts()"></i>`:''}
     </div>
     <select class="btn" onchange="_partsBrand=this.value;renderParts()">
       <option value="">All brands</option>
