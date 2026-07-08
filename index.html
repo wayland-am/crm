@@ -617,6 +617,46 @@ async function loadAll(){
   db.tasks=db.tasks.map(t=>({...t,done:t.done===true||t.done==='true'||t.done==='TRUE',auto_scheduled:t.auto_scheduled===true||t.auto_scheduled==='true'||t.auto_scheduled==='TRUE',amount:+t.amount||0}));
   db.deals=db.deals.map(d=>({...d,amount:+d.amount||0,probability:+d.probability||0}));
   db.users=db.users.map(u=>({...u,active:u.active!==false&&u.active!=='false'&&u.active!=='FALSE'}));
+  // Normalize contacts: fix company_id field (sheet stores it as 'company', may be JSON array ["id"] for new records)
+  db.contacts=db.contacts.map(c=>{
+    // Determine company_id: prefer explicit company_id, else fall back to 'company' field
+    let cid=c.company_id||'';
+    if(!cid){
+      const raw=c.company||'';
+      if(typeof raw==='string'&&raw.startsWith('[')){
+        try{const arr=JSON.parse(raw);cid=Array.isArray(arr)&&arr[0]?arr[0]:'';}catch(e){cid=raw;}
+      } else {
+        cid=raw;
+      }
+    }
+    // company_ids array
+    let cids=c.company_ids;
+    if(!Array.isArray(cids)){
+      const raw=c.company_ids||c.company||'';
+      if(typeof raw==='string'&&raw.startsWith('[')){
+        try{cids=JSON.parse(raw);}catch(e){cids=cid?[cid]:[];}
+      } else {
+        cids=cid?[cid]:[];
+      }
+    }
+    // company name: if 'contact' field looks like a company name (old schema), map fields accordingly
+    // Old schema columns: id, company(=cid), contact(=company_name or last_name), phone(=first_name), industry(=last_name), deals(=position), status(=phone)
+    // New schema columns: id, company_ids, company_id, company(=name), first_name, last_name, position, phone, email, channel, language, notes, created
+    let fn=c.first_name||'';
+    let ln=c.last_name||'';
+    let pos=c.position||'';
+    let ph=c.phone||'';
+    let em=c.email||'';
+    // Detect old schema: no first_name but has 'phone' field that looks like a name (no digits)
+    if(!fn&&c.phone&&!/\d/.test(c.phone)){
+      fn=c.phone||'';         // 'phone' col was actually first_name
+      ln=c.industry||'';     // 'industry' col was actually last_name
+      pos=c.deals||'';       // 'deals' col was actually position
+      ph=c.status||'';       // 'status' col was actually phone number
+      em=c.email||'';
+    }
+    return{...c,company_id:cid,company_ids:cids,first_name:fn,last_name:ln,position:pos,phone:ph,email:em};
+  });
   _dataLoaded=true;
   updateBadges();
 }
