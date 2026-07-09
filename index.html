@@ -1367,7 +1367,7 @@ function openTaskM(id){
 }
 
 // ─── PIPELINE ────────────────────────────────────────────────
-let _pipeAgent='',_pipeSearch='',_pipeStage='';
+let _pipeAgent='',_pipeSearch='',_pipeStage='',_pipeSort='amount',_pipePeriod='',_lostSort={col:'created',dir:-1};
 function renderPipeline(){
   if(!_dataLoaded){
     $('page').innerHTML='<div style="display:flex;align-items:center;justify-content:center;height:300px;flex-direction:column;gap:12px"><i class="ti ti-loader-2 spin" style="font-size:36px;color:var(--blue)"></i><div style="color:var(--text-m)">Loading…</div></div>';
@@ -1381,9 +1381,18 @@ function renderPipeline(){
       ${_pipeSearch?`<i class="ti ti-x" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text-l);font-size:13px" onclick="_pipeSearch='';renderPipeline()"></i>`:''}
     </div>
     ${me?.role==='manager'?`<select class="btn" onchange="_pipeAgent=this.value;renderPipeline()"><option value="">All agents</option>${AGENTS().map(a=>`<option ${_pipeAgent===a?'selected':''}>${a}</option>`).join('')}</select>`:''}
-    <select class="btn" onchange="_pipeStage=this.value;renderPipeline()">
-      <option value="">All stages</option>
-      ${[...ACT_STAGES,'Won','Lost'].map(s=>`<option ${_pipeStage===s?'selected':''}>${s}</option>`).join('')}
+    <select class="btn" onchange="_pipePeriod=this.value;renderPipeline()">
+      <option value="">All time</option>
+      <option value="month" ${_pipePeriod==='month'?'selected':''}>This month</option>
+      <option value="quarter" ${_pipePeriod==='quarter'?'selected':''}>This quarter</option>
+      <option value="ytd" ${_pipePeriod==='ytd'?'selected':''}>This year</option>
+      <option value="year" ${_pipePeriod==='year'?'selected':''}>Last 12 months</option>
+    </select>
+    <select class="btn" onchange="_pipeSort=this.value;renderPipeline()">
+      <option value="amount" ${_pipeSort==='amount'?'selected':''}>↓ Amount</option>
+      <option value="created" ${_pipeSort==='created'?'selected':''}>↓ Newest</option>
+      <option value="company" ${_pipeSort==='company'?'selected':''}>A→Z Company</option>
+      <option value="days" ${_pipeSort==='days'?'selected':''}>↓ Age</option>
     </select>
     <button class="btn ${_showLost?'btn-danger':''}" onclick="_showLost=!_showLost;renderPipeline()"><i class="ti ti-eye"></i> Lost</button>
     <button class="btn btn-primary" onclick="openDealForm()"><i class="ti ti-plus"></i> Add Deal</button>
@@ -1392,6 +1401,16 @@ function renderPipeline(){
   let myD=myDeals();
   if(_pipeAgent)myD=myD.filter(d=>d.agent===_pipeAgent);
   if(_pipeSearch){const q=_pipeSearch;myD=myD.filter(d=>_matches(d.company,q)||_matches(d.model,q)||_matches(d.agent,q));}
+  // Period filter — применяем к closed/lost deals; активные показываем всегда
+  if(_pipePeriod){
+    const now=new Date(),y=now.getFullYear(),m=now.getMonth();
+    let pStart;
+    if(_pipePeriod==='month') pStart=new Date(y,m,1);
+    else if(_pipePeriod==='quarter') pStart=new Date(y,Math.floor(m/3)*3,1);
+    else if(_pipePeriod==='ytd') pStart=new Date(y,0,1);
+    else if(_pipePeriod==='year') pStart=new Date(now.getTime()-365*86400000);
+    myD=myD.filter(d=>isActive(d.stage)||(d.created&&new Date(d.created)>=pStart)||(d.closed_date&&new Date(d.closed_date)>=pStart));
+  }
   if(_pipeStage){
     if(_pipeStage==='Won')myD=myD.filter(d=>d.stage==='Won');
     else if(_pipeStage==='Lost')myD=myD.filter(d=>d.stage==='Lost');
@@ -1408,7 +1427,17 @@ function renderPipeline(){
   </div>`;
   const kanban=`<div class="kanban" style="padding:14px 20px">
     ${ACT_STAGES.map(s=>{
-      const ds=active.filter(d=>d.stage===s).sort((a,b)=>b.amount-a.amount);
+      const ds=active.filter(d=>d.stage===s).sort((a,b)=>{
+        if(_pipeSort==='amount') return b.amount-a.amount;
+        if(_pipeSort==='created') return (b.created||'').localeCompare(a.created||'');
+        if(_pipeSort==='company') return (a.company||'').localeCompare(b.company||'');
+        if(_pipeSort==='days'){
+          const da=a.created?Date.now()-new Date(a.created).getTime():0;
+          const db2=b.created?Date.now()-new Date(b.created).getTime():0;
+          return db2-da;
+        }
+        return 0;
+      });
       return`<div class="k-col" ondragover="event.preventDefault();this.classList.add('drop-over')" ondragleave="this.classList.remove('drop-over')" ondrop="dropToStage('${s}',event)">
         <div class="k-head">
           <div class="k-dot" style="background:${SC[s]}"></div>
@@ -1425,17 +1454,50 @@ function renderPipeline(){
   </div>`;
   let lostHtml='';
   if(_showLost){
-    const lost=myD.filter(d=>d.stage==='Lost').sort((a,b)=>(b.created||'').localeCompare(a.created||''));
+    const lostAll=myD.filter(d=>d.stage==='Lost');
+    const wonAll=myD.filter(d=>d.stage==='Won');
+    const sortFn=(a,b)=>{
+      const {col,dir}=_lostSort;
+      if(col==='amount') return (b.amount-a.amount)*dir;
+      return ((a[col]||'').localeCompare(b[col]||''))*dir;
+    };
+    const lost=lostAll.sort(sortFn);
+    const won=wonAll.sort((a,b)=>(b.closed_date||b.created||'').localeCompare(a.closed_date||a.created||''));
     const lv=lost.reduce((s,d)=>s+d.amount,0);
-    lostHtml=`<div class="card" style="margin:0 20px 20px">
-      <div class="card-head"><div class="card-title" style="color:var(--red)">Lost Deals — ${lost.length} · ${fmtUSD(lv)}</div></div>
+    const wv=won.reduce((s,d)=>s+d.amount,0);
+    const thS=(col,label)=>{
+      const active=_lostSort.col===col;
+      const arrow=active?(_lostSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.35;font-size:10px"></i>';
+      return`<th onclick="_lostSort=${active?`{col:'${col}',dir:${_lostSort.dir*-1}}`:`{col:'${col}',dir:-1}`};renderPipeline()" style="cursor:pointer;white-space:nowrap">${label} ${arrow}</th>`;
+    };
+    lostHtml=`
+    ${won.length?`<div class="card" style="margin:0 20px 16px;border-color:#86efac">
+      <div class="card-head" style="background:#f0fdf4"><div class="card-title" style="color:var(--green)">✓ Won Deals — ${won.length} · ${fmtUSD(wv)}</div></div>
       <table class="tbl tbl-hover">
-        <thead><tr><th>Company</th><th>Model</th><th>Amount</th><th>Competitor</th><th>Reason</th><th>Date</th></tr></thead>
+        <thead><tr><th>Company</th><th>Model</th><th>Amount</th><th>Date</th></tr></thead>
+        <tbody>${won.map(d=>`<tr onclick="openDeal('${d.id}')">
+          <td><strong>${d.company}</strong></td><td style="color:var(--text-m)">${d.model||'—'}</td>
+          <td style="color:var(--green);font-weight:600">${fmtUSD(d.amount)}</td>
+          <td style="color:var(--text-m)">${fmtDS(d.closed_date||d.created)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>`:''}
+    <div class="card" style="margin:0 20px 20px">
+      <div class="card-head"><div class="card-title" style="color:var(--red)">✗ Lost Deals — ${lost.length} · ${fmtUSD(lv)}</div></div>
+      <table class="tbl tbl-hover">
+        <thead><tr>
+          ${thS('company','Company')}
+          <th>Model</th>
+          ${thS('amount','Amount')}
+          <th>Competitor</th>
+          ${thS('lost_reason','Reason')}
+          ${thS('created','Date')}
+        </tr></thead>
         <tbody>${lost.map(d=>`<tr onclick="openDeal('${d.id}')">
           <td><strong>${d.company}</strong></td><td style="color:var(--text-m)">${d.model||'—'}</td>
           <td>${fmtUSD(d.amount)}</td><td style="color:var(--red)">${d.competitor||'—'}</td>
           <td style="font-size:12px">${d.lost_reason||'—'}</td><td style="color:var(--text-m)">${fmtDS(d.created)}</td>
-        </tr>`).join('')}</tbody>
+        </tr>`).join('')||`<tr><td colspan="6" style="text-align:center;padding:16px;color:var(--text-m)">No lost deals${_pipePeriod?' in this period':''}</td></tr>`}</tbody>
       </table>
     </div>`;
   }
@@ -1627,15 +1689,13 @@ function renderCompanies(){
       <div id="co-count-bar" style="padding:7px 14px;border-bottom:1px solid var(--bdr);background:var(--sur2);font-size:12px;color:var(--text-m)">Loading…</div>
       <table class="tbl tbl-hover">
         <thead><tr>
-          <th onclick="sortCo('name')" style="cursor:pointer">Company ${_coSort.col==='name'?(_coSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-          <th onclick="sortCo('industry')" style="cursor:pointer">Industry ${_coSort.col==='industry'?(_coSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-          <th onclick="sortCo('category')" style="cursor:pointer">Cat. ${_coSort.col==='category'?(_coSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-          <th onclick="sortCo('city')" style="cursor:pointer">City ${_coSort.col==='city'?(_coSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
+          <th onclick="sortCo('name')" style="cursor:pointer">Company <i class="ti ti-arrows-sort"></i></th>
+          <th>Industry</th><th>Cat.</th><th>City</th>
           <th style="text-align:center">Contacts</th>
           <th style="text-align:center">Deals</th>
           <th style="text-align:center">Fleet</th>
-          <th onclick="sortCo('_lastAct')" style="cursor:pointer">Last Contact ${_coSort.col==='_lastAct'?(_coSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-          <th onclick="sortCo('status')" style="cursor:pointer">Status ${_coSort.col==='status'?(_coSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
+          <th>Last Contact</th>
+          <th>Status</th>
           <th></th>
         </tr></thead>
         <tbody id="co-rows"></tbody>
@@ -1645,7 +1705,7 @@ function renderCompanies(){
   renderCoRows();
 }
 
-function sortCo(col){if(_coSort.col===col)_coSort.dir*=-1;else{_coSort.col=col;_coSort.dir=1;}renderCompanies();}
+function sortCo(col){if(_coSort.col===col)_coSort.dir*=-1;else{_coSort.col=col;_coSort.dir=1;}renderCoRows();}
 
 function renderCoRows(){
   // Если данные ещё не загружены
@@ -1661,16 +1721,7 @@ function renderCoRows(){
     if(_coCatF&&c.category!==_coCatF)return false;
     if(q&&!_matches(c.name,q)&&!_matches(c.city,q)&&!_matches(c.industry,q))return false;
     return true;
-  }).sort((a,b)=>{
-    if(_coSort.col==='_lastAct'){
-      const la=act=>db.activities.filter(x=>x.company_id===act.id&&isRealAct(x)).sort((x,y)=>(y.created||y.date||'').localeCompare(x.created||x.date||''))[0];
-      const da=la(a),db2=la(b);
-      const ta=da?new Date(da.created||da.date).getTime():0;
-      const tb=db2?new Date(db2.created||db2.date).getTime():0;
-      return(tb-ta)*_coSort.dir;
-    }
-    return(a[_coSort.col]||'').localeCompare(b[_coSort.col]||'')*_coSort.dir;
-  });
+  }).sort((a,b)=>(a[_coSort.col]||'').localeCompare(b[_coSort.col]||'')*_coSort.dir);
   const t=today();
   // Update count
   const countBar=document.getElementById('co-count-bar');
@@ -2258,7 +2309,7 @@ function openTaskForm(coId,tid,prefillDate){
 }
 
 // ─── CONTACTS PAGE ───────────────────────────────────────────
-let _ctFilter='',_ctChan='',_ctSort={col:'first_name',dir:1};
+let _ctFilter='',_ctChan='';
 function renderContacts(){
   $('tb-right').innerHTML='<button class="btn" onclick="exportContacts()" title="Export CSV"><i class="ti ti-download"></i></button><button class="btn btn-primary" onclick="openContactForm()"><i class="ti ti-plus"></i> Contact</button><button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>';
   const channels=[...new Set(db.contacts.filter(x=>x.channel).map(x=>x.channel))];
@@ -2276,46 +2327,33 @@ function renderContacts(){
       <span id="ct-count" style="font-size:12px;color:var(--text-m);white-space:nowrap"></span>
     </div>
     <table class="tbl tbl-hover">
-      <thead><tr>
-        <th onclick="sortCt('first_name')" style="cursor:pointer">Name ${_ctSort.col==='first_name'?(_ctSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-        <th onclick="sortCt('company')" style="cursor:pointer">Company ${_ctSort.col==='company'?(_ctSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-        <th onclick="sortCt('position')" style="cursor:pointer">Position ${_ctSort.col==='position'?(_ctSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-        <th onclick="sortCt('phone')" style="cursor:pointer">Phone ${_ctSort.col==='phone'?(_ctSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-        <th onclick="sortCt('email')" style="cursor:pointer">Email ${_ctSort.col==='email'?(_ctSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-        <th onclick="sortCt('channel')" style="cursor:pointer">Channel ${_ctSort.col==='channel'?(_ctSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-      </tr></thead>
+      <thead><tr><th>Name</th><th>Company</th><th>Position</th><th>Phone</th><th>Email</th><th>Channel</th></tr></thead>
       <tbody id="ct-rows"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-m)">Loading…</td></tr></tbody>
     </table>
   </div></div>`;
   renderCtRows();
 }
-function sortCt(col){if(_ctSort.col===col)_ctSort.dir*=-1;else{_ctSort.col=col;_ctSort.dir=1;}renderContacts();}
 function renderCtRows(){
   const q=_ctFilter,ch=_ctChan;
   const list=db.contacts.filter(x=>{
     if(ch&&x.channel!==ch)return false;
     if(!q)return true;
     return _matches((x.first_name||'')+' '+(x.last_name||''),q)||_matches(x.company,q)||(x.phone||'').includes(q)||(x.email||'').toLowerCase().includes(q.toLowerCase());
-  }).sort((a,b)=>{
-    const col=_ctSort.col;
-    const va=col==='first_name'?(a.first_name||'')+' '+(a.last_name||''):(a[col]||'');
-    const vb=col==='first_name'?(b.first_name||'')+' '+(b.last_name||''):(b[col]||'');
-    return va.localeCompare(vb)*_ctSort.dir;
-  });
+  }).sort((a,b)=>(a.first_name||'').localeCompare(b.first_name||''));
   const rows=document.getElementById('ct-rows');
   const cnt=document.getElementById('ct-count');
   if(cnt)cnt.textContent=q||ch?`${list.length} of ${db.contacts.length}`:`${db.contacts.length} contacts`;
-  if(rows)rows.innerHTML=list.map(x=>`<tr style="cursor:pointer">
-        <td onclick="openContactForm(${x.company_id?`'${x.company_id}'`:'null'},'${x.id}')"><div style="display:flex;align-items:center;gap:8px"><div class="av av-sm ${avCls(x.first_name+x.last_name)}">${ini(x.first_name+' '+x.last_name)}</div><strong>${x.first_name||''} ${x.last_name||''}</strong></div></td>
+  if(rows)rows.innerHTML=list.map(x=>`<tr onclick="${x.company_id?`go('companies');openCo('${x.company_id}')`:`openContactForm('${x.id}')`}" style="cursor:pointer">>
+        <td><div style="display:flex;align-items:center;gap:8px"><div class="av av-sm ${avCls(x.first_name+x.last_name)}">${ini(x.first_name+' '+x.last_name)}</div><strong>${x.first_name} ${x.last_name}</strong></div></td>
         <td style="color:var(--blue)">${(()=>{
           const ids=Array.isArray(x.company_ids)&&x.company_ids.length?x.company_ids:[x.company_id].filter(Boolean);
           if(!ids.length)return '—';
-          return ids.map(id=>{const co=db.companies.find(c=>c.id===id);return co?`<span style="cursor:pointer;color:var(--blue)" onclick="go('companies');openCo('${id}')">${co.name}</span>`:'?';}).join(' <span style="color:var(--text-l)">·</span> ');
+          return ids.map(id=>{const co=db.companies.find(c=>c.id===id);return co?`<span style="cursor:pointer;color:var(--blue)" onclick="event.stopPropagation();go('companies');openCo('${id}')">${co.name}</span>`:'?';}).join(' <span style="color:var(--text-l)">·</span> ');
         })()}</td>
-        <td style="color:var(--text-m)" onclick="openContactForm(${x.company_id?`'${x.company_id}'`:'null'},'${x.id}')">${x.position||'—'}</td>
-        <td>${x.phone?`<a href="tel:${x.phone}" style="color:var(--blue)">${x.phone}</a>`:'—'}</td>
-        <td style="font-size:12px;color:var(--text-m)" onclick="openContactForm(${x.company_id?`'${x.company_id}'`:'null'},'${x.id}')">${x.email||'—'}</td>
-        <td onclick="openContactForm(${x.company_id?`'${x.company_id}'`:'null'},'${x.id}')">${x.channel?`<span class="badge b-gray">${x.channel}</span>`:'—'}</td>
+        <td style="color:var(--text-m)">${x.position||'—'}</td>
+        <td>${x.phone?`<a href="tel:${x.phone}" style="color:var(--blue)" onclick="event.stopPropagation()">${x.phone}</a>`:'—'}</td>
+        <td style="font-size:12px;color:var(--text-m)">${x.email||'—'}</td>
+        <td>${x.channel?`<span class="badge b-gray">${x.channel}</span>`:'—'}</td>
       </tr>`).join('')||`<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text-m)">No contacts found${q?`<div style="margin-top:10px"><button class="btn btn-sm btn-primary" onclick="openContactForm(null,null,'${q.replace(/'/g,"\\'")}')"><i class="ti ti-plus"></i> Create "${q}"</button></div>`:''}</td></tr>`;
 }
 
@@ -2908,8 +2946,7 @@ async function delFleet(id){
   if(coPage){const u=db.fleet.find(f=>f.company_id===coPage);openCo(coPage);}else renderFleet();
 }
 
-let _fleetSearch='',_fleetBrand='',_fleetSort={col:'company',dir:1};
-function sortFleet(col){if(_fleetSort.col===col)_fleetSort.dir*=-1;else{_fleetSort.col=col;_fleetSort.dir=1;}renderFleet();}
+let _fleetSearch='',_fleetBrand='';
 function renderFleet(){
   $('tb-right').innerHTML=`
     <div style="position:relative">
@@ -2943,31 +2980,18 @@ function renderFleet(){
   </div>
   <div class="card" style="overflow:hidden;margin-bottom:${_showComp&&comp.length?'16px':'0'}">
     <table class="tbl tbl-hover">
-      <thead><tr>
-        <th onclick="sortFleet('company')" style="cursor:pointer">Company ${_fleetSort.col==='company'?(_fleetSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-        <th onclick="sortFleet('brand')" style="cursor:pointer">Brand ${_fleetSort.col==='brand'?(_fleetSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-        <th onclick="sortFleet('model')" style="cursor:pointer">Model ${_fleetSort.col==='model'?(_fleetSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-        <th onclick="sortFleet('type')" style="cursor:pointer">Type ${_fleetSort.col==='type'?(_fleetSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-        <th onclick="sortFleet('year')" style="cursor:pointer">Year ${_fleetSort.col==='year'?(_fleetSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-        <th onclick="sortFleet('serial')" style="cursor:pointer">Serial ${_fleetSort.col==='serial'?(_fleetSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-        <th onclick="sortFleet('condition')" style="cursor:pointer">Condition ${_fleetSort.col==='condition'?(_fleetSort.dir===1?'↑':'↓'):'<i class="ti ti-arrows-sort" style="opacity:.4"></i>'}</th>
-        <th>Notes</th><th></th>
-      </tr></thead>
-      <tbody>${our.sort((a,b)=>{
-        const va=_fleetSort.col==='year'?+(a.year||0):String(a[_fleetSort.col]||'');
-        const vb=_fleetSort.col==='year'?+(b.year||0):String(b[_fleetSort.col]||'');
-        return _fleetSort.col==='year'?(va-vb)*_fleetSort.dir:va.localeCompare(vb)*_fleetSort.dir;
-      }).map(u=>`<tr>
-        <td onclick="go('companies');openCo('${u.company_id}')" style="cursor:pointer;color:var(--blue)"><strong>${u.company}</strong></td>
-        <td onclick="go('companies');openCo('${u.company_id}')" style="cursor:pointer"><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:${BRAND_C[u.brand]||'#185FA5'}"></span>${u.brand}</span></td>
-        <td onclick="openFleetForm('${u.company_id}','${u.id}')" style="cursor:pointer;font-weight:600">${u.model}</td>
-        <td onclick="openFleetForm('${u.company_id}','${u.id}')" style="cursor:pointer;color:var(--text-m)">${u.type||'—'}</td>
-        <td onclick="openFleetForm('${u.company_id}','${u.id}')" style="cursor:pointer;color:var(--text-m)">${u.year||'—'}</td>
-        <td onclick="openFleetForm('${u.company_id}','${u.id}')" style="cursor:pointer;font-size:12px;font-family:monospace;color:var(--text-m)">${u.serial||'—'}</td>
-        <td onclick="openFleetForm('${u.company_id}','${u.id}')" style="cursor:pointer"><span class="badge ${{New:'b-blue',Excellent:'b-green',Good:'b-green',Fair:'b-amber',Poor:'b-red'}[u.condition]||'b-gray'}">${u.condition||'Good'}</span></td>
-        <td onclick="openFleetForm('${u.company_id}','${u.id}')" style="cursor:pointer;font-size:12px;color:var(--text-m)">${u.notes||'—'}</td>
-        <td style="white-space:nowrap">
-          <button class="btn btn-xs btn-primary" onclick="openFleetForm('${u.company_id}','${u.id}')"><i class="ti ti-edit"></i></button>
+      <thead><tr><th>Company</th><th>Brand</th><th>Model</th><th>Type</th><th>Year</th><th>Serial</th><th>Condition</th><th>Notes</th><th></th></tr></thead>
+      <tbody>${our.sort((a,b)=>(a.company||'').localeCompare(b.company||'')).map(u=>`<tr onclick="go('companies');openCo('${u.company_id}')">
+        <td><strong>${u.company}</strong></td>
+        <td><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:${BRAND_C[u.brand]||'#185FA5'}"></span>${u.brand}</span></td>
+        <td style="font-weight:600">${u.model}</td>
+        <td style="color:var(--text-m)">${u.type||'—'}</td>
+        <td style="color:var(--text-m)">${u.year||'—'}</td>
+        <td style="font-size:12px;font-family:monospace;color:var(--text-m)">${u.serial||'—'}</td>
+        <td><span class="badge ${{New:'b-blue',Excellent:'b-green',Good:'b-green',Fair:'b-amber',Poor:'b-red'}[u.condition]||'b-gray'}">${u.condition||'Good'}</span></td>
+        <td style="font-size:12px;color:var(--text-m)">${u.notes||'—'}</td>
+        <td onclick="event.stopPropagation()" style="white-space:nowrap">
+          <button class="btn btn-xs btn-ghost" onclick="openFleetForm('${u.company_id}','${u.id}')"><i class="ti ti-edit"></i></button>
           <button class="btn btn-xs btn-ghost" style="color:var(--red)" onclick="delFleet('${u.id}')"><i class="ti ti-trash"></i></button>
         </td>
       </tr>`).join('')||'<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text-m)">No equipment recorded</td></tr>'}
