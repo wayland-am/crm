@@ -1657,7 +1657,11 @@ function openDeal(id){
         <button class="btn btn-sm btn-success" onclick="closeModal();moveToStage(db.deals.find(x=>x.id==='${id}'),'Won')">✓ Won</button>
         <button class="btn btn-sm" style="color:var(--red)" onclick="closeModal();moveToStage(db.deals.find(x=>x.id==='${id}'),'Lost')">✗ Lost</button>
       </div>
-    </div>`:''}
+    </div>`:`<div style="border-top:1px solid var(--bdr);padding-top:14px"><div style="font-size:11px;color:var(--text-m);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px">Reopen deal</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        ${ACT_STAGES.map(s=>`<button class="btn btn-sm" style="color:${SC[s]};border-color:${SC[s]}20;background:${SBG[s]}" onclick="closeModal();moveToStage(db.deals.find(x=>x.id==='${id}'),'${s}')">${s}</button>`).join('')}
+      </div>
+    </div>`}
   `,null,null,[
     {label:'Edit',action:()=>{closeModal();openDealForm(d.company_id,id);}},
     {label:'Delete',danger:true,action:async()=>{if(!confirm('Delete?'))return;await del('deals',id);db.deals=db.deals.filter(x=>x.id!==id);closeModal();updateBadges();renderPipeline();}}
