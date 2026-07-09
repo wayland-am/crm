@@ -1545,6 +1545,9 @@ async function moveToStage(deal,stage){
     deal.closed_date=today();
   } else if(isActive(stage)){
     delete deal.closed_date; // переоткрыта
+    // Очищаем поля закрытия
+    deal.lost_reason='';deal.competitor='';deal.competitor_price=0;
+    deal.disq_reason='';deal.disq_comment='';
   }
   if(stage==='Won'){
     if(!confirm('Move to WON?\n\n• Equipment will be added to '+deal.company+' fleet\n• Company status → Active'))return;
