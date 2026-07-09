@@ -559,14 +559,16 @@ const ini=n=>{if(!n)return'?';const p=n.trim().split(/\s+/);return(p[0][0]+(p[1]
 const avCls=n=>{const a=['av-blue','av-green','av-purple','av-amber','av-red'];let h=0;for(const c of(n||''))h=(h*31+c.charCodeAt(0))&0xffff;return a[h%a.length];};
 const timeAgo=s=>{
   if(!s)return'—';
-  const d=new Date(s);if(isNaN(d))return'—';
+  // Нормализуем: '2026-06-07 00:00:00' → '2026-06-07T00:00:00'
+  const norm=typeof s==='string'?s.replace(' ','T'):s;
+  const d=new Date(norm);if(isNaN(d))return'—';
   const diff=Math.floor((Date.now()-d)/1000);
   if(diff<60)return'just now';
   if(diff<3600)return Math.floor(diff/60)+'m ago';
   if(diff<86400)return Math.floor(diff/3600)+'h ago';
   const days=Math.floor(diff/86400);
   if(days<7)return days+'d ago';
-  return fmtDS(s.slice?s.slice(0,10):s);
+  return fmtDS(String(s).slice(0,10));
 };
 const dueFmt=due=>{
   if(!due||due==='Invalid Date'||!parseLocalDate(due))return'<span style="color:var(--text-l)">No date</span>';
