@@ -616,7 +616,8 @@ async function loadAll(){
   const data=await apiCall({action:'readAll'});
   Object.keys(data).forEach(k=>{if(db[k]!==undefined)db[k]=Array.isArray(data[k])?data[k]:[];});
   // Normalize
-  db.fleet=db.fleet.map(u=>({...u,hours:+u.hours||0}));t.done===true||t.done==='true'||t.done==='TRUE',auto_scheduled:t.auto_scheduled===true||t.auto_scheduled==='true'||t.auto_scheduled==='TRUE',amount:+t.amount||0}));
+  db.fleet=db.fleet.map(u=>({...u,hours:+u.hours||0}));
+  db.tasks=db.tasks.map(t=>({...t,done:t.done===true||t.done==='true'||t.done==='TRUE',auto_scheduled:t.auto_scheduled===true||t.auto_scheduled==='true'||t.auto_scheduled==='TRUE',amount:+t.amount||0}));
   db.deals=db.deals.map(d=>({...d,amount:+d.amount||0,probability:+d.probability||0}));
   db.users=db.users.map(u=>({...u,active:u.active!==false&&u.active!=='false'&&u.active!=='FALSE'}));
   // Normalize contacts: fix company_id field (sheet stores it as 'company', may be JSON array ["id"] for new records)
