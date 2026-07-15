@@ -616,7 +616,7 @@ async function loadAll(){
   const data=await apiCall({action:'readAll'});
   Object.keys(data).forEach(k=>{if(db[k]!==undefined)db[k]=Array.isArray(data[k])?data[k]:[];});
   // Normalize
-  db.tasks=db.tasks.map(t=>({...t,done:t.done===true||t.done==='true'||t.done==='TRUE',auto_scheduled:t.auto_scheduled===true||t.auto_scheduled==='true'||t.auto_scheduled==='TRUE',amount:+t.amount||0}));
+  db.fleet=db.fleet.map(u=>({...u,hours:+u.hours||0}));t.done===true||t.done==='true'||t.done==='TRUE',auto_scheduled:t.auto_scheduled===true||t.auto_scheduled==='true'||t.auto_scheduled==='TRUE',amount:+t.amount||0}));
   db.deals=db.deals.map(d=>({...d,amount:+d.amount||0,probability:+d.probability||0}));
   db.users=db.users.map(u=>({...u,active:u.active!==false&&u.active!=='false'&&u.active!=='FALSE'}));
   // Normalize contacts: fix company_id field (sheet stores it as 'company', may be JSON array ["id"] for new records)
@@ -1858,6 +1858,7 @@ function renderCoCard(id){
         <div style="width:8px;height:8px;border-radius:50%;background:${BRAND_C[u.brand]||'#185FA5'};flex-shrink:0"></div>
         <div style="flex:1"><strong>${u.brand} ${u.model}</strong>${u.year?` <span style="color:var(--text-m)">${u.year}</span>`:''}</div>
         <span class="badge ${{New:'b-blue',Excellent:'b-green',Good:'b-green',Fair:'b-amber',Poor:'b-red'}[u.condition]||'b-gray'}" style="font-size:10px">${u.condition||'Good'}</span>
+        ${u.hours?`<span style="font-size:11px;color:var(--text-m)">${Number(u.hours).toLocaleString('en-US')} h</span>`:''}
         <i class="ti ti-edit" style="color:var(--text-l);font-size:13px"></i>
       </div>`).join(''):`<div style="text-align:center;padding:10px"><div style="font-size:12px;color:var(--text-m);margin-bottom:6px">No equipment</div><button class="btn btn-sm" onclick="openFleetForm('${id}')"><i class="ti ti-plus"></i> Add</button></div>`}
       ${compFleet.length?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bdr)">
@@ -2281,13 +2282,17 @@ function openFleetForm(coId,uid2){
       <div class="fg"><label class="fl">Serial No.</label><input class="fc" id="ff-serial" value="${u.serial||''}" style="font-family:monospace"></div>
       <div class="fg" id="ff-cond-wrap" style="${WAYLAND.includes(u.brand||'Hitachi')?'':'display:none'}"><label class="fl">Condition</label><select class="fc" id="ff-cond">${['New','Excellent','Good','Fair','Poor'].map(c=>`<option ${(u.condition||'Good')===c?'selected':''}>${c}</option>`).join('')}</select></div>
     </div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Hours (mth)</label><input class="fc" id="ff-hours" type="text" inputmode="numeric" value="${u.hours?Number(u.hours).toLocaleString('en-US'):''}" placeholder="e.g. 12 500" maxlength="7" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/^0+/,'');if(+this.value>99999)this.value='99999';this.value=this.value?Number(this.value).toLocaleString('en-US'):''"></div>
+      <div class="fg"></div>
+    </div>
     <div class="fg"><label class="fl">Notes</label><input class="fc" id="ff-notes" value="${u.notes||''}"></div>
   `,async()=>{
     const coid=coId||$('ff-coid')?.value;if(!coid){alert('Select a company');return false;}
     const coObj=db.companies.find(c=>c.id===coid);
     const brand=$('ff-brand').value||'Hitachi';
     const isOurs=WAYLAND.includes(brand);
-    const row={...(u||{}),id:uid2||uid(),company_id:coid,company:coObj?.name||'',brand,model:$('ff-model').value,type:$('ff-type').value,year:+$('ff-year').value||0,serial:$('ff-serial').value,condition:isOurs?$('ff-cond')?.value||'Good':'Competitor',notes:$('ff-notes').value};
+    const row={...(u||{}),id:uid2||uid(),company_id:coid,company:coObj?.name||'',brand,model:$('ff-model').value,type:$('ff-type').value,year:+$('ff-year').value||0,serial:$('ff-serial').value,hours:+($('ff-hours').value.replace(/[^0-9]/g,'')||0)||0,condition:isOurs?$('ff-cond')?.value||'Good':'Competitor',notes:$('ff-notes').value};
     // Проверка дублирования серийного номера
     if(row.serial && row.serial.trim()){
       const dup=db.fleet.find(f=>f.serial&&f.serial.trim().toLowerCase()===row.serial.trim().toLowerCase()&&f.id!==row.id);
@@ -3011,13 +3016,14 @@ function renderFleet(){
   </div>
   <div class="card" style="overflow:hidden;margin-bottom:${_showComp&&comp.length?'16px':'0'}">
     <table class="tbl tbl-hover">
-      <thead><tr><th>Company</th><th>Brand</th><th>Model</th><th>Type</th><th>Year</th><th>Serial</th><th>Condition</th><th>Notes</th><th></th></tr></thead>
+      <thead><tr><th>Company</th><th>Brand</th><th>Model</th><th>Type</th><th>Year</th><th>Hours</th><th>Serial</th><th>Condition</th><th>Notes</th><th></th></tr></thead>
       <tbody>${our.sort((a,b)=>(a.company||'').localeCompare(b.company||'')).map(u=>`<tr onclick="go('companies');openCo('${u.company_id}')">
         <td><strong>${u.company}</strong></td>
         <td><span style="display:inline-flex;align-items:center;gap:5px"><span style="width:8px;height:8px;border-radius:50%;background:${BRAND_C[u.brand]||'#185FA5'}"></span>${u.brand}</span></td>
         <td style="font-weight:600">${u.model}</td>
         <td style="color:var(--text-m)">${u.type||'—'}</td>
         <td style="color:var(--text-m)">${u.year||'—'}</td>
+        <td style="color:var(--text-m);font-size:12px">${u.hours?Number(u.hours).toLocaleString('en-US')+' h':'—'}</td>
         <td style="font-size:12px;font-family:monospace;color:var(--text-m)">${u.serial||'—'}</td>
         <td><span class="badge ${{New:'b-blue',Excellent:'b-green',Good:'b-green',Fair:'b-amber',Poor:'b-red'}[u.condition]||'b-gray'}">${u.condition||'Good'}</span></td>
         <td style="font-size:12px;color:var(--text-m)">${u.notes||'—'}</td>
@@ -3025,7 +3031,7 @@ function renderFleet(){
           <button class="btn btn-xs btn-ghost" onclick="openFleetForm('${u.company_id}','${u.id}')"><i class="ti ti-edit"></i></button>
           <button class="btn btn-xs btn-ghost" style="color:var(--red)" onclick="delFleet('${u.id}')"><i class="ti ti-trash"></i></button>
         </td>
-      </tr>`).join('')||'<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--text-m)">No equipment recorded</td></tr>'}
+      </tr>`).join('')||'<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--text-m)">No equipment recorded</td></tr>'}
       </tbody>
     </table>
   </div>
