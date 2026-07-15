@@ -886,8 +886,21 @@ function doSearch(q){
   db.companies.filter(c=>_matches(c.name,q)||_matches(c.city,q)).slice(0,4).forEach(c=>res.push({type:'Company',label:c.name,sub:c.industry||c.city||'',id:c.id,page:'companies'}));
   db.contacts.filter(c=>_matches((c.first_name||'')+' '+(c.last_name||''),q)||(c.phone||'').includes(q)).slice(0,3).forEach(c=>res.push({type:'Contact',label:((c.first_name||'')+' '+(c.last_name||'')).trim(),sub:c.company||'',id:c.company_id,page:'companies'}));
   db.deals.filter(d=>_matches(d.company,q)||_matches(d.model,q)).slice(0,3).forEach(d=>res.push({type:'Deal',label:d.company,sub:(d.model||'')+'  '+fmtUSD(d.amount),id:d.id,page:'pipeline'}));
+  // Поиск по активностям (заметки, текст, next_step)
+  const actHits=db.activities.filter(a=>{
+    const text=(a.note||'')+(a.text||'')+(a.next_step||'')+(a.outcome||'');
+    return _matches(text,q);
+  }).slice(0,4).map(a=>{
+    const co=db.companies.find(c=>c.id===a.company_id);
+    // Находим фрагмент с вхождением
+    const full=(a.note||a.text||'');
+    const idx=full.toLowerCase().indexOf(q.toLowerCase());
+    const snippet=idx>=0?'…'+full.slice(Math.max(0,idx-20),idx+60)+'…':full.slice(0,60);
+    return{type:'Activity',label:co?.name||a.company||'',sub:`${a.type||'Call'} · ${timeAgo(a.date||a.created)} · ${snippet}`,id:a.company_id,page:'companies'};
+  });
+  actHits.forEach(r=>res.push(r));
   const el=$('search-drop');
-  el.innerHTML=res.length?res.map(r=>`<div class="sr-item" onclick="srClick('${r.page}','${r.id}')"><span class="sr-type">${r.type}</span><div><div style="font-weight:600">${r.label}</div><div style="font-size:11px;color:var(--text-m)">${r.sub}</div></div></div>`).join(''):`
+  el.innerHTML=res.length?res.map(r=>`<div class="sr-item" onclick="srClick('${r.page}','${r.id}')"><span class="sr-type" style="${r.type==='Activity'?'background:var(--purple-lt,#f3e8ff);color:#7c3aed':''}">${r.type}</span><div><div style="font-weight:600">${r.label}</div><div style="font-size:11px;color:var(--text-m)">${r.sub}</div></div></div>`).join(''):`
     <div style="padding:14px">
       <div style="font-size:12px;color:var(--text-l);margin-bottom:10px">No results for "<strong>${q}</strong>"</div>
       <button class="btn btn-sm btn-primary" style="width:100%;justify-content:center;margin-bottom:6px" onclick="hideDrop();openCoForm(null,'${q.replace(/'/g,"\\'")}')"><i class="ti ti-building-plus"></i> Create company "${q}"</button>
@@ -1030,14 +1043,14 @@ function renderDashboard(){
     <!-- Recent activity (real only) -->
     <div class="card">
       <div class="card-head"><div class="card-title">Recent Activity</div></div>
-      ${db.activities.filter(isRealAct).sort((a,b)=>(b.created||b.date||'').localeCompare(a.created||a.date||'')).slice(0,6).map(a=>`
+      ${db.activities.filter(isRealAct).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||'')).slice(0,6).map(a=>`
       <div style="display:flex;gap:10px;padding:10px 16px;border-bottom:1px solid var(--bdr);cursor:pointer;transition:background .1s" onclick="go('companies');openCo('${a.company_id}')" onmouseover="this.style.background='var(--blue-lt)'" onmouseout="this.style.background=''">
         <div class="act-icon ${ACT_CLS[a.type]||'act-other'}" style="width:30px;height:30px;font-size:13px"><i class="ti ${ACT_ICONS[a.type]||'ti-dots'}"></i></div>
         <div style="flex:1;min-width:0">
           <div style="font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.company}</div>
           <div style="font-size:11px;color:var(--text-m);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a.note||a.text||a.type}</div>
         </div>
-        <div style="font-size:11px;color:var(--text-l);white-space:nowrap">${timeAgo(a.created||a.date)}</div>
+        <div style="font-size:11px;color:var(--text-l);white-space:nowrap">${timeAgo(a.date||a.created)}</div>
       </div>`).join('')||'<div class="empty" style="padding:20px"><div class="empty-sub">No activities yet</div></div>'}
     </div>
 
@@ -1049,8 +1062,8 @@ function renderDashboard(){
         const groups={hot:[],waking:[],dormant:[]};
         db.companies.forEach(co=>{
           const acts=db.activities.filter(a=>a.company_id===co.id&&isRealAct(a));
-          const last=acts.sort((a,b)=>(b.created||b.date||'').localeCompare(a.created||a.date||''))[0];
-          const d=last?Math.floor((Date.now()-new Date(last.created||last.date))/86400000):999;
+          const last=acts.sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''))[0];
+          const d=last?Math.floor((Date.now()-new Date(last.date||last.created))/86400000):999;
           const pipe=db.deals.filter(x=>x.company_id===co.id&&isActive(x.stage)).reduce((s,x)=>s+x.amount,0);
           const obj={co,d,pipe,lastType:last?.type||''};
           if(d<=30)groups.hot.push(obj);
@@ -1739,10 +1752,10 @@ function renderCoRows(){
     const contacts=db.contacts.filter(c=>c.company_id===co.id).length;
     const deals=db.deals.filter(d=>d.company_id===co.id&&isActive(d.stage)).length;
     const fleet=db.fleet.filter(f=>f.company_id===co.id&&f.condition!=='Competitor').length;
-    const lastAct=db.activities.filter(a=>a.company_id===co.id&&isRealAct(a)).sort((a,b)=>(b.created||b.date||'').localeCompare(a.created||a.date||'')).shift();
+    const lastAct=db.activities.filter(a=>a.company_id===co.id&&isRealAct(a)).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||'')).shift();
     const cat=co.category,cc=CATS[cat]?.color||'';
     const sb={Active:'b-green',Prospect:'b-blue',Negotiating:'b-amber',Partner:'b-purple',Inactive:'b-gray',Cold:'b-gray'}[co.status]||'b-gray';
-    const _lad=lastAct?new Date(lastAct.created||lastAct.date):null;const daysSince=_lad&&!isNaN(_lad)?Math.floor((Date.now()-_lad)/86400000):999;
+    const _lad=lastAct?new Date(lastAct.date||lastAct.created):null;const daysSince=_lad&&!isNaN(_lad)?Math.floor((Date.now()-_lad)/86400000):999;
     const contactColor=daysSince<=7?'var(--green)':daysSince<=30?'var(--text)':daysSince<=90?'var(--amber)':'var(--red)';
     return`<tr onclick="openCo('${co.id}')">
       <td><div style="display:flex;align-items:center;gap:8px">
@@ -1755,7 +1768,7 @@ function renderCoRows(){
       <td style="text-align:center">${contacts||'—'}</td>
       <td style="text-align:center">${deals?`<span style="color:var(--blue);font-weight:600">${deals}</span>`:'—'}</td>
       <td style="text-align:center">${fleet?`<span style="color:var(--green)">${fleet}</span>`:'—'}</td>
-      <td style="font-size:12px;color:${contactColor}" title="${lastAct?('Last: '+(lastAct.type||'')+(lastAct.agent?' by '+lastAct.agent:'')):'No activity'}">${lastAct?timeAgo(lastAct.created||lastAct.date):'<span style="color:var(--text-l)">Never</span>'}</td>
+      <td style="font-size:12px;color:${contactColor}" title="${lastAct?('Last: '+(lastAct.type||'')+(lastAct.agent?' by '+lastAct.agent:'')):'No activity'}">${lastAct?timeAgo(lastAct.date||lastAct.created):'<span style="color:var(--text-l)">Never</span>'}</td>
       <td><span class="badge ${sb}">${co.status||'Prospect'}</span></td>
       <td onclick="event.stopPropagation()" style="width:80px">
         <div style="display:flex;gap:4px;opacity:0;transition:opacity .15s" class="row-act">
@@ -1790,7 +1803,7 @@ function renderCoCard(id){
   const tasks=db.tasks.filter(t=>t.company_id===id&&!t.done).sort((a,b)=>(a.due||'9').localeCompare(b.due||'9'));
   const locations=db.locations.filter(l=>l.company_id===id);
   const photos=db.photos.filter(p=>p.company_id===id);
-  const acts=db.activities.filter(a=>a.company_id===id&&isRealAct(a)).sort((a,b)=>(b.created||b.date||'').localeCompare(a.created||a.date||''));
+  const acts=db.activities.filter(a=>a.company_id===id&&isRealAct(a)).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
   const lastAct=acts[0];
   const pipe=activeDeals.reduce((s,d)=>s+d.amount,0);
   const wonVal=wonDeals.reduce((s,d)=>s+d.amount,0);
@@ -1901,7 +1914,7 @@ function renderCoCard(id){
       <div class="log-cta-icon"><i class="ti ti-phone" style="color:#fff;font-size:18px"></i></div>
       <div>
         <div class="log-cta-title">Log a call, meeting or activity</div>
-        <div class="log-cta-sub">${lastAct?'Last: '+timeAgo(lastAct.created||lastAct.date)+' · '+lastAct.type+' · '+(lastAct.agent||''):'First activity — start here'}</div>
+        <div class="log-cta-sub">${lastAct?'Last: '+timeAgo(lastAct.date||lastAct.created)+' · '+lastAct.type+' · '+(lastAct.agent||''):'First activity — start here'}</div>
       </div>
     </div>
     <div id="co-feed" style="padding:0 16px">${actFeed(acts,id)}</div>
@@ -1994,7 +2007,7 @@ function actFeed(acts,coId){
         <strong style="color:var(--text)">${a.type}</strong>
         ${a.contact_name?' · '+a.contact_name:''}
         ${a.direction?' ('+a.direction+')':''}
-        · ${timeAgo(a.created||a.date)}
+        · ${timeAgo(a.date||a.created)}
         · ${a.agent||''}
       </div>
       ${a.note?`<div style="font-size:13px;line-height:1.55;color:var(--text)">${a.note}</div>`:''}
@@ -2009,7 +2022,7 @@ function actFeed(acts,coId){
 function filterActs(types,coId,el){
   document.querySelectorAll('#co-tabs .tab').forEach(t=>t.classList.remove('on'));
   el.classList.add('on');
-  const all=db.activities.filter(a=>a.company_id===coId&&isRealAct(a)).sort((a,b)=>(b.created||b.date||'').localeCompare(a.created||a.date||''));
+  const all=db.activities.filter(a=>a.company_id===coId&&isRealAct(a)).sort((a,b)=>(b.date||b.created||'').localeCompare(a.date||a.created||''));
   const filtered=types==='all'?all:all.filter(a=>types.split(',').includes(a.type));
   $('co-feed').innerHTML=actFeed(filtered,coId);
 }
@@ -2275,6 +2288,15 @@ function openFleetForm(coId,uid2){
     const brand=$('ff-brand').value||'Hitachi';
     const isOurs=WAYLAND.includes(brand);
     const row={...(u||{}),id:uid2||uid(),company_id:coid,company:coObj?.name||'',brand,model:$('ff-model').value,type:$('ff-type').value,year:+$('ff-year').value||0,serial:$('ff-serial').value,condition:isOurs?$('ff-cond')?.value||'Good':'Competitor',notes:$('ff-notes').value};
+    // Проверка дублирования серийного номера
+    if(row.serial && row.serial.trim()){
+      const dup=db.fleet.find(f=>f.serial&&f.serial.trim().toLowerCase()===row.serial.trim().toLowerCase()&&f.id!==row.id);
+      if(dup){
+        const dupCo=db.companies.find(c=>c.id===dup.company_id);
+        const msg=`⚠️ Serial number "${row.serial}" already exists!\n\n${dup.brand} ${dup.model} (${dup.year||'?'})\nCompany: ${dupCo?.name||dup.company||'Unknown'}\n\nSave anyway?`;
+        if(!confirm(msg))return false;
+      }
+    }
     await persist('fleet',row);
     if(uid2)Object.assign(db.fleet.find(f=>f.id===uid2)||{},row);else db.fleet.push(row);
     toast('Equipment saved');updateBadges();if(coPage===coid)openCo(coid);else renderFleet();
