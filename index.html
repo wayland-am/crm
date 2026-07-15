@@ -3091,16 +3091,23 @@ function exportLeads(){
   ]);
 }
 function exportFleet(){
-  // Лист 1: Техника (одна строка на единицу, контакты через "; ")
-  const fleetRows=db.fleet.map(u=>{
+  // Определяем максимальное кол-во контактов у одной единицы техники
+  let maxContacts=1;
+  db.fleet.forEach(u=>{
+    const cnt=db.contacts.filter(c=>c.company_id===u.company_id||
+      (Array.isArray(c.company_ids)&&c.company_ids.includes(u.company_id))).length;
+    if(cnt>maxContacts)maxContacts=cnt;
+  });
+
+  // Строим строки
+  const rows=db.fleet.map(u=>{
     const contacts=db.contacts.filter(c=>c.company_id===u.company_id||
       (Array.isArray(c.company_ids)&&c.company_ids.includes(u.company_id)));
     const photo=db.photos.find(p=>p.company_id===u.company_id);
     const locs=db.locations.filter(l=>l.company_id===u.company_id);
     const mapsLinks=locs.map(l=>l.lat&&l.lng?`https://maps.google.com/?q=${l.lat},${l.lng}`:'').filter(Boolean).join(' | ');
-    const contactNames=contacts.map(c=>((c.first_name||'')+' '+(c.last_name||'')).trim()).filter(Boolean).join('; ');
-    const contactPhones=contacts.map(c=>c.phone||'').filter(Boolean).join('; ');
-    return {
+
+    const row={
       'Тип': u.type||'',
       'Марка': u.brand||'',
       'Модель': u.model||'',
@@ -3109,47 +3116,36 @@ function exportFleet(){
       'Серийный номер': u.serial||'',
       'Состояние': u.condition||'',
       'Компания': u.company||'',
-      'Контакт': contactNames,
-      'Телефон': contactPhones,
-      'Фото (ссылка)': photo?.url||'',
-      'Локация (Google Maps)': mapsLinks,
     };
-  });
 
-  // Лист 2: Контакты (одна строка на контакт)
-  const contactRows=[];
-  db.fleet.forEach(u=>{
-    const contacts=db.contacts.filter(c=>c.company_id===u.company_id||
-      (Array.isArray(c.company_ids)&&c.company_ids.includes(u.company_id)));
-    const locs=db.locations.filter(l=>l.company_id===u.company_id);
-    const mapsLinks=locs.map(l=>l.lat&&l.lng?`https://maps.google.com/?q=${l.lat},${l.lng}`:'').filter(Boolean).join(' | ');
-    if(contacts.length===0){
-      contactRows.push({'Компания':u.company||'','Марка':u.brand||'','Модель':u.model||'','Год':u.year||'','Наработка (SMU)':u.hours||'','Серийный номер':u.serial||'','Состояние':u.condition||'','Контакт':'','Телефон':'','Email':'','Локация':mapsLinks});
-    } else {
-      contacts.forEach(ct=>{
-        contactRows.push({'Компания':u.company||'','Марка':u.brand||'','Модель':u.model||'','Год':u.year||'','Наработка (SMU)':u.hours||'','Серийный номер':u.serial||'','Состояние':u.condition||'','Контакт':((ct.first_name||'')+' '+(ct.last_name||'')).trim(),'Телефон':ct.phone||'','Email':ct.email||'','Локация':mapsLinks});
-      });
+    // Контакты динамически
+    for(let i=0;i<maxContacts;i++){
+      const ct=contacts[i];
+      const n=maxContacts===1?'':` ${i+1}`;
+      row[`Контакт${n}`]=ct?((ct.first_name||'')+' '+(ct.last_name||'')).trim():'';
+      row[`Телефон${n}`]=ct?.phone||'';
     }
+
+    row['Фото (ссылка)']=photo?.url||'';
+    row['Локация (Google Maps)']=mapsLinks;
+    return row;
   });
 
-  // Создаём Excel через SheetJS
   const XLSX=window.XLSX||window.xlsx;
   if(!XLSX){toast('⚠ SheetJS not loaded');return;}
   const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.json_to_sheet(rows);
 
-  // Лист 1
-  const ws1=XLSX.utils.json_to_sheet(fleetRows);
   // Ширины колонок
-  ws1['!cols']=[{wch:12},{wch:10},{wch:12},{wch:8},{wch:12},{wch:20},{wch:12},{wch:22},{wch:22},{wch:16},{wch:30},{wch:40}];
-  ws1['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:fleetRows.length,c:11}})};
-  XLSX.utils.book_append_sheet(wb,ws1,'Техника');
+  const colWidths=[12,10,12,8,12,20,12,22];
+  for(let i=0;i<maxContacts;i++){colWidths.push(22,16);}
+  colWidths.push(30,40);
+  ws['!cols']=colWidths.map(w=>({wch:w}));
 
-  // Лист 2
-  const ws2=XLSX.utils.json_to_sheet(contactRows);
-  ws2['!cols']=[{wch:22},{wch:10},{wch:12},{wch:6},{wch:12},{wch:20},{wch:12},{wch:22},{wch:16},{wch:24},{wch:40}];
-  ws2['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:contactRows.length,c:10}})};
-  XLSX.utils.book_append_sheet(wb,ws2,'Контакты');
+  const totalCols=8+maxContacts*2+2;
+  ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows.length,c:totalCols-1}})};
 
+  XLSX.utils.book_append_sheet(wb,ws,'Парк техники');
   XLSX.writeFile(wb,`fleet_report_${today()}.xlsx`);
   toast('📥 Fleet report exported');
 }
