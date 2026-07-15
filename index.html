@@ -617,7 +617,7 @@ async function loadAll(){
   const data=await apiCall({action:'readAll'});
   Object.keys(data).forEach(k=>{if(db[k]!==undefined)db[k]=Array.isArray(data[k])?data[k]:[];});
   // Normalize
-  db.fleet=db.fleet.map(u=>({...u,hours:+u.hours||0}));
+  db.fleet=db.fleet.map(u=>({...u,hours:+u.hours||0,year:u.year?String(Math.round(+u.year)):''}));
   db.tasks=db.tasks.map(t=>({...t,done:t.done===true||t.done==='true'||t.done==='TRUE',auto_scheduled:t.auto_scheduled===true||t.auto_scheduled==='true'||t.auto_scheduled==='TRUE',amount:+t.amount||0}));
   db.deals=db.deals.map(d=>({...d,amount:+d.amount||0,probability:+d.probability||0}));
   db.users=db.users.map(u=>({...u,active:u.active!==false&&u.active!=='false'&&u.active!=='FALSE'}));
@@ -2998,7 +2998,7 @@ function renderFleet(){
     </select>
     <button class="btn ${_showComp?'btn-danger':''}" onclick="_showComp=!_showComp;renderFleet()"><i class="ti ti-sword"></i> Competitors (${db.fleet.filter(f=>f.condition==='Competitor').length})</button>
     <button class="btn btn-primary" onclick="openFleetForm()"><i class="ti ti-plus"></i> Add Equipment</button>
-    <button class="btn" onclick="exportFleet()" title="Export CSV"><i class="ti ti-download"></i></button>
+    <button class="btn btn-primary" onclick="exportFleet()"><i class="ti ti-download"></i> Fleet Report</button>
     <button class="tb-icon-btn" onclick="toggleNotif()"><i class="ti ti-bell"></i><span id="notif-dot" class="notif-dot" style="display:none"></span></button>`;
   const flQ=_fleetSearch,flB=_fleetBrand;
   const our=db.fleet.filter(f=>f.condition!=='Competitor'&&(!flB||f.brand===flB)&&(!flQ||_matches(f.company,flQ)||_matches(f.model,flQ)||_matches(f.brand,flQ)));
@@ -3091,18 +3091,29 @@ function exportLeads(){
   ]);
 }
 function exportFleet(){
+  // Вспомогательная функция матча контакта с компанией
+  function contactMatchesCo(ct, coId){
+    if(!coId) return false;
+    if(ct.company_id===coId) return true;
+    if(Array.isArray(ct.company_ids)&&ct.company_ids.includes(coId)) return true;
+    // Если company_ids — строка JSON (не распарсили)
+    if(typeof ct.company_ids==='string'){
+      try{const arr=JSON.parse(ct.company_ids);if(Array.isArray(arr)&&arr.includes(coId))return true;}catch(e){}
+      if(ct.company_ids===coId)return true;
+    }
+    return false;
+  }
+
   // Определяем максимальное кол-во контактов у одной единицы техники
   let maxContacts=1;
   db.fleet.forEach(u=>{
-    const cnt=db.contacts.filter(c=>c.company_id===u.company_id||
-      (Array.isArray(c.company_ids)&&c.company_ids.includes(u.company_id))).length;
+    const cnt=db.contacts.filter(c=>contactMatchesCo(c,u.company_id)).length;
     if(cnt>maxContacts)maxContacts=cnt;
   });
 
   // Строим строки
   const rows=db.fleet.map(u=>{
-    const contacts=db.contacts.filter(c=>c.company_id===u.company_id||
-      (Array.isArray(c.company_ids)&&c.company_ids.includes(u.company_id)));
+    const contacts=db.contacts.filter(c=>contactMatchesCo(c,u.company_id));
     const photo=db.photos.find(p=>p.company_id===u.company_id);
     const locs=db.locations.filter(l=>l.company_id===u.company_id);
     const mapsLinks=locs.map(l=>l.lat&&l.lng?`https://maps.google.com/?q=${l.lat},${l.lng}`:'').filter(Boolean).join(' | ');
@@ -3118,7 +3129,6 @@ function exportFleet(){
       'Компания': u.company||'',
     };
 
-    // Контакты динамически
     for(let i=0;i<maxContacts;i++){
       const ct=contacts[i];
       const n=maxContacts===1?'':` ${i+1}`;
@@ -3136,7 +3146,6 @@ function exportFleet(){
   const wb=XLSX.utils.book_new();
   const ws=XLSX.utils.json_to_sheet(rows);
 
-  // Ширины колонок
   const colWidths=[12,10,12,8,12,20,12,22];
   for(let i=0;i<maxContacts;i++){colWidths.push(22,16);}
   colWidths.push(30,40);
