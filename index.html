@@ -3161,10 +3161,11 @@ function exportFleet(){
   dataRows.forEach((row,ri)=>{
     row.forEach((val,ci)=>{
       const addr=XLSX.utils.encode_cell({r:ri+1,c:ci});
+      if(val===null||val===undefined||val==='') return; // пустые ячейки не пишем вообще
       if((ci===photoCol||ci===mapsCol)&&val){
-        ws[addr]={v:'Открыть →',t:'s',l:{Target:val,Tooltip:val}};
+        ws[addr]={v:'Открыть →',t:'s',l:{Target:String(val),Tooltip:String(val)}};
       } else {
-        ws[addr]={v:val===''?null:val,t:typeof val==='number'?'n':'s'};
+        ws[addr]={v:val,t:typeof val==='number'?'n':'s'};
       }
     });
   });
