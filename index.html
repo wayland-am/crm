@@ -2277,14 +2277,14 @@ function openFleetForm(coId,uid2){
     </div>
     <div class="fr">
       <div class="fg"><label class="fl">Type</label><select class="fc" id="ff-type">${['Excavator','Loader','Bulldozer','Drill','Crane','Compressor','Generator','Other'].map(t=>`<option ${u.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
-      <div class="fg"><label class="fl">Year</label><input class="fc" id="ff-year" type="number" value="${u.year||''}" placeholder="${new Date().getFullYear()}"></div>
-    </div>
-    <div class="fr">
-      <div class="fg"><label class="fl">Serial No.</label><input class="fc" id="ff-serial" value="${u.serial||''}" style="font-family:monospace"></div>
       <div class="fg" id="ff-cond-wrap" style="${WAYLAND.includes(u.brand||'Hitachi')?'':'display:none'}"><label class="fl">Condition</label><select class="fc" id="ff-cond">${['New','Excellent','Good','Fair','Poor'].map(c=>`<option ${(u.condition||'Good')===c?'selected':''}>${c}</option>`).join('')}</select></div>
     </div>
     <div class="fr">
-      <div class="fg"><label class="fl">Hours (mth)</label><input class="fc" id="ff-hours" type="text" inputmode="numeric" value="${u.hours?Number(u.hours).toLocaleString('en-US'):''}" placeholder="e.g. 12 500" maxlength="7" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/^0+/,'');if(+this.value>99999)this.value='99999';this.value=this.value?Number(this.value).toLocaleString('en-US'):''"></div>
+      <div class="fg"><label class="fl">Year</label><input class="fc" id="ff-year" type="number" value="${u.year||''}" placeholder="${new Date().getFullYear()}"></div>
+      <div class="fg"><label class="fl">Hours (SMU)</label><input class="fc" id="ff-hours" type="text" inputmode="numeric" value="${u.hours?Number(u.hours).toLocaleString('en-US'):''}" placeholder="e.g. 12 500" maxlength="7" oninput="this.value=this.value.replace(/[^0-9]/g,'').replace(/^0+/,'');if(+this.value>99999)this.value='99999';this.value=this.value?Number(this.value).toLocaleString('en-US'):''"></div>
+    </div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Serial No.</label><input class="fc" id="ff-serial" value="${(u.serial||'').toUpperCase()}" style="font-family:monospace;text-transform:uppercase" oninput="this.value=this.value.replace(/[^A-Z0-9\-]/gi,'').toUpperCase()"></div>
       <div class="fg"></div>
     </div>
     <div class="fg"><label class="fl">Notes</label><input class="fc" id="ff-notes" value="${u.notes||''}"></div>
