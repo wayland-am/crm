@@ -3091,12 +3091,10 @@ function exportLeads(){
   ]);
 }
 function exportFleet(){
-  // Вспомогательная функция матча контакта с компанией
   function contactMatchesCo(ct, coId){
     if(!coId) return false;
     if(ct.company_id===coId) return true;
     if(Array.isArray(ct.company_ids)&&ct.company_ids.includes(coId)) return true;
-    // Если company_ids — строка JSON (не распарсили)
     if(typeof ct.company_ids==='string'){
       try{const arr=JSON.parse(ct.company_ids);if(Array.isArray(arr)&&arr.includes(coId))return true;}catch(e){}
       if(ct.company_ids===coId)return true;
@@ -3104,55 +3102,80 @@ function exportFleet(){
     return false;
   }
 
-  // Определяем максимальное кол-во контактов у одной единицы техники
   let maxContacts=1;
   db.fleet.forEach(u=>{
     const cnt=db.contacts.filter(c=>contactMatchesCo(c,u.company_id)).length;
     if(cnt>maxContacts)maxContacts=cnt;
   });
 
-  // Строим строки
-  const rows=db.fleet.map(u=>{
-    const contacts=db.contacts.filter(c=>contactMatchesCo(c,u.company_id));
-    const photo=db.photos.find(p=>p.company_id===u.company_id);
-    const locs=db.locations.filter(l=>l.company_id===u.company_id);
-    const mapsLinks=locs.map(l=>l.lat&&l.lng?`https://maps.google.com/?q=${l.lat},${l.lng}`:'').filter(Boolean).join(' | ');
-
-    const row={
-      'Тип': u.type||'',
-      'Марка': u.brand||'',
-      'Модель': u.model||'',
-      'Год выпуска': u.year||'',
-      'Наработка (SMU)': u.hours||'',
-      'Серийный номер': u.serial||'',
-      'Состояние': u.condition||'',
-      'Компания': u.company||'',
-    };
-
-    for(let i=0;i<maxContacts;i++){
-      const ct=contacts[i];
-      const n=maxContacts===1?'':` ${i+1}`;
-      row[`Контакт${n}`]=ct?((ct.first_name||'')+' '+(ct.last_name||'')).trim():'';
-      row[`Телефон${n}`]=ct?.phone||'';
-    }
-
-    row['Фото (ссылка)']=photo?.url||'';
-    row['Локация (Google Maps)']=mapsLinks;
-    return row;
-  });
-
   const XLSX=window.XLSX||window.xlsx;
   if(!XLSX){toast('⚠ SheetJS not loaded');return;}
   const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.json_to_sheet(rows);
+
+  // Строим заголовки
+  const headers=['Тип','Марка','Модель','Год выпуска','Наработка (SMU)','Серийный номер','Состояние','Компания'];
+  for(let i=0;i<maxContacts;i++){
+    const n=maxContacts===1?'':` ${i+1}`;
+    headers.push(`Контакт${n}`,`Телефон${n}`);
+  }
+  headers.push('Фото','Локация (Google Maps)');
+
+  // Строим данные
+  const dataRows=db.fleet.map(u=>{
+    const contacts=db.contacts.filter(c=>contactMatchesCo(c,u.company_id));
+    const photos=db.photos.filter(p=>p.company_id===u.company_id);
+    const locs=db.locations.filter(l=>l.company_id===u.company_id);
+
+    const row=[
+      u.type||'', u.brand||'', u.model||'',
+      u.year||'', u.hours||'', u.serial||'',
+      u.condition||'', u.company||'',
+    ];
+    for(let i=0;i<maxContacts;i++){
+      const ct=contacts[i];
+      row.push(ct?((ct.first_name||'')+' '+(ct.last_name||'')).trim():'');
+      row.push(ct?.phone||'');
+    }
+    // Фото — первое
+    row.push(photos[0]?.url||'');
+    // Локации — первая
+    const loc=locs.find(l=>l.lat&&l.lng);
+    row.push(loc?`https://maps.google.com/?q=${loc.lat},${loc.lng}`:'');
+    return row;
+  });
+
+  // Создаём лист вручную для поддержки гиперссылок
+  const ws={};
+  const R=dataRows.length;
+  const C=headers.length;
+  const photoCol=headers.indexOf('Фото');
+  const mapsCol=headers.indexOf('Локация (Google Maps)');
+
+  // Заголовки
+  headers.forEach((h,ci)=>{
+    const addr=XLSX.utils.encode_cell({r:0,c:ci});
+    ws[addr]={v:h,t:'s',s:{font:{bold:true},fill:{fgColor:{rgb:'185FA5'}}}};
+  });
+
+  // Данные
+  dataRows.forEach((row,ri)=>{
+    row.forEach((val,ci)=>{
+      const addr=XLSX.utils.encode_cell({r:ri+1,c:ci});
+      if((ci===photoCol||ci===mapsCol)&&val){
+        ws[addr]={v:'Открыть →',t:'s',l:{Target:val,Tooltip:val}};
+      } else {
+        ws[addr]={v:val===''?null:val,t:typeof val==='number'?'n':'s'};
+      }
+    });
+  });
+
+  ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:R,c:C-1}});
 
   const colWidths=[12,10,12,8,12,20,12,22];
   for(let i=0;i<maxContacts;i++){colWidths.push(22,16);}
-  colWidths.push(30,40);
+  colWidths.push(12,14);
   ws['!cols']=colWidths.map(w=>({wch:w}));
-
-  const totalCols=8+maxContacts*2+2;
-  ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:rows.length,c:totalCols-1}})};
+  ws['!autofilter']={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:R,c:C-1}})};
 
   XLSX.utils.book_append_sheet(wb,ws,'Парк техники');
   XLSX.writeFile(wb,`fleet_report_${today()}.xlsx`);
