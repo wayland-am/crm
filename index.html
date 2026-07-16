@@ -3113,12 +3113,12 @@ function exportFleet(){
   const wb=XLSX.utils.book_new();
 
   // Строим заголовки
-  const headers=['Тип','Марка','Модель','Год выпуска','Наработка (SMU)','Серийный номер','Состояние','Компания'];
+  const headers=['Type','Brand','Model','Year','Hours (SMU)','Serial No.','Condition','Company'];
   for(let i=0;i<maxContacts;i++){
     const n=maxContacts===1?'':` ${i+1}`;
-    headers.push(`Контакт${n}`,`Телефон${n}`);
+    headers.push(`Contact${n}`,`Phone${n}`);
   }
-  headers.push('Фото','Локация (Google Maps)');
+  headers.push('Photo','Location (Google Maps)');
 
   // Строим данные
   const dataRows=db.fleet.map(u=>{
